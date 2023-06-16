@@ -1,23 +1,12 @@
-# !pip install -r requirements.txt
-# !pip install boto3
 import boto3
 import json
-# %%
 from src.ndnp_open_ocr.processors import AltoProcessor, PDFProcessor
 from rich import print
-
 import errno
 import pytesseract
 from PIL import Image
 import os
-import subprocess
 import pikepdf
-# from src.helpers import transfer_xmp, postprocess_pdf
-import typer
-import time
-import multiprocessing as mp
-from multiprocessing import Pool, cpu_count
-import glob
 import subprocess
 import tempfile
 
@@ -187,18 +176,7 @@ def handler(event, context):
                 print("OUTPUT KEY", output_key)
                 s3.upload_file(output_file_path, bucket_name, output_key)
 
-        # # boto3 delete message from Queue
-        # sqs = boto3.client('sqs')
-        # queue_url = os.environ.get('QUEUE_URL')
-        # receipt_handle = message['ReceiptHandle']
-        # sqs.delete_message(
-        #     QueueUrl=queue_url,
-        #     ReceiptHandle=receipt_handle
-        # )
-
     return {
         "statusCode": 200,
         "body": "Success"
     }
-
-# %%
