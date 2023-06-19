@@ -120,7 +120,11 @@ resource "aws_iam_policy" "iam_policy_for_lambda" {
      ],
      "Resource": "*",
      "Effect": "Allow"
-   }
+   },
+   "Action": [
+    "s3:*"
+   ],
+   "Resource": "s3://loc-preservation"
  ]
 }
 EOF

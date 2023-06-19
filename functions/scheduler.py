@@ -1,11 +1,9 @@
 import os
 import boto3
-from botocore.exceptions import NoCredentialsError
 import json
 import uuid
+
 # Create Scheduler SQS messages to line out all the files that need to be processed in parallel.
-
-
 def handler(event, context):
     # Get S3 bucket from environment variable
     # os.getenv('S3_BUCKET_NAME')
