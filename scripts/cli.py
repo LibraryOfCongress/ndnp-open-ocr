@@ -2,7 +2,7 @@ import os
 import boto3
 import click
 import requests
-
+import shutil
 
 @click.group()
 def cli():
@@ -41,9 +41,23 @@ def sync_s3_bucket(bucket, prefix):
 
 @cli.command()
 @click.option('--batch', default='', help='The batch argument to pass to the API.')
-def reprocess(batch):
+@click.option('--output-dir', default='output_batch', help='The directory to output the new files to.')
+@click.option('--local-batch', default='', help='The path to local batch data.')
+def reprocess(batch, output_dir, local_batch):
+    """Kicks off reprocessing job for a certain S3 NDNP batch."""
+
+   # Ensure the local batch directory exists
+    if not os.path.isdir(local_batch):
+        print(f"Local batch directory {local_batch} does not exist!")
+        return
+
+    print("Copying local batch...")
+    # Copy the batch directory to output_batch directory
+    shutil.copytree(local_batch, output_dir, dirs_exist_ok=True)
+    print("Local batch copy complete...")
+
+    # Call the API
     api_url = "https://wq3cr3qvo9.execute-api.us-east-1.amazonaws.com/dev/"
-    """Triggers an API endpoint at API_URL/batch."""
     response = requests.post(f'{api_url}/{batch}')
     if response.status_code == 200:
         print(f"{response.text} for {batch} batch!")
@@ -52,6 +66,8 @@ def reprocess(batch):
             f"Failed to trigger API endpoint: {api_url}{batch}. Status code: {response.status_code}"
         )
 
+    # # Update the files in output_batch directory
+    # sync_s3_bucket(bucket='my-bucket', prefix=f'{output_dir}/')
 
 if __name__ == "__main__":
     cli()
