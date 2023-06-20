@@ -8,11 +8,7 @@ import shutil
 def cli():
     pass
 
-
-@cli.command()
-@click.option('--bucket', prompt='S3 bucket', help='The S3 bucket to download files from.')
-@click.option('--prefix', default='', help='The prefix in S3 bucket to filter files.')
-def sync_s3_bucket(bucket, prefix):
+def sync_s3_bucket(bucket, prefix, output_dir, overwrite):
     """Syncs an S3 bucket with local files."""
     s3 = boto3.client('s3')
 
@@ -26,17 +22,27 @@ def sync_s3_bucket(bucket, prefix):
             if not file_key.endswith('.pdf') and not file_key.endswith('.xml'):
                 continue
 
-            local_path = os.path.join(os.getcwd(), file_key)
+            # Ignore prefix directory name
+            file_key_without_prefix = file_key.replace(prefix + '/', '', 1)
+            local_path = os.path.join(output_dir, file_key_without_prefix)
 
             # Ensure the folder structure for the file exists
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
 
             # Only download the file if it does not exist, or is older than the file on S3
-            if not os.path.exists(local_path) or os.path.getmtime(local_path) < file['LastModified'].timestamp():
+            if overwrite or not os.path.exists(local_path) or os.path.getmtime(local_path) < file['LastModified'].timestamp():
                 print(f"Downloading {file_key} to {local_path}")
                 s3.download_file(bucket, file_key, local_path)
             else:
                 print(f"{local_path} is up to date")
+
+@cli.command()
+@click.option('--bucket', prompt='S3 bucket', help='The S3 bucket to download files from.')
+@click.option('--prefix', default='', help='The prefix in S3 bucket to filter files.')
+@click.option('--output-dir', default='.', help='The directory to output the new files to.')
+@click.option('--overwrite', is_flag=True, default=False, help='Overwrite existing files.')
+def sync(bucket, prefix, output_dir, overwrite):
+    sync_s3_bucket(bucket, prefix, output_dir, overwrite)
 
 
 @cli.command()
