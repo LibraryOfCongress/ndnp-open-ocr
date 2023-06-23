@@ -120,11 +120,7 @@ resource "aws_iam_policy" "iam_policy_for_lambda" {
      ],
      "Resource": "*",
      "Effect": "Allow"
-   },
-   "Action": [
-    "s3:*"
-   ],
-   "Resource": "s3://loc-preservation"
+ }
  ]
 }
 EOF
@@ -136,12 +132,13 @@ resource "aws_iam_role_policy_attachment" "attach_iam_policy_to_iam_role" {
 }
 
 resource "aws_lambda_function" "scheduler_function" {
-  function_name = "ndnp-open-ocr-scheduler-function"
-  filename      = data.archive_file.zip.output_path
-  handler       = "scheduler.handler"
-  role          = aws_iam_role.lambda_role.arn
-  runtime       = "python3.8"
-  timeout       = 120
+  function_name    = "ndnp-open-ocr-scheduler-function"
+  filename         = data.archive_file.zip.output_path
+  handler          = "scheduler.handler"
+  role             = aws_iam_role.lambda_role.arn
+  runtime          = "python3.8"
+  source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
+  timeout          = 120
 
   environment {
     variables = {
@@ -291,11 +288,16 @@ resource "aws_lambda_event_source_mapping" "event_source_mapping" {
 }
 
 output "api_endpoint" {
-  description = "API endpoint URL"
+  description = "API Endpoint URL"
   value       = aws_apigatewayv2_api.http.api_endpoint
 }
 
 output "bucket_name" {
-  description = "S3 bucket name"
+  description = "S3 Bucket Name"
   value       = aws_s3_bucket.bucket.id
+}
+
+output "sqs_url" {
+  description = "SQS Queue Url"
+  value       = aws_sqs_queue.queue.id
 }

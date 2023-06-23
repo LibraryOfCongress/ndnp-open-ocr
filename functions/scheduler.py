@@ -2,7 +2,7 @@ import os
 import boto3
 import json
 import uuid
-
+from datetime import datetime
 # Create Scheduler SQS messages to line out all the files that need to be processed in parallel.
 def handler(event, context):
     # Get S3 bucket from environment variable
@@ -25,9 +25,9 @@ def handler(event, context):
     print(queue_url)
     total_files = 0
     try:
-        # Generate a unique UUID for the output path
-        output_prefix = str(uuid.uuid4())
-        # List all files in the bucket
+       # Generate a unique timestamp for the output path
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        output_prefix = os.path.join(os.path.dirname(prefix), os.path.basename(prefix) + "-" + timestamp)
         # List all files in the bucket
         messages = []
         for object_summary in s3.Bucket(bucket_name).objects.filter(Prefix=prefix):
@@ -67,7 +67,10 @@ def handler(event, context):
 
         return {
             "statusCode": 200,
-            "body": "NDNP Open OCR Job Successfully Scheduled. The output prefix in S3 is {}, and we are going to process {} files".format(output_prefix, total_files)
+            "body": json.dumps({
+                "prefix": output_prefix,
+                "num_issues": total_files
+            })
         }
     except Exception as e:
         print(e)
