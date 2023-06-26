@@ -6,6 +6,30 @@ This command line interface (CLI) enables you to trigger batch processing jobs o
 
 Before running the CLI, make sure that you have installed the required Python libraries listed in the accompanying `requirements.txt` file.
 
+## Installation
+These will need to be installed using virtualenv and Python3.9 in the target VM environment.
+* dzdo yum install -y python39
+<!-- * sudo yum install python34-devel.x86_64 -->
+* sudo yum install git
+<!-- * sudo easy_install virtualenv -->
+pip3.9 install virtualenv
+
+
+
+* mkdir /opt/ndnp/openocr
+* cd /opt/ndnp
+* git clone ssh://git@git.loc.gov:7999/NDNP/openocr.git
+* cd scripts
+
+* python3.9 -m virtualenv _env
+* source _env/bin/activate
+* export PYTHONPATH=/opt/ndnp/openocr/
+<!-- * pip install -r requirements.txt -->
+It isn't currently known why, but the following has to be run on the prod VM (SSL Cert issues for some reason).
+* pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host=files.pythonhosted.org -r requirements.txt
+* Make sure your AWS access_key and secret_key is set in your   ~/.aws/credentials file
+
+
 ## Usage
 
 The CLI provides three commands:
@@ -61,4 +85,4 @@ To trigger a reprocessing job for a specific batch named 'batch1' and download t
 python cli.py reprocess_and_download --output-dir ./output_notvalidated_batch --local-batch ./notvalidated_local --batch notvalidated
 ```
 
-This command will trigger a reprocessing job for 'batch1', monitor the job progress, and once completed, it will download the results to './output' directory, overwriting existing files if necessary.
+This command will trigger a reprocessing job for 'notvalidated', monitor the job progress, and once completed, the local batch will be copied into ./output_notvalidated_batch, then it will download the results to './output_notvalidated_batch' directory, overwriting the old ALTO and PDF files.
