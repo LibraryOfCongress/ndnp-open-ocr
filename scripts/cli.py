@@ -1,8 +1,6 @@
-import os
 import boto3
 import click
 import requests
-import shutil
 from helpers import sync_s3_batch
 import json
 import time
