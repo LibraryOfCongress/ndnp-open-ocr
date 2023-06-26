@@ -173,7 +173,7 @@ resource "aws_lambda_function" "consumer_function" {
   handler          = "consumer.handler"
   role             = aws_iam_role.lambda_role.arn
   runtime          = "python3.8"
-  timeout          = 600
+  timeout          = 800
   depends_on       = [aws_iam_role_policy_attachment.attach_iam_policy_to_iam_role]
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   memory_size      = 1024
