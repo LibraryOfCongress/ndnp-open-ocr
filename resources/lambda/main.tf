@@ -5,22 +5,34 @@ data "archive_file" "zip" {
 }
 
 resource "aws_lambda_function" "scheduler_function" {
-  function_name    = "ndnp-open-ocr-scheduler-function"
-  filename         = data.archive_file.zip.output_path
+  function_name    = "ndnp-open-ocr-scheduler-lambda-function"
+  filename         = var.output_path
   handler          = "scheduler.handler"
   role             = var.lambda_role_arn
   runtime          = "python3.8"
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   timeout          = 120
 
-#   environment {
-#     variables = var.environment_variables
-#   }
+  environment {
+    variables = {
+      TESSDATA_PREFIX    = "/opt/share/tessdata"
+      LD_LIBRARY_PATH    = "/opt/lib"
+      PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
+      TMP                = "/tmp"
+      OUTPUT_BUCKET_NAME = var.aws_s3_bucket
+      QUEUE_URL = var.queue_url
+    }
+  }
+
+   layers = [
+    aws_lambda_layer_version.lambda_layer.arn,
+  ]
+
 }
 
 resource "aws_lambda_function" "consumer_function" {
-  function_name    = "ndnp-open-ocr-consumer-function"
-  filename         = data.archive_file.zip.output_path
+  function_name    = "ndnp-open-ocr-consumer-lambda-function"
+  filename         = "functions.zip"
   handler          = "consumer.handler"
   role             = var.lambda_role_arn
   runtime          = "python3.8"
@@ -52,4 +64,21 @@ resource "aws_lambda_layer_version" "lambda_layer" {
   layer_name          = "ndnp-open-ocr-layer"
   compatible_runtimes = ["python3.8"]
   source_code_hash    = filebase64sha256("layers.zip")
+}
+
+resource "aws_cloudwatch_log_group" "scheduler_function_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.scheduler_function.function_name}"
+  retention_in_days = 14
+}
+
+resource "aws_cloudwatch_log_group" "consumer_function_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.consumer_function.function_name}"
+  retention_in_days = 14
+}
+
+resource "aws_lambda_permission" "apigw" {
+  statement_id  = "AllowExecutionFromAPIGatewayScheduler"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.scheduler_function.function_name
+  principal     = "apigateway.amazonaws.com"
 }

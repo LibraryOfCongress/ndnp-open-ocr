@@ -30,7 +30,7 @@ def handler(event, context):
         output_prefix = os.path.join(os.path.dirname(prefix), os.path.basename(prefix) + "-" + timestamp)
         # List all files in the bucket
         messages = []
-        for object_summary in s3.Bucket(bucket_name).objects.filter(Prefix=prefix)[0:10]:
+        for object_summary in s3.Bucket(bucket_name).objects.filter(Prefix=prefix):
             file_name = object_summary.key
 
             # Check if the file is a TIFF file
