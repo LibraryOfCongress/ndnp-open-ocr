@@ -1,8 +1,8 @@
 module "iam" {
   source = "./resources/iam"
 
-  lambda_iam_role_name = "my_lambda_role"
-  lambda_iam_policy_name = "my_lambda_policy"
+  lambda_iam_role_name = "ndnp-open-ocr-lambda-role-1"
+  lambda_iam_policy_name = "ndnp-open-ocr-lambda-policy"
 }
 
 module "s3" {
@@ -20,6 +20,7 @@ module "lambda" {
   source_dir = "${path.module}/functions"
   output_path = "${path.module}/functions.zip"
   lambda_role_arn = module.iam.lambda_role_arn
+  aws_s3_bucket = module.s3.bucket_name
 }
 
 module "apigw" {
