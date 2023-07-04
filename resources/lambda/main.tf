@@ -19,7 +19,7 @@ resource "aws_lambda_function" "scheduler_function" {
 }
 
 resource "aws_lambda_function" "consumer_function" {
-  function_name    = "ndnp-open-ocr-worker-function"
+  function_name    = "ndnp-open-ocr-consumer-function"
   filename         = data.archive_file.zip.output_path
   handler          = "consumer.handler"
   role             = var.lambda_role_arn
@@ -41,7 +41,7 @@ resource "aws_lambda_function" "consumer_function" {
       LD_LIBRARY_PATH    = "/opt/lib"
       PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP                = "/tmp"
-    #   OUTPUT_BUCKET_NAME = aws_s3_bucket.bucket.bucket
+      OUTPUT_BUCKET_NAME = var.aws_s3_bucket
     }
   }
 }
