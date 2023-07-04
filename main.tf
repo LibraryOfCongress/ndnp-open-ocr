@@ -7,7 +7,7 @@ module "iam" {
 
 module "s3" {
   source = "./resources/s3"
-  bucket_name = "ndnp-open-ocr-outputs-bucket"
+  bucket_name = "ndnp-open-ocr-outputs-bucket-test"
 }
 
 module "sqs" {
@@ -17,10 +17,11 @@ module "sqs" {
 
 module "lambda" {
   source = "./resources/lambda"
-  source_dir = "${path.module}/functions"
-  output_path = "${path.module}/functions.zip"
+  source_dir = "./functions"
+  output_path = "./resources/lambda/functions.zip"
   lambda_role_arn = module.iam.lambda_role_arn
   aws_s3_bucket = module.s3.bucket_name
+  queue_url = module.sqs.queue_url
 }
 
 module "apigw" {
