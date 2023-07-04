@@ -17,3 +17,8 @@ variable "aws_s3_bucket" {
   description = "Name of the S3 bucket that Lambda will use for processing outputs"
   type        = string
 }
+
+variable "queue_url" {
+  description = "Queue URL of the SQS queue for processing job management"
+  type = string
+}
