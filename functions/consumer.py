@@ -33,8 +33,7 @@ s3 = boto3.client("s3")
 def run_tesseract_worker(input_file_path, output_path):
     input_file_name = os.path.splitext(os.path.basename(input_file_path))[0]
 
-    old_pdf = os.path.join(os.path.dirname(
-        input_file_path), f"{input_file_name}.pdf")
+    old_pdf = os.path.join(os.path.dirname(input_file_path), f"{input_file_name}.pdf")
     alto_file_path = os.path.join(output_path, f"{input_file_name}.xml")
 
     # List the contents of the input_file_path directory
@@ -53,22 +52,22 @@ def run_tesseract_worker(input_file_path, output_path):
             raise
         pass
 
-    new_pdf = os.path.join(output_path, f'{input_file_name}_output.pdf')
+    new_pdf = os.path.join(output_path, f"{input_file_name}_output.pdf")
 
     tmp_img = input_file_path
     print("TEMP IMAGE PATH", tmp_img)
 
     try:
-        pdf = pytesseract.image_to_pdf_or_hocr(tmp_img, extension='pdf')
+        pdf = pytesseract.image_to_pdf_or_hocr(tmp_img, extension="pdf")
         print("NEW PDF", new_pdf)
-        with open(new_pdf, 'w+b') as f:
+        with open(new_pdf, "w+b") as f:
             f.write(pdf)
             f.close()
         del pdf
     except Exception as e:
         print(f"PDF generation failed: {input_file_name} {e}")
 
-    postprocessed_pdf = os.path.join(output_path, f'{input_file_name}.pdf')
+    postprocessed_pdf = os.path.join(output_path, f"{input_file_name}.pdf")
     # Create an instance of PDFProcessor and use its methods
     processor = PDFProcessor(new_pdf, postprocessed_pdf)
     processor.postprocess_pdf()
@@ -83,7 +82,7 @@ def run_tesseract_worker(input_file_path, output_path):
     try:
         print("TRY TO GENERATE ALTO")
         xml = pytesseract.image_to_alto_xml(tmp_img)
-        with open(alto_file_path, 'w+b') as f:
+        with open(alto_file_path, "w+b") as f:
             f.write(xml)
             f.close()
 
@@ -105,29 +104,28 @@ def run_tesseract_worker(input_file_path, output_path):
 
     os.remove(new_pdf)
     # Remove pikePdf .pdf_original file output
-    os.remove(os.path.join(output_path, input_file_name+'.pdf_original'))
+    os.remove(os.path.join(output_path, input_file_name + ".pdf_original"))
 
-
-# Write code that will loop through all files in the input directory and run tesseract on each file.
-# If the file is not a valid image file, then skip it.
-# Outputs ALTO and PDF files from Tesseract
-
+# Lambda Handler Function
 def handler(event, context):
     # Get bucket name and key (file path) from the path parameters
-    # bucket_name = "local-ndnp-open-ocr-stack-ndnpocrbucket3de183d7-1lu4lkbivgn84" #event["pathParameters"]["bucket_name"]
-    # key = "notvalidated/batch_dlc_sampleissue/2010270501/00237285074/1203.tif" #event["pathParameters"]["key"]
-    print("THIS MANY MESSAGES IN QUEUE", len(event['Records']))
-    for message in event['Records']:
-        message = json.loads(message['body'])
-        bucket_name = message['Bucket']
-        key = message['Key']
-        output_prefix = message['OutputPrefix']
-        input_prefix = message['InputPrefix']
+    print("THIS MANY MESSAGES IN QUEUE", len(event["Records"]))
+    for message in event["Records"]:
+        message = json.loads(message["body"])
+        bucket_name = message["Bucket"]
+        key = message["Key"]
+        output_prefix = message["OutputPrefix"]
+        input_prefix = message["InputPrefix"]
+        job_id = message["JobId"]
 
         print("BUCKET NAME", bucket_name)
         print("KEY", key)
         print("OUTPUT PREFIX", output_prefix)
         print("INPUT PREFIX", input_prefix)
+        print("JOB ID", job_id)
+
+        dynamodb = boto3.resource("dynamodb")  # Create DynamoDB resource
+        table = dynamodb.Table(os.getenv("TABLE_NAME"))
 
         # Compute the difference between the input prefix and the filename
         file_name, file_ext = os.path.splitext(os.path.basename(key))
@@ -159,7 +157,7 @@ def handler(event, context):
             # Set up the output directory path
             output_dir = os.path.join(temp_dir, "output")
 
-        # Make sure the file has been downloaded
+            # Make sure the file has been downloaded
             if os.path.exists(input_file_path):
                 print(f"{input_file_path} has been downloaded successfully.")
                 output_path = output_dir
@@ -176,7 +174,14 @@ def handler(event, context):
                 print("OUTPUT KEY", output_key)
                 s3.upload_file(output_file_path, bucket_name, output_key)
 
-    return {
-        "statusCode": 200,
-        "body": "Success"
-    }
+    resp = table.update_item(
+        Key={"pk": "JOB", "sk":job_id},
+        UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
+        ExpressionAttributeValues={
+            ":dec": len(event['Records']),
+        },
+        ReturnValues="UPDATED_NEW",
+    )
+    print(resp)
+
+    return {"statusCode": 200, "body": "Success"}

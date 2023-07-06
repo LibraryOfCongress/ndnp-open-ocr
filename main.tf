@@ -22,6 +22,8 @@ module "lambda" {
   lambda_role_arn = module.iam.lambda_role_arn
   aws_s3_bucket = module.s3.bucket_name
   queue_url = module.sqs.queue_url
+  queue_arn = module.sqs.queue_arn
+  table_name = var.table_name
 }
 
 module "apigw" {
@@ -34,4 +36,9 @@ module "apigw" {
   api_stage_throttling_burst_limit = 5000
   api_stage_throttling_rate_limit = 10000
   lambda_invoke_arn = module.lambda.scheduler_function_invoke_arn
+}
+
+module "dynamodb" {
+  source = "./resources/dynamodb"
+  table_name = var.table_name
 }

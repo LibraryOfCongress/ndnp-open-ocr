@@ -34,7 +34,8 @@ resource "aws_iam_policy" "iam_policy_for_lambda" {
        "sqs:SendMessage",
        "sqs:DeleteMessage",
        "sqs:*",
-       "s3:*"
+       "s3:*",
+       "dynamodb:*"
      ],
      "Resource": "*",
      "Effect": "Allow"

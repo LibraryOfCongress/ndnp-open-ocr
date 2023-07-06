@@ -22,3 +22,13 @@ variable "queue_url" {
   description = "Queue URL of the SQS queue for processing job management"
   type = string
 }
+
+variable "queue_arn" {
+  description = "Queue ARN of the SQS queue for processing job management"
+  type = string
+}
+
+variable "table_name" {
+  description = "DynamoDB table for SQS message tracking"
+  type = string
+}
