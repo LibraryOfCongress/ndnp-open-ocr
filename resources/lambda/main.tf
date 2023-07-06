@@ -20,7 +20,8 @@ resource "aws_lambda_function" "scheduler_function" {
       PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP                = "/tmp"
       OUTPUT_BUCKET_NAME = var.aws_s3_bucket
-      QUEUE_URL = var.queue_url
+      QUEUE_URL = var.queue_url,
+      TABLE_NAME = var.table_name
     }
   }
 
@@ -32,7 +33,7 @@ resource "aws_lambda_function" "scheduler_function" {
 
 resource "aws_lambda_function" "consumer_function" {
   function_name    = "ndnp-open-ocr-consumer-lambda-function"
-  filename         = "functions.zip"
+  filename         = var.output_path
   handler          = "consumer.handler"
   role             = var.lambda_role_arn
   runtime          = "python3.8"
@@ -54,6 +55,8 @@ resource "aws_lambda_function" "consumer_function" {
       PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP                = "/tmp"
       OUTPUT_BUCKET_NAME = var.aws_s3_bucket
+      QUEUE_URL = var.queue_url,
+      TABLE_NAME = var.table_name
     }
   }
 }
@@ -81,4 +84,10 @@ resource "aws_lambda_permission" "apigw" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.scheduler_function.function_name
   principal     = "apigateway.amazonaws.com"
+}
+
+resource "aws_lambda_event_source_mapping" "event_source_mapping" {
+  event_source_arn = var.queue_arn
+  function_name    = aws_lambda_function.consumer_function.function_name
+  batch_size       = 3
 }
