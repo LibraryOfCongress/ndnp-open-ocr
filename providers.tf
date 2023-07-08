@@ -3,13 +3,13 @@
 variable "aws_region" {
   description = "AWS region"
   type        = string
-  default     = "us-east-1"
+  default     = "us-east-2"
 }
 
 variable "aws_profile" {
   description = "AWS profile"
   type        = string
-  default     = "loc"
+  default     = "NDNP_OPEN_OCR_DEVELOPER_DEV_profile"
 }
 
 provider "aws" {

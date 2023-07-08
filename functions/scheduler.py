@@ -6,7 +6,7 @@ from datetime import datetime
 
 def handler(event, context):
     job_id = str(uuid.uuid4())  # Generate a new job id
-    bucket_name = os.getenv('OUTPUT_BUCKET_NAME')
+    bucket_name = os.getenv('INPUT_BUCKET_NAME')
     prefix = event['pathParameters']['prefix']
     if bucket_name is None:
         raise Exception("No S3_BUCKET_NAME environment variable set")
