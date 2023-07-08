@@ -13,8 +13,13 @@ variable "lambda_role_arn" {
   type        = string
 }
 
-variable "aws_s3_bucket" {
-  description = "Name of the S3 bucket that Lambda will use for processing outputs"
+variable "aws_s3_input_bucket" {
+  description = "Name of the S3 bucket that Lambda will use for reading in inputs"
+  type        = string
+}
+
+variable "aws_s3_output_bucket" {
+  description = "Name of the S3 bucket that Lambda will use for storing outputs"
   type        = string
 }
 

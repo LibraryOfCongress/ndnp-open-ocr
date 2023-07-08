@@ -3,3 +3,4 @@
 .DS_Store
 **/reprocessing_output**
 *.zip
+**.vscode

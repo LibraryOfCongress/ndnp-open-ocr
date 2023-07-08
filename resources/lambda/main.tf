@@ -4,8 +4,12 @@ data "archive_file" "zip" {
   output_path = var.output_path
 }
 
+# data "aws_iam_role" "existing_role" {
+#   name = ""arn:aws:iam::342134162356:role/NDNP_OPEN_OCR_DEVELOPER_DEV""
+# }
+
 resource "aws_lambda_function" "scheduler_function" {
-  function_name    = "ndnp-open-ocr-scheduler-lambda-function"
+  function_name    = "ndnp-open-ocr-scheduler-lambda-function-dev"
   filename         = var.output_path
   handler          = "scheduler.handler"
   role             = var.lambda_role_arn
@@ -18,8 +22,8 @@ resource "aws_lambda_function" "scheduler_function" {
       TESSDATA_PREFIX    = "/opt/share/tessdata"
       LD_LIBRARY_PATH    = "/opt/lib"
       PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
-      TMP                = "/tmp"
-      OUTPUT_BUCKET_NAME = var.aws_s3_bucket
+      TMP                = "/tmp",
+      INPUT_BUCKET_NAME = var.aws_s3_input_bucket
       QUEUE_URL = var.queue_url,
       TABLE_NAME = var.table_name
     }
@@ -32,7 +36,7 @@ resource "aws_lambda_function" "scheduler_function" {
 }
 
 resource "aws_lambda_function" "consumer_function" {
-  function_name    = "ndnp-open-ocr-consumer-lambda-function"
+  function_name    = "ndnp-open-ocr-consumer-lambda-function-dev"
   filename         = var.output_path
   handler          = "consumer.handler"
   role             = var.lambda_role_arn
@@ -44,8 +48,8 @@ resource "aws_lambda_function" "consumer_function" {
 
   layers = [
     aws_lambda_layer_version.lambda_layer.arn,
-    "arn:aws:lambda:us-east-1:764866452798:layer:ghostscript:13",
-    "arn:aws:lambda:us-east-1:445285296882:layer:perl-5-32-runtime-al2:2"
+    "arn:aws:lambda:us-east-2:764866452798:layer:ghostscript:13",
+    "arn:aws:lambda:us-east-2:445285296882:layer:perl-5-32-runtime-al2:2"
   ]
 
   environment {
@@ -54,7 +58,8 @@ resource "aws_lambda_function" "consumer_function" {
       LD_LIBRARY_PATH    = "/opt/lib"
       PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP                = "/tmp"
-      OUTPUT_BUCKET_NAME = var.aws_s3_bucket
+      OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
+      INPUT_BUCKET_NAME =  var.aws_s3_input_bucket
       QUEUE_URL = var.queue_url,
       TABLE_NAME = var.table_name
     }

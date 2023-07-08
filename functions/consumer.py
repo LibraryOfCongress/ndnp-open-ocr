@@ -112,13 +112,14 @@ def handler(event, context):
     print("THIS MANY MESSAGES IN QUEUE", len(event["Records"]))
     for message in event["Records"]:
         message = json.loads(message["body"])
-        bucket_name = message["Bucket"]
+        input_bucket_name = message["Bucket"]
+        output_bucket_name = os.environ.get('OUTPUT_BUCKET_NAME')
         key = message["Key"]
         output_prefix = message["OutputPrefix"]
         input_prefix = message["InputPrefix"]
         job_id = message["JobId"]
 
-        print("BUCKET NAME", bucket_name)
+        print("BUCKET NAME", input_bucket_name)
         print("KEY", key)
         print("OUTPUT PREFIX", output_prefix)
         print("INPUT PREFIX", input_prefix)
@@ -144,15 +145,15 @@ def handler(event, context):
             input_file_path = os.path.join(temp_dir, file_name + file_ext)
             print("INPUT FILE PATH", input_file_path)
 
-            s3.download_file(bucket_name, key, input_file_path)
+            s3.download_file(input_bucket_name, key, input_file_path)
 
             # Download the XML and PDF files
             xml_key = os.path.join(os.path.dirname(key), f"{file_name}.xml")
             pdf_key = os.path.join(os.path.dirname(key), f"{file_name}.pdf")
             xml_file_path = os.path.join(temp_dir, f"{file_name}.xml")
             pdf_file_path = os.path.join(temp_dir, f"{file_name}.pdf")
-            s3.download_file(bucket_name, xml_key, xml_file_path)
-            s3.download_file(bucket_name, pdf_key, pdf_file_path)
+            s3.download_file(input_bucket_name, xml_key, xml_file_path)
+            s3.download_file(input_bucket_name, pdf_key, pdf_file_path)
 
             # Set up the output directory path
             output_dir = os.path.join(temp_dir, "output")
@@ -172,7 +173,7 @@ def handler(event, context):
                 output_file_path = os.path.join(output_dir, output_file)
                 output_key = os.path.join(output_prefix, difference, output_file)
                 print("OUTPUT KEY", output_key)
-                s3.upload_file(output_file_path, bucket_name, output_key)
+                s3.upload_file(output_file_path, output_bucket_name, output_key)
 
     resp = table.update_item(
         Key={"pk": "JOB", "sk":job_id},
