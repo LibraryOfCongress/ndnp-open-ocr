@@ -32,10 +32,10 @@ The module creates AWS resources for the application including:
 To use this module:
 1. Download pre-made Lambda Layer: https://ndnp-open-ocr-dependencies.s3.amazonaws.com/layers.zip from the NDNP bucket we setup to temporarily store these dependencies. In the future we will automate layer building as part of the Terraform file.
 
-2. Initialize Terraform.
+2. Initialize the correct Terraform workspace - our current work takes place in us-east-2 region.
 
 ```bash
-terraform init
+terraform workspace select us-east-2
 ```
 
 3. Create an execution plan.
@@ -52,7 +52,7 @@ terraform apply
 
 ## Inputs
 
-No input is required for this module. However, you may need to provide your AWS credentials to the AWS provider either via the AWS CLI or environment variables.
+See main.tf for adjustable values for each module stored in resource folder.
 
 ## Outputs
 
