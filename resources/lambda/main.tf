@@ -4,10 +4,6 @@ data "archive_file" "zip" {
   output_path = var.output_path
 }
 
-# data "aws_iam_role" "existing_role" {
-#   name = ""arn:aws:iam::342134162356:role/NDNP_OPEN_OCR_DEVELOPER_DEV""
-# }
-
 resource "aws_lambda_function" "scheduler_function" {
   function_name    = "ndnp-open-ocr-scheduler-lambda-function-dev"
   filename         = var.output_path
@@ -65,6 +61,35 @@ resource "aws_lambda_function" "consumer_function" {
     }
   }
 }
+
+resource "aws_lambda_function" "dlq_consumer_function" {
+  function_name    = "ndnp-open-ocr-dlq-consumer-function"
+  filename         = var.output_path
+  handler          = "dlq_consumer.handler"
+  role             = var.lambda_role_arn
+  runtime          = "python3.8"
+  timeout          = 900
+  source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
+  memory_size      = 1024
+
+
+  layers = [
+    aws_lambda_layer_version.lambda_layer.arn,
+    "arn:aws:lambda:us-east-2:764866452798:layer:ghostscript:13",
+    "arn:aws:lambda:us-east-2:445285296882:layer:perl-5-32-runtime-al2:2"
+  ]
+
+  environment {
+    variables = {
+      TESSDATA_PREFIX    = "/opt/share/tessdata"
+      LD_LIBRARY_PATH    = "/opt/lib"
+      PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
+      TMP                = "/tmp"
+      DLQ_QUEUE_URL = var.dlq_queue_arn
+    }
+  }
+}
+
 
 
 resource "aws_lambda_layer_version" "lambda_layer" {
