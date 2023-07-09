@@ -33,6 +33,12 @@ variable "queue_arn" {
   type = string
 }
 
+variable "dlq_queue_arn" {
+  description = "Queue ARN of the deadletter SQS queue for catching failed job messages from the main queue."
+  type = string
+}
+
+
 variable "table_name" {
   description = "DynamoDB table for SQS message tracking"
   type = string

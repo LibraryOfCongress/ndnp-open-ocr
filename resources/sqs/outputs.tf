@@ -7,3 +7,8 @@ output "queue_arn" {
     description = "The queue ARN for the SQS queue"
     value = aws_sqs_queue.queue.arn
 }
+
+output "dlq_queue_arn" {
+    description = "The queue ARN for the Deadletter SQS queue"
+    value = aws_sqs_queue.dlq.arn
+}
