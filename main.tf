@@ -24,6 +24,7 @@ module "lambda" {
   aws_s3_output_bucket = module.s3.bucket_name
   queue_url = module.sqs.queue_url
   queue_arn = module.sqs.queue_arn
+  dlq_queue_arn = module.sqs.dlq_queue_arn
   table_name = var.table_name
 }
 

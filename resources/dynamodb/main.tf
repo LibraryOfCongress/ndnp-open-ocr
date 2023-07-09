@@ -6,6 +6,7 @@ resource "aws_dynamodb_table" "dynamodb_table" {
 
   # Partition key for the table.
   hash_key = "pk"
+  # Sort key for the table
   range_key = "sk"
 
   attribute {
