@@ -1,9 +1,13 @@
+import errno
 from bs4 import BeautifulSoup
 import exiftool
 from rich import print
 import subprocess
 import os
-
+import logging
+import pikepdf
+import pytesseract
+from PIL import Image
 
 class AltoProcessor:
     def __init__(self, input_file):
@@ -201,7 +205,7 @@ class PDFProcessor:
             "-dMonoImageDownsampleThreshold=1.0",
             "-dProcessDSCComments=false",
             self.old_pdf,
-            "src/pdf_marks.txt"
+            "pdf_marks.txt"
         ]
 
         result = subprocess.run(args, check=True)
@@ -212,3 +216,97 @@ class PDFProcessor:
             print(f"Output file exists and is a regular file: {self.new_pdf}")
         else:
             print("Output file does not exist or is not a regular file.")
+
+
+class OCRProcessor:
+    def __init__(self, input_file_path, output_path):
+        self.input_file_path = input_file_path
+        self.output_path = output_path
+
+    def _get_file_name(self):
+        return os.path.splitext(os.path.basename(self.input_file_path))[0]
+
+    def _get_new_pdf_path(self):
+        return os.path.join(self.output_path, f"{self._get_file_name()}_output.pdf")
+
+    def _get_postprocessed_pdf_path(self):
+        return os.path.join(self.output_path, f"{self._get_file_name()}.pdf")
+
+    def _get_alto_file_path(self):
+        return os.path.join(self.output_path, f"{self._get_file_name()}.xml")
+
+    def generate_pdf(self):
+        try:
+            pdf = pytesseract.image_to_pdf_or_hocr(self.input_file_path, extension="pdf")
+            logging.info("NEW PDF", self._get_new_pdf_path())
+            with open(self._get_new_pdf_path(), "w+b") as f:
+                f.write(pdf)
+            del pdf
+        except Exception as e:
+            logging.error(f"PDF generation failed: {self._get_file_name()} {e}")
+
+    def postprocess_pdf(self):
+        processor = PDFProcessor(self._get_new_pdf_path(), self._get_postprocessed_pdf_path())
+        processor.postprocess_pdf()
+        processor.transfer_xmp()
+
+    def linearize_pdf(self):
+        try:
+            with pikepdf.Pdf.open(self._get_postprocessed_pdf_path(), allow_overwriting_input=True) as pdf:
+                pdf.save(self._get_postprocessed_pdf_path(), linearize=True)
+        except Exception as e:
+            logging.error(f"PDF Linearization failed: {self._get_file_name()} {e}")
+
+    def generate_alto(self):
+        try:
+            logging.info("TRY TO GENERATE ALTO")
+            xml = pytesseract.image_to_alto_xml(self.input_file_path)
+            with open(self._get_alto_file_path(), "w+b") as f:
+                f.write(xml)
+
+            image = Image.open(self.input_file_path)
+            dpi = image.info.get("dpi", (96, 96))
+
+            logging.info(dpi)
+
+            alto_processor = AltoProcessor(self._get_alto_file_path())
+            alto_processor.add_description_tags()
+            alto_processor.convert_pixels_to_inches(dpi)
+            alto_processor.save(self._get_alto_file_path())
+            del xml
+        except Exception as e:
+            logging.error(f"ALTO generation failed: {self._get_file_name()} {e}")
+
+    def process(self):
+        def list_directory_contents(directory_path):
+            """List the contents of the directory"""
+            directory_contents = os.listdir(directory_path)
+            logging.info(f"Contents of {directory_path}:")
+            for item in directory_contents:
+                logging.info(f" - {item}")
+
+        def make_directory(path):
+            """Create a directory if it doesn't exist"""
+            try:
+                os.makedirs(path)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    raise
+            list_directory_contents(os.path.dirname(self.input_file_path))
+            make_directory(self.output_path)
+            logging.info("TEMP IMAGE PATH", self.input_file_path)
+
+        self.generate_pdf()
+        self.postprocess_pdf()
+        self.linearize_pdf()
+        self.generate_alto()
+
+        os.remove(self._get_new_pdf_path())
+        # Remove pikePdf .pdf_original file output
+        os.remove(os.path.join(self.output_path, self._get_file_name() + ".pdf_original"))
+
+
+# if __name__ == "__main__":
+#     processor = OCRProcessor(input_file_path="/Users/dillonpeterson/Library/CloudStorage/OneDrive-StandardData/LOC_Bathces/notvalidated/batch_dlc_sampleissue/2010270501/00237285074/1203.tif", output_path="./")
+#     processor.process()
+#     print("Job Complete")

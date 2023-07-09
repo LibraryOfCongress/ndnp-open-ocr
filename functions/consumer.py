@@ -1,188 +1,102 @@
 import boto3
 import json
-from src.ndnp_open_ocr.processors import AltoProcessor, PDFProcessor
-from rich import print
+import os
 import errno
 import pytesseract
 from PIL import Image
-import os
 import pikepdf
-import subprocess
 import tempfile
+from src.ndnp_open_ocr.processors import OCRProcessor
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 # Directory paths to be added to the PATH
 ghostscript_directory = "/opt/bin"
 exiftool_directory = "/opt/bin"
 
-# Get the current PATH
-current_path = os.environ.get("PATH")
-print(current_path)
-# Append the new directories to the PATH
-new_path = f"{ghostscript_directory}:{exiftool_directory}:{current_path}"
-
-# Set the modified PATH as the new environment variable
-os.environ["PATH"] = new_path
-os.environ["PYTHONPATH"] = f"{ghostscript_directory}:{'/opt/python'}"
-
-TIFF_MODE = True
-
-# Runs the OCR process on a single file
+# S3 client
 s3 = boto3.client("s3")
+# DynamoDB resource
+dynamodb = boto3.resource("dynamodb")
 
 
-def run_tesseract_worker(input_file_path, output_path):
-    input_file_name = os.path.splitext(os.path.basename(input_file_path))[0]
+def update_environment_variables():
+    current_path = os.environ.get("PATH")
+    new_path = f"{ghostscript_directory}:{exiftool_directory}:{current_path}"
+    os.environ["PATH"] = new_path
+    os.environ["PYTHONPATH"] = f"{ghostscript_directory}:{'/opt/python'}"
 
-    old_pdf = os.path.join(os.path.dirname(input_file_path), f"{input_file_name}.pdf")
-    alto_file_path = os.path.join(output_path, f"{input_file_name}.xml")
 
-    # List the contents of the input_file_path directory
-    input_directory = os.path.dirname(input_file_path)
-    directory_contents = os.listdir(input_directory)
+def list_directory_contents(directory):
+    logging.info(f"Contents of {directory}:")
+    for item in os.listdir(directory):
+        logging.info(f" - {item}")
 
-    # Print the contents of the directory
-    print(f"Contents of {input_directory}:")
-    for item in directory_contents:
-        print(f" - {item}")
 
+def make_directory(path):
     try:
-        os.makedirs(output_path)
+        os.makedirs(path)
     except OSError as exc:
         if exc.errno != errno.EEXIST:
             raise
-        pass
 
-    new_pdf = os.path.join(output_path, f"{input_file_name}_output.pdf")
+def download_files_from_s3(bucket_name, key, temp_dir):
+    file_name, file_ext = os.path.splitext(os.path.basename(key))
+    input_file_path = os.path.join(temp_dir, file_name + file_ext)
+    logging.info("INPUT FILE PATH", input_file_path)
+    s3.download_file(bucket_name, key, input_file_path)
+    return input_file_path
 
-    tmp_img = input_file_path
-    print("TEMP IMAGE PATH", tmp_img)
 
-    try:
-        pdf = pytesseract.image_to_pdf_or_hocr(tmp_img, extension="pdf")
-        print("NEW PDF", new_pdf)
-        with open(new_pdf, "w+b") as f:
-            f.write(pdf)
-            f.close()
-        del pdf
-    except Exception as e:
-        print(f"PDF generation failed: {input_file_name} {e}")
+def upload_files_to_s3(output_dir, output_bucket_name, output_prefix, difference):
+    for output_file in os.listdir(output_dir):
+        logging.info(output_file)
+        output_file_path = os.path.join(output_dir, output_file)
+        output_key = os.path.join(output_prefix, difference, output_file)
+        logging.info("OUTPUT KEY", output_key)
+        s3.upload_file(output_file_path, output_bucket_name, output_key)
 
-    postprocessed_pdf = os.path.join(output_path, f"{input_file_name}.pdf")
-    # Create an instance of PDFProcessor and use its methods
-    processor = PDFProcessor(new_pdf, postprocessed_pdf)
-    processor.postprocess_pdf()
-    processor.transfer_xmp()
 
-    try:
-        with pikepdf.Pdf.open(postprocessed_pdf, allow_overwriting_input=True) as pdf:
-            pdf.save(postprocessed_pdf, linearize=True)
-    except Exception as e:
-        print(f"PDF Linearization failed: {input_file_name} {e}")
-
-    try:
-        print("TRY TO GENERATE ALTO")
-        xml = pytesseract.image_to_alto_xml(tmp_img)
-        with open(alto_file_path, "w+b") as f:
-            f.write(xml)
-            f.close()
-
-        # fix_alto_file_hyphenation(alto_file_path)
-        input_file = alto_file_path
-
-        image = Image.open(tmp_img)
-        dpi = image.info.get("dpi", (96, 96))
-
-        print(dpi)
-
-        alto_processor = AltoProcessor(input_file)
-        alto_processor.add_description_tags()
-        alto_processor.convert_pixels_to_inches(dpi)
-        alto_processor.save(alto_file_path)
-        del xml
-    except Exception as e:
-        print(f"ALTO generation failed: {input_file_name} {e}")
-
-    os.remove(new_pdf)
-    # Remove pikePdf .pdf_original file output
-    os.remove(os.path.join(output_path, input_file_name + ".pdf_original"))
-
-# Lambda Handler Function
-def handler(event, context):
-    # Get bucket name and key (file path) from the path parameters
-    print("THIS MANY MESSAGES IN QUEUE", len(event["Records"]))
-    for message in event["Records"]:
-        message = json.loads(message["body"])
-        input_bucket_name = message["Bucket"]
-        output_bucket_name = os.environ.get('OUTPUT_BUCKET_NAME')
-        key = message["Key"]
-        output_prefix = message["OutputPrefix"]
-        input_prefix = message["InputPrefix"]
-        job_id = message["JobId"]
-
-        print("BUCKET NAME", input_bucket_name)
-        print("KEY", key)
-        print("OUTPUT PREFIX", output_prefix)
-        print("INPUT PREFIX", input_prefix)
-        print("JOB ID", job_id)
-
-        dynamodb = boto3.resource("dynamodb")  # Create DynamoDB resource
-        table = dynamodb.Table(os.getenv("TABLE_NAME"))
-
-        # Compute the difference between the input prefix and the filename
-        file_name, file_ext = os.path.splitext(os.path.basename(key))
-        difference = os.path.relpath(os.path.dirname(key), input_prefix)
-
-        print(file_name, file_ext)
-        print("DIFFERENCE", difference)
-
-        # Extract the file name without extension and the file extension
-        file_name, file_ext = os.path.splitext(os.path.basename(key))
-
-        print(file_name, file_ext)
-
-        # Download the image file, XML, and PDF files from S3 to a temporary directory
-        with tempfile.TemporaryDirectory() as temp_dir:
-            input_file_path = os.path.join(temp_dir, file_name + file_ext)
-            print("INPUT FILE PATH", input_file_path)
-
-            s3.download_file(input_bucket_name, key, input_file_path)
-
-            # Download the XML and PDF files
-            xml_key = os.path.join(os.path.dirname(key), f"{file_name}.xml")
-            pdf_key = os.path.join(os.path.dirname(key), f"{file_name}.pdf")
-            xml_file_path = os.path.join(temp_dir, f"{file_name}.xml")
-            pdf_file_path = os.path.join(temp_dir, f"{file_name}.pdf")
-            s3.download_file(input_bucket_name, xml_key, xml_file_path)
-            s3.download_file(input_bucket_name, pdf_key, pdf_file_path)
-
-            # Set up the output directory path
-            output_dir = os.path.join(temp_dir, "output")
-
-            # Make sure the file has been downloaded
-            if os.path.exists(input_file_path):
-                print(f"{input_file_path} has been downloaded successfully.")
-                output_path = output_dir
-                os.makedirs(output_path, exist_ok=True)
-                run_tesseract_worker(input_file_path, output_path)
-            else:
-                print(f"Failed to download {input_file_path}.")
-
-            # Upload the output files to the output folder in the S3 bucket
-            for output_file in os.listdir(output_dir):
-                print(output_file)
-                output_file_path = os.path.join(output_dir, output_file)
-                output_key = os.path.join(output_prefix, difference, output_file)
-                print("OUTPUT KEY", output_key)
-                s3.upload_file(output_file_path, output_bucket_name, output_key)
-
+def update_remaining_messages(table, job_id, event):
     resp = table.update_item(
-        Key={"pk": "JOB", "sk":job_id},
+        Key={"pk": "JOB", "sk": job_id},
         UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
         ExpressionAttributeValues={
-            ":dec": len(event['Records']),
+            ":dec": len(event["Records"]),
         },
         ReturnValues="UPDATED_NEW",
     )
-    print(resp)
+    logging.info(resp)
 
+def run_tesseract_worker(input_file_path, output_path):
+    processor = OCRProcessor(input_file_path, output_path)
+    processor.process()
+
+
+def handler(event, context):
+    logging.info("Number of messages left in queue: {}".format(len(event["Records"])))
+    for message in event["Records"]:
+        message = json.loads(message["body"])
+        table = dynamodb.Table(os.getenv("TABLE_NAME"))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_file_path = download_files_from_s3(
+                message["Bucket"], message["Key"], temp_dir
+            )
+            if os.path.exists(input_file_path):
+                logging.info(f"{input_file_path} has been downloaded successfully.")
+                output_path = os.path.join(temp_dir, "output")
+                make_directory(output_path)
+                run_tesseract_worker(input_file_path, output_path)
+            else:
+                logging.error(f"Failed to download {input_file_path}.")
+            upload_files_to_s3(
+                output_path,
+                os.environ.get("OUTPUT_BUCKET_NAME"),
+                message["OutputPrefix"],
+                os.path.relpath(
+                    os.path.dirname(message["Key"]), message["InputPrefix"]
+                ),
+            )
+    update_remaining_messages(table, message["JobId"], event)
     return {"statusCode": 200, "body": "Success"}
