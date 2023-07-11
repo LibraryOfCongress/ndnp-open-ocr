@@ -1,55 +1,54 @@
 import boto3
-
-dynamodb = boto3.client('dynamodb')
+import logging
+import os
+import json
+dynamodb = boto3.resource('dynamodb')
 queue_url = os.environ.get('QUEUE_URL')
-def lambda_handler(event, context):
-    for record in event['Records']:
-        message_body = record['body']
-        receipt_handle = record['receiptHandle']
 
-        # Assuming the message body contains the job ID
-        job_id = message_body
-
-        # Update DynamoDB entry for the job ID
-        update_dynamodb_entry(job_id)
-
-        # Delete the message from the DLQ
-        delete_message_from_dlq(receipt_handle)
-
-            response = dynamodb.update_item(
-        TableName='your-dynamodb-table-name',
+def handle_failed_message(message, table, job_id):
+    # Increment the count of failed messages in the job summary
+    table.update_item(
         Key={
-            'job_id': {'S': job_id}
+            'pk': 'JOB',
+            'sk': job_id
         },
-        UpdateExpression='SET status = :status',
+        UpdateExpression='ADD #FailureCount :inc',
+        ExpressionAttributeNames={
+            '#FailureCount': 'FailureCount'
+        },
         ExpressionAttributeValues={
-            ':status': {'S': 'Failed'}
+            ':inc': 1
         }
     )
 
-
-
-def update_dynamodb_entry(job_id):
-    # Update the DynamoDB table with the necessary changes for the job ID
-    response = dynamodb.update_item(
-        TableName='your-dynamodb-table-name',
+    # Optionally, add the message ID to a "failed_messages" list
+    table.update_item(
         Key={
-            'job_id': {'S': job_id}
+            'pk': 'JOB',
+            'sk': job_id
         },
-        UpdateExpression='SET status = :status',
+        UpdateExpression='SET #failed_messages = list_append(if_not_exists(#failed_messages, :empty_list), :message)',
+        ExpressionAttributeNames={
+            '#failed_messages': 'failed_messages'
+        },
         ExpressionAttributeValues={
-            ':status': {'S': 'Failed'}
+            ':message': message,
+            ':empty_list': []
         }
     )
 
-    print(f"Updated DynamoDB entry for job ID {job_id}")
+def handler(event, context):
+    logging.info("Number of failed messages: {}".format(len(event["Records"])))
+    for record in event["Records"]:
+        message = json.loads(record["body"])
+        print(message)
+        job_id = message["JobId"]
+        table = dynamodb.Table(os.getenv("TABLE_NAME"))
+        try:
+            # Log the failed message
+            # logging.error(f"Processing of message {message['MessageId']} failed.")
+            handle_failed_message(message, table, job_id)
+        except Exception as e:
+            logging.error(f"Failed to update job summary for message {message['MessageId']}: {e}")
 
-def delete_message_from_dlq(receipt_handle):
-    # Delete the message from the Dead Letter Queue (DLQ)
-    sqs = boto3.client('sqs')
-    sqs.delete_message(
-        QueueUrl='your-dlq-queue-url',
-        ReceiptHandle=receipt_handle
-    )
-
-    print("Deleted message from DLQ")
+    return {"statusCode": 200, "body": "DLQ processing complete"}

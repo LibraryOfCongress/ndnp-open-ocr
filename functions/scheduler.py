@@ -3,6 +3,11 @@ import boto3
 import json
 import uuid
 from datetime import datetime
+import logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 
 def handler(event, context):
     job_id = str(uuid.uuid4())  # Generate a new job id
@@ -16,11 +21,11 @@ def handler(event, context):
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(os.getenv('TABLE_NAME'))
 
-    print(os.environ)
+    logger.info('Environment variables: %s', os.environ)
 
     queue_url = os.environ.get('QUEUE_URL')
 
-    print(queue_url)
+    logger.info('Queue URL: %s', queue_url)
     total_files = 0
     try:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -101,4 +106,4 @@ def handler(event, context):
             })
         }
     except Exception as e:
-        print(e)
+        logger.error("Error occurred: %s", e)
