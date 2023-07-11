@@ -30,7 +30,6 @@ ExifTool is a platform-independent Perl library plus a command-line application 
 ```bash
 brew install exiftool
 ```
-
 ### Ghostscript
 
 Ghostscript is an interpreter for the PostScript language and for PDF.
