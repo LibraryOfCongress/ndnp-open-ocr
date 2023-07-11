@@ -7,13 +7,14 @@ resource "aws_sqs_queue" "queue" {
   visibility_timeout_seconds = 900
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.dlq.arn
-    maxReceiveCount     = 2
+    maxReceiveCount     = 1
   })
 }
 
 # Dead letter queue to catch failed jobs
 resource "aws_sqs_queue" "dlq" {
   name = "${var.queue_name}_dlq"
+  visibility_timeout_seconds = 60
 }
 
 # IAM policy to grant access to SQSyes

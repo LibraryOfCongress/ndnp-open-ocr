@@ -4,6 +4,8 @@ data "archive_file" "zip" {
   output_path = var.output_path
 }
 
+# Scheduler to create 1 message per issue/sample that needs to be processed by a
+# NDNP Open OCR consumer/worker.
 resource "aws_lambda_function" "scheduler_function" {
   function_name    = "ndnp-open-ocr-scheduler-lambda-function-dev"
   filename         = var.output_path
@@ -31,6 +33,7 @@ resource "aws_lambda_function" "scheduler_function" {
 
 }
 
+# Consumer to catch messages published by the scheduler
 resource "aws_lambda_function" "consumer_function" {
   function_name    = "ndnp-open-ocr-consumer-lambda-function-dev"
   filename         = var.output_path
@@ -62,13 +65,14 @@ resource "aws_lambda_function" "consumer_function" {
   }
 }
 
+# Consumer for deadletter queue to catch failed issues.
 resource "aws_lambda_function" "dlq_consumer_function" {
   function_name    = "ndnp-open-ocr-dlq-consumer-function"
   filename         = var.output_path
   handler          = "dlq_consumer.handler"
   role             = var.lambda_role_arn
   runtime          = "python3.8"
-  timeout          = 900
+  timeout          = 15
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   memory_size      = 1024
 
@@ -86,12 +90,14 @@ resource "aws_lambda_function" "dlq_consumer_function" {
       PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP                = "/tmp"
       DLQ_QUEUE_URL = var.dlq_queue_arn
+      TABLE_NAME = var.table_name
     }
   }
 }
 
 
-
+# AWS Lambda Layer to hold Python dependencies with pre-built layer.
+# FIXME: Automate layer creation
 resource "aws_lambda_layer_version" "lambda_layer" {
   filename            = "layers.zip"
   layer_name          = "ndnp-open-ocr-layer"
@@ -99,16 +105,25 @@ resource "aws_lambda_layer_version" "lambda_layer" {
   source_code_hash    = filebase64sha256("layers.zip")
 }
 
+# Log group for scheduler
 resource "aws_cloudwatch_log_group" "scheduler_function_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.scheduler_function.function_name}"
   retention_in_days = 14
 }
 
+# Log group for consumer
 resource "aws_cloudwatch_log_group" "consumer_function_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.consumer_function.function_name}"
   retention_in_days = 14
 }
 
+# Log group for dlq_consumer
+resource "aws_cloudwatch_log_group" "dlq_consumer_function_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.dlq_consumer_function.function_name}"
+  retention_in_days = 14
+}
+
+# Permission for API Gateway to invoke the scheduler function
 resource "aws_lambda_permission" "apigw" {
   statement_id  = "AllowExecutionFromAPIGatewayScheduler"
   action        = "lambda:InvokeFunction"
@@ -116,8 +131,16 @@ resource "aws_lambda_permission" "apigw" {
   principal     = "apigateway.amazonaws.com"
 }
 
+# Connect Consumer to Queue
 resource "aws_lambda_event_source_mapping" "event_source_mapping" {
   event_source_arn = var.queue_arn
   function_name    = aws_lambda_function.consumer_function.function_name
+  batch_size       = 3
+}
+
+# Connect DLQ Consumer to DLQ Queue
+resource "aws_lambda_event_source_mapping" "dlq_event_source_mapping" {
+  event_source_arn = var.dlq_queue_arn
+  function_name    = aws_lambda_function.dlq_consumer_function.function_name
   batch_size       = 3
 }
