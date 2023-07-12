@@ -21,7 +21,6 @@ def handle_failed_message(message, table, job_id):
         }
     )
 
-    # Optionally, add the message ID to a "failed_messages" list
     table.update_item(
         Key={
             'pk': 'JOB',
