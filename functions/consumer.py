@@ -9,7 +9,7 @@ import tempfile
 from src.ndnp_open_ocr.processors import OCRProcessor
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 # Directory paths to be added to the PATH
 ghostscript_directory = "/opt/bin"
