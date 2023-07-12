@@ -6,7 +6,7 @@ from datetime import datetime
 import logging
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 def handler(event, context):
@@ -57,16 +57,16 @@ def handler(event, context):
                     Entries=messages
                 )
 
-                # After sending messages to SQS, store them in DynamoDB
-                for msg in messages:
-                    table.put_item(
-                        Item={
-                            'pk': job_id,
-                            'sk': msg['Id'],
-                            'MessageBody': msg['MessageBody'],
-                            'Timestamp': timestamp
-                        }
-                    )
+                # # After sending messages to SQS, store them in DynamoDB
+                # for msg in messages:
+                #     table.put_item(
+                #         Item={
+                #             'pk': job_id,
+                #             'sk': msg['Id'],
+                #             'MessageBody': msg['MessageBody'],
+                #             'Timestamp': timestamp
+                #         }
+                #     )
 
                 messages = []
 

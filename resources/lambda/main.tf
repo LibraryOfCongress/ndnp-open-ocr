@@ -42,7 +42,7 @@ resource "aws_lambda_function" "consumer_function" {
   runtime          = "python3.8"
   timeout          = 900
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  memory_size      = 1024
+  memory_size      = 2048
 
 
   layers = [
@@ -135,12 +135,12 @@ resource "aws_lambda_permission" "apigw" {
 resource "aws_lambda_event_source_mapping" "event_source_mapping" {
   event_source_arn = var.queue_arn
   function_name    = aws_lambda_function.consumer_function.function_name
-  batch_size       = 3
+  batch_size       = 1
 }
 
 # Connect DLQ Consumer to DLQ Queue
 resource "aws_lambda_event_source_mapping" "dlq_event_source_mapping" {
   event_source_arn = var.dlq_queue_arn
   function_name    = aws_lambda_function.dlq_consumer_function.function_name
-  batch_size       = 3
+  batch_size       = 1
 }
