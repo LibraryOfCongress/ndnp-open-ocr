@@ -49,6 +49,6 @@ def handler(event, context):
             # logging.error(f"Processing of message {message['MessageId']} failed.")
             handle_failed_message(message, table, job_id)
         except Exception as e:
-            logging.error(f"Failed to update job summary for message {message['MessageId']}: {e}")
+            logging.error(f"Failed to update job summary for message {message}: {e}")
 
     return {"statusCode": 200, "body": "DLQ processing complete"}
