@@ -79,6 +79,7 @@ def handler(event, context):
     for message in event["Records"]:
         message = json.loads(message["body"])
         table = dynamodb.Table(os.getenv("TABLE_NAME"))
+        # raise Exception("Throw exception.")
         with tempfile.TemporaryDirectory() as temp_dir:
             input_file_path = download_files_from_s3(
                 message["Bucket"], message["Key"], temp_dir

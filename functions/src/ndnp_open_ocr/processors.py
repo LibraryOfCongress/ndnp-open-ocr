@@ -8,7 +8,8 @@ import logging
 import pikepdf
 import pytesseract
 from PIL import Image
-
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import time
 class AltoProcessor:
     def __init__(self, input_file):
         self.input_file = input_file
@@ -281,10 +282,8 @@ class OCRProcessor:
             alto_processor.convert_pixels_to_inches(dpi)
             alto_processor.save(self._get_alto_file_path())
             del xml
-            return True
         except Exception as e:
             logging.error(f"ALTO generation failed: {self._get_file_name()} {e}")
-            return False
 
     def process(self):
         def list_directory_contents(directory_path):
@@ -305,17 +304,23 @@ class OCRProcessor:
             make_directory(self.output_path)
             logging.info("TEMP IMAGE PATH", self.input_file_path)
 
+        os.environ['OMP_THREAD_LIMIT'] = '1'
+
         self.generate_pdf()
-        self.postprocess_pdf()
+        self.generate_alto()
         self.linearize_pdf()
         self.generate_alto()
 
-        os.remove(self._get_new_pdf_path())
+        # os.remove(self._get_new_pdf_path())
         # Remove pikePdf .pdf_original file output
-        os.remove(os.path.join(self.output_path, self._get_file_name() + ".pdf_original"))
+        # os.remove(os.path.join(self.output_path, self._get_file_name() + ".pdf_original"))
 
 
 # if __name__ == "__main__":
-#     processor = OCRProcessor(input_file_path="/Users/dillonpeterson/Library/CloudStorage/OneDrive-StandardData/LOC_Bathces/notvalidated/batch_dlc_sampleissue/2010270501/00237285074/1203.tif", output_path="./")
+#     start_time = time.time()
+#     processor = OCRProcessor(input_file_path="/Users/dillonpeterson/Library/CloudStorage/OneDrive-StandardData/LOC_Bathces/batch_dlc_kite/batch_dlc_kite_ver01/data/sn83030214/00206531290/1877082301/0841.tif", output_path="./")
 #     processor.process()
+#     end_time = time.time()
+
+#     print(f"The script took {end_time - start_time} seconds to complete.")
 #     print("Job Complete")
