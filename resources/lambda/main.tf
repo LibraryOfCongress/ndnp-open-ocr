@@ -33,6 +33,7 @@ resource "aws_lambda_function" "scheduler_function" {
 
 }
 
+
 # Consumer to catch messages published by the scheduler
 resource "aws_lambda_function" "consumer_function" {
   function_name    = "ndnp-open-ocr-consumer-lambda-function-dev"
@@ -42,7 +43,7 @@ resource "aws_lambda_function" "consumer_function" {
   runtime          = "python3.8"
   timeout          = 900
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  memory_size      = 2048
+  memory_size      = 5000
 
 
   layers = [

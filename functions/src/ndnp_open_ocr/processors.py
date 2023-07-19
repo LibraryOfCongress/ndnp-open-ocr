@@ -304,16 +304,14 @@ class OCRProcessor:
             make_directory(self.output_path)
             logging.info("TEMP IMAGE PATH", self.input_file_path)
 
-        os.environ['OMP_THREAD_LIMIT'] = '1'
-
         self.generate_pdf()
-        self.generate_alto()
+        self.postprocess_pdf()
         self.linearize_pdf()
         self.generate_alto()
 
-        # os.remove(self._get_new_pdf_path())
+        os.remove(self._get_new_pdf_path())
         # Remove pikePdf .pdf_original file output
-        # os.remove(os.path.join(self.output_path, self._get_file_name() + ".pdf_original"))
+        os.remove(os.path.join(self.output_path, self._get_file_name() + ".pdf_original"))
 
 
 # if __name__ == "__main__":
