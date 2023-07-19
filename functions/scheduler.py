@@ -29,7 +29,9 @@ def handler(event, context):
     total_files = 0
     try:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        output_prefix = os.path.join(os.path.dirname(prefix), os.path.basename(prefix) + "-" + timestamp)
+        # output_prefix = os.path.join(os.path.dirname(prefix), os.path.basename(prefix) + "-" + timestamp)
+        # Get top-level directory input name
+        output_prefix = os.path.split(prefix)[1] + "_____" + str(timestamp)
 
         messages = []
         for object_summary in s3.Bucket(bucket_name).objects.filter(Prefix=prefix):
@@ -57,17 +59,6 @@ def handler(event, context):
                     Entries=messages
                 )
 
-                # # After sending messages to SQS, store them in DynamoDB
-                # for msg in messages:
-                #     table.put_item(
-                #         Item={
-                #             'pk': job_id,
-                #             'sk': msg['Id'],
-                #             'MessageBody': msg['MessageBody'],
-                #             'Timestamp': timestamp
-                #         }
-                #     )
-
                 messages = []
 
         if messages:
@@ -75,17 +66,6 @@ def handler(event, context):
                 QueueUrl=queue_url,
                 Entries=messages
             )
-
-            # # After sending messages to SQS, store them in DynamoDB
-            # for msg in messages:
-            #     table.put_item(
-            #         Item={
-            #                 'pk': job_id,
-            #                 'sk': msg['Id'],
-            #                 'MessageBody': msg['MessageBody'],
-            #                 'Timestamp': timestamp
-            #         }
-            #     )
 
         table.put_item(
             Item={
