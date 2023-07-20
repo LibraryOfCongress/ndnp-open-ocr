@@ -31,8 +31,7 @@ def handler(event, context):
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         # output_prefix = os.path.join(os.path.dirname(prefix), os.path.basename(prefix) + "-" + timestamp)
         # Get top-level directory input name
-        output_prefix = os.path.split(prefix)[1] + "_____" + str(timestamp)
-
+        output_prefix = os.path.split(prefix)[1] + "_____" + job_id
         messages = []
         for object_summary in s3.Bucket(bucket_name).objects.filter(Prefix=prefix):
             file_name = object_summary.key
