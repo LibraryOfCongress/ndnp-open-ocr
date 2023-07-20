@@ -36,7 +36,7 @@ def handler(event, context):
     )
 
     for item in response["Items"]:
-        for failed_message in item.get("failed_messages", []):
+        for failed_message in [item.get("failed_messages", [])[0]]:
             try:
                 # Resubmit the failed message to SQS
                 resubmit_message_to_sqs(failed_message)

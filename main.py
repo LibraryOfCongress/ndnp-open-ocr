@@ -36,7 +36,7 @@ response = table.query(
 )
 
 for item in response["Items"]:
-    for failed_message in item.get("failed_messages", []):
+    for failed_message in [item.get("failed_messages", [])[5]]:
         try:
             # Resubmit the failed message to SQS
             print(failed_message)

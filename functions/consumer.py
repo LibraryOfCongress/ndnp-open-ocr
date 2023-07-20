@@ -75,7 +75,7 @@ def run_tesseract_worker(input_file_path, output_path):
 
 
 def handler(event, context):
-    logging.debug("Number of messages left in queue: {}".format(len(event["Records"])))
+    print("Number of messages left in queue: {}".format(len(event["Records"])))
     for message in event["Records"]:
         message = json.loads(message["body"])
         table = dynamodb.Table(os.getenv("TABLE_NAME"))
