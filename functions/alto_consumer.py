@@ -10,6 +10,7 @@ from src.ndnp_open_ocr.processors import OCRProcessor
 import logging
 import os
 import shutil
+
 logging.basicConfig(level=logging.DEBUG)
 
 # Directory paths to be added to the PATH
@@ -30,9 +31,9 @@ def update_environment_variables():
 
 
 def list_directory_contents(directory):
-    logging.debug(f"Contents of {directory}:")
+    print(f"Contents of {directory}:")
     for item in os.listdir(directory):
-        logging.debug(f" - {item}")
+        print(f" - {item}")
 
 
 def make_directory(path):
@@ -84,8 +85,7 @@ def update_remaining_messages(table, job_id, event):
         },
         ReturnValues="UPDATED_NEW",
     )
-    logging.debug(resp)
-
+    print(resp)
 
 def clear_tmp_directory():
     tmp_dir = '/tmp'
@@ -110,13 +110,13 @@ def handler(event, context):
                 message["Bucket"], message["Key"], temp_dir
             )
             if os.path.exists(input_file_path):
-                logging.debug(f"{input_file_path} has been downloaded successfully.")
+                print(f"{input_file_path} has been downloaded successfully.")
                 output_path = os.path.join(temp_dir, "output")
                 make_directory(output_path)
 
-                # Run NDNP Open OCR Reprocessing on this input
+                # Run NDNP Open OCR Reprocessing on this input file.
                 processor = OCRProcessor(input_file_path, output_path)
-                processor.generate_pdf()
+                processor.generate_alto()
             else:
                 logging.error(f"Failed to download {input_file_path}.")
 

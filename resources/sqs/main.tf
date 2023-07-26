@@ -11,6 +11,19 @@ resource "aws_sqs_queue" "queue" {
   })
 }
 
+# Queue to serve as source messages for Lambda OCR Reprocessing ALTO Consumer
+resource "aws_sqs_queue" "alto_queue" {
+  name                       = "ndnp-open-ocr-alto-consumer-queue"
+  delay_seconds              = 0
+  max_message_size           = 1024
+  message_retention_seconds  = 345600
+  visibility_timeout_seconds = 900
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.dlq.arn
+    maxReceiveCount     = 1
+  })
+}
+
 # Dead letter queue to catch failed jobs
 resource "aws_sqs_queue" "dlq" {
   name = "${var.queue_name}_dlq"

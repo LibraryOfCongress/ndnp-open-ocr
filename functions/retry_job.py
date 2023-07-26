@@ -9,11 +9,17 @@ sqs = boto3.client("sqs")
 # DynamoDB table and SQS queue details
 table_name = os.environ.get("TABLE_NAME")
 queue_url = os.environ.get("QUEUE_URL")
+alto_queue_url = os.environ.get("ALTO_QUEUE_URL")
 
 def resubmit_message_to_sqs(message_body):
     """Resubmit the failed message back to the original SQS queue."""
     sqs.send_message(
         QueueUrl=queue_url,
+        MessageBody=json.dumps(message_body)
+    )
+
+    sqs.send_message(
+        QueueUrl=alto_queue_url,
         MessageBody=json.dumps(message_body)
     )
 

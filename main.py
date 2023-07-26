@@ -9,6 +9,7 @@ sqs = boto3.client("sqs")
 # DynamoDB table and SQS queue details
 table_name = "ndnp-open-ocr-table" #os.environ.get("TABLE_NAME")
 queue_url = "https://sqs.us-east-2.amazonaws.com/342134162356/ndnp-open-ocr-queue" #os.environ.get("QUEUE_URL")
+alto_queue_url = "https://sqs.us-east-2.amazonaws.com/342134162356/ndnp-open-ocr-alto-consumer-queue"
 
 def resubmit_message_to_sqs(message_body):
     """Resubmit the failed message back to the original SQS queue."""
@@ -17,9 +18,14 @@ def resubmit_message_to_sqs(message_body):
         MessageBody=json.dumps(message_body)
     )
 
+    # sqs.send_message(
+    #     QueueUrl=alto_queue_url,
+    #     MessageBody=json.dumps(message_body)
+    # )
+
 # def handler(event, context):
     # Assuming the job_id is passed within the event input
-job_id = "e72006d9-7e35-47da-b776-da8d2e5091e4" #event.get("job_id")
+job_id = "5005c7a2-1c86-44ba-9cc6-11aabdeae4ac" #event.get("job_id")
 if not job_id:
     logging.error("job_id not provided in the event.")
     # return {"statusCode": 400, "body": "job_id is required"}
@@ -36,12 +42,22 @@ response = table.query(
 )
 
 for item in response["Items"]:
-    for failed_message in [item.get("failed_messages", [])[5]]:
+    # items = list(set(item.get("failed_messages", [])))
+    keys = []
+    messages = []
+    for failed_message in [item.get("failed_messages", [])[2]]:
         try:
             # Resubmit the failed message to SQS
             print(failed_message)
-            resubmit_message_to_sqs(failed_message)
+            if failed_message['Key'] in keys:
+                pass
+            else:
+                keys.append(failed_message['Key'])
+                # failed_message['Key'] = failed_message['Key'].replace(".tif", ".jp2")
+                resubmit_message_to_sqs(failed_message)
+                messages.append(failed_message)
             # logging.info(f"Resubmitted message {failed_message['MessageId']} to SQS.")
+            print(len(messages))
 
             # You can additionally delete or mark the message as reprocessed, if desired.
 
