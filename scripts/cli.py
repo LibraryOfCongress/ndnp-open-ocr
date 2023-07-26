@@ -11,7 +11,7 @@ def cli(ctx):
     # Initialize the context dict
     ctx.ensure_object(dict)
     # Store bucket in the context
-    ctx.obj['BUCKET'] = "ndnp-open-ocr-outputs-bucket"
+    ctx.obj['BUCKET'] = "ndnp-open-ocr-output-bucket-test"
     ctx.obj['QUEUE_URL'] = "https://sqs.us-east-1.amazonaws.com/342134162356/ndnp-open-ocr-queue"
     ctx.obj['API_URL'] = "https://o26oj5w54d.execute-api.us-east-1.amazonaws.com/dev/"
 

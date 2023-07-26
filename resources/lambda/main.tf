@@ -23,7 +23,8 @@ resource "aws_lambda_function" "scheduler_function" {
       TMP                = "/tmp",
       INPUT_BUCKET_NAME = var.aws_s3_input_bucket
       QUEUE_URL = var.queue_url,
-      TABLE_NAME = var.table_name
+      TABLE_NAME = var.table_name,
+      ALTO_QUEUE_URL = var.alto_queue_url
     }
   }
 
@@ -61,6 +62,39 @@ resource "aws_lambda_function" "consumer_function" {
       OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
       INPUT_BUCKET_NAME =  var.aws_s3_input_bucket
       QUEUE_URL = var.queue_url,
+      ALTO_QUEUE_URL = var.alto_queue_url,
+      TABLE_NAME = var.table_name
+    }
+  }
+}
+
+# Consumer to catch messages published by the scheduler
+resource "aws_lambda_function" "alto_consumer_function" {
+  function_name    = "ndnp-open-ocr-alto-consumer-lambda-function-dev"
+  filename         = var.output_path
+  handler          = "alto_consumer.handler"
+  role             = var.lambda_role_arn
+  runtime          = "python3.8"
+  timeout          = 900
+  source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
+  memory_size      = 6000
+
+
+  layers = [
+    aws_lambda_layer_version.lambda_layer.arn,
+    "arn:aws:lambda:us-east-2:764866452798:layer:ghostscript:13",
+    "arn:aws:lambda:us-east-2:445285296882:layer:perl-5-32-runtime-al2:2"
+  ]
+
+  environment {
+    variables = {
+      TESSDATA_PREFIX    = "/opt/share/tessdata"
+      LD_LIBRARY_PATH    = "/opt/lib"
+      PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
+      TMP                = "/tmp"
+      OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
+      INPUT_BUCKET_NAME =  var.aws_s3_input_bucket
+      QUEUE_URL = var.alto_queue_url,
       TABLE_NAME = var.table_name
     }
   }
@@ -124,6 +158,12 @@ resource "aws_cloudwatch_log_group" "dlq_consumer_function_log_group" {
   retention_in_days = 14
 }
 
+# Log group for alto_consumer
+resource "aws_cloudwatch_log_group" "alto_consumer_function_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.alto_consumer_function.function_name}"
+  retention_in_days = 14
+}
+
 # Permission for API Gateway to invoke the scheduler function
 resource "aws_lambda_permission" "apigw" {
   statement_id  = "AllowExecutionFromAPIGatewayScheduler"
@@ -143,5 +183,12 @@ resource "aws_lambda_event_source_mapping" "event_source_mapping" {
 resource "aws_lambda_event_source_mapping" "dlq_event_source_mapping" {
   event_source_arn = var.dlq_queue_arn
   function_name    = aws_lambda_function.dlq_consumer_function.function_name
+  batch_size       = 1
+}
+
+# Connect ALTO Consumer to ALTO Queue
+resource "aws_lambda_event_source_mapping" "alto_event_source_mapping" {
+  event_source_arn = var.alto_queue_arn
+  function_name    = aws_lambda_function.alto_consumer_function.function_name
   batch_size       = 1
 }

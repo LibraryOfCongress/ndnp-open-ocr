@@ -24,6 +24,7 @@ def handler(event, context):
     logger.info('Environment variables: %s', os.environ)
 
     queue_url = os.environ.get('QUEUE_URL')
+    alto_queue_url = os.environ.get('ALTO_QUEUE_URL')
 
     logger.info('Queue URL: %s', queue_url)
     total_files = 0
@@ -58,11 +59,20 @@ def handler(event, context):
                     Entries=messages
                 )
 
+                response_alto = sqs.send_message_batch (
+                    QueueUrl=alto_queue_url,
+                    Entries=messages
+                )
+
                 messages = []
 
         if messages:
             response = sqs.send_message_batch(
                 QueueUrl=queue_url,
+                Entries=messages
+            )
+            response_alto = sqs.send_message_batch (
+                QueueUrl=alto_queue_url,
                 Entries=messages
             )
 
