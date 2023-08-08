@@ -7,10 +7,10 @@ import os
 import logging
 import pikepdf
 import pytesseract
-from PIL import Image
+from PIL import Image, ImageEnhance
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import time
-
+import datetime
 
 class AltoProcessor:
     def __init__(self, input_file):
@@ -264,11 +264,28 @@ class OCRProcessor:
                 gray_image = img.convert('L')
 
                 # Save the grayscale image temporarily
-                temp_gray_path = self.input_file_path + "_temp_gray.png"
-                gray_image.save(temp_gray_path, dpi=(350,350))
+                temp_gray_path = self.input_file_path + "_temp_gray.tif"
+                # Enhance the contrast
+                enhancer = ImageEnhance.Contrast(gray_image)
+                # Enhance Image
+                print("Enhance Image")
+                enhanced_image = enhancer.enhance(2)  # Increase contrast; adjust the factor as needed
+                # Resize the image to a new height, keeping aspect ratio
+                base_height = 2000
+                print("IMAGE HEIGHT", enhanced_image.height)
+                print("IMAGE WIDTH", enhanced_image.width)
+                print("Resizign to ", base_height)
+                aspect_ratio = enhanced_image.width / enhanced_image.height
+                new_width = int(base_height * aspect_ratio)
+                resized_image = enhanced_image.resize((new_width, base_height))
+                resized_image.save(temp_gray_path)
 
             # Generate PDF from grayscale image
-            pdf = pytesseract.image_to_pdf_or_hocr(temp_gray_path, extension="pdf", config='-l eng')
+            current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            print("START", current_time)
+            pdf = pytesseract.image_to_pdf_or_hocr(temp_gray_path, extension="pdf", config="-l eng")
+            current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            print("END", current_time)
             print("NEW PDF", self._get_new_pdf_path())
             with open(self._get_new_pdf_path(), "w+b") as f:
                 f.write(pdf)
@@ -309,12 +326,24 @@ class OCRProcessor:
             with Image.open(self.input_file_path) as img:
                 gray_image = img.convert('L')
 
+
                 # Save the grayscale image temporarily
-                temp_gray_path = self.input_file_path + "_temp_gray.png"
-                gray_image.save(temp_gray_path, dpi=(350, 350))
+                temp_gray_path = self.input_file_path + "_temp_gray.tif"
+                enhancer = ImageEnhance.Contrast(gray_image)
+                # Enhance Image
+                print("Enhance Image")
+                enhanced_image = enhancer.enhance(2.0)  # Increase contrast; adjust the factor as needed
+                base_height = 2000
+                print("IMAGE HEIGHT", enhanced_image.height)
+                print("IMAGE WIDTH", enhanced_image.width)
+                print("Resizign to ", base_height)
+                aspect_ratio = enhanced_image.width / enhanced_image.height
+                new_width = int(base_height * aspect_ratio)
+                resized_image = enhanced_image.resize((new_width, base_height))
+                resized_image.save(temp_gray_path)
 
             print("TRY TO GENERATE ALTO")
-            xml = pytesseract.image_to_alto_xml(temp_gray_path, config='-l eng')
+            xml = pytesseract.image_to_alto_xml(temp_gray_path)
             with open(self._get_alto_file_path(), "w+b") as f:
                 f.write(xml)
 
@@ -341,7 +370,7 @@ class OCRProcessor:
 if __name__ == "__main__":
     start_time = time.time()
     processor = OCRProcessor(input_file_path="/Users/dillonpeterson/Library/CloudStorage/OneDrive-StandardData/LOC_Bathces/batch_dlc_kite/batch_dlc_kite_ver01/data/sn83030214/00206531290/1877082301/0841.tif", output_path="./")
-    processor.generate_pdf()
+    processor.generate_alto()
     end_time = time.time()
 
     print(f"The script took {end_time - start_time} seconds to complete.")

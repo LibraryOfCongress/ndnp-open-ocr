@@ -25,7 +25,7 @@ def resubmit_message_to_sqs(message_body):
 
 # def handler(event, context):
     # Assuming the job_id is passed within the event input
-job_id = "5005c7a2-1c86-44ba-9cc6-11aabdeae4ac" #event.get("job_id")
+job_id = "5ce7bcad-ec0e-4978-a760-cd6d457ab5c2" #event.get("job_id")
 if not job_id:
     logging.error("job_id not provided in the event.")
     # return {"statusCode": 400, "body": "job_id is required"}
@@ -45,7 +45,7 @@ for item in response["Items"]:
     # items = list(set(item.get("failed_messages", [])))
     keys = []
     messages = []
-    for failed_message in [item.get("failed_messages", [])[2]]:
+    for failed_message in [item.get("failed_messages", [])[6]]:
         try:
             # Resubmit the failed message to SQS
             print(failed_message)
