@@ -2,19 +2,36 @@ import boto3
 import json
 import os
 import errno
-import pytesseract
-from PIL import Image
-import pikepdf
 import tempfile
+import sys
+import subprocess
+sys.path.append("/opt/python/")
+dir_contents = os.listdir("/opt/python/lib/python3.8/site-packages")
+
+# Print each file or directory in the "/opt/" directory
+for item in dir_contents:
+    print(item)
+# os.environ["PYTHONPATH"] = "/opt/python"
 from src.ndnp_open_ocr.processors import OCRProcessor
 import logging
 import os
 import shutil
 logging.basicConfig(level=logging.DEBUG)
+import datetime
 
 # Directory paths to be added to the PATH
 ghostscript_directory = "/opt/bin"
 exiftool_directory = "/opt/bin"
+
+# Check Tesseract version
+try:
+    result = subprocess.run(['tesseract', '--version'], capture_output=True, text=True, check=True)
+    print(result.stdout)
+except subprocess.CalledProcessError as e:
+    print(f"Error occurred while checking Tesseract version: {e}")
+except FileNotFoundError:
+    print("Tesseract is not installed or not found in the system PATH.")
+
 
 # S3 client
 s3 = boto3.client("s3")
@@ -56,12 +73,14 @@ def download_files_from_s3(bucket_name, key, temp_dir):
         s3_key = os.path.join(os.path.dirname(key), file_name + ext)
         download_path = os.path.join(temp_dir, file_name + ext)
 
+        current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         try:
-            print("Attempting to download: %s", s3_key)
+            print(f"{current_time} - Attempting to download:", s3_key)
             s3.download_file(bucket_name, s3_key, download_path)
-            print("Successfully downloaded: %s", s3_key)
+            print(f"{current_time} - Successfully downloaded:", s3_key)
         except Exception as e:
-            print("Error downloading %s. Error: %s", s3_key, str(e))
+            print(f"{current_time} - Error downloading", s3_key, ". Error:", str(e))
 
     return input_file_path
 

@@ -17,18 +17,18 @@ resource "aws_lambda_function" "scheduler_function" {
 
   environment {
     variables = {
-      TESSDATA_PREFIX    = "/opt/share/tessdata"
-      LD_LIBRARY_PATH    = "/opt/lib"
-      PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
-      TMP                = "/tmp",
+      TESSDATA_PREFIX   = "/opt/share/tessdata"
+      LD_LIBRARY_PATH   = "/opt/lib"
+      PATH              = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
+      TMP               = "/tmp",
       INPUT_BUCKET_NAME = var.aws_s3_input_bucket
-      QUEUE_URL = var.queue_url,
-      TABLE_NAME = var.table_name,
-      ALTO_QUEUE_URL = var.alto_queue_url
+      QUEUE_URL         = var.queue_url,
+      TABLE_NAME        = var.table_name,
+      ALTO_QUEUE_URL    = var.alto_queue_url
     }
   }
 
-   layers = [
+  layers = [
     aws_lambda_layer_version.lambda_layer.arn,
   ]
 
@@ -44,7 +44,7 @@ resource "aws_lambda_function" "consumer_function" {
   runtime          = "python3.8"
   timeout          = 900
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  memory_size      = 6000
+  memory_size      = 10000
 
 
   layers = [
@@ -57,13 +57,15 @@ resource "aws_lambda_function" "consumer_function" {
     variables = {
       TESSDATA_PREFIX    = "/opt/share/tessdata"
       LD_LIBRARY_PATH    = "/opt/lib"
-      PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
+      PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin:/opt/python/lib/python3.8/site-packages"
+      PYTHONPATH         = "/opt/python/:/opt/python/lib/python3.8/site-packages"
+      OMP_THREAD_LIMIT   = 1
       TMP                = "/tmp"
       OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
-      INPUT_BUCKET_NAME =  var.aws_s3_input_bucket
-      QUEUE_URL = var.queue_url,
-      ALTO_QUEUE_URL = var.alto_queue_url,
-      TABLE_NAME = var.table_name
+      INPUT_BUCKET_NAME  = var.aws_s3_input_bucket
+      QUEUE_URL          = var.queue_url,
+      ALTO_QUEUE_URL     = var.alto_queue_url,
+      TABLE_NAME         = var.table_name
     }
   }
 }
@@ -90,12 +92,13 @@ resource "aws_lambda_function" "alto_consumer_function" {
     variables = {
       TESSDATA_PREFIX    = "/opt/share/tessdata"
       LD_LIBRARY_PATH    = "/opt/lib"
-      PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
+      PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin:/opt/python/lib/python3.8/site-packages"
+      PYTHONPATH         = "/opt/python/:/opt/python/lib/python3.8/site-packages"
       TMP                = "/tmp"
       OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
-      INPUT_BUCKET_NAME =  var.aws_s3_input_bucket
-      QUEUE_URL = var.alto_queue_url,
-      TABLE_NAME = var.table_name
+      INPUT_BUCKET_NAME  = var.aws_s3_input_bucket
+      QUEUE_URL          = var.alto_queue_url,
+      TABLE_NAME         = var.table_name
     }
   }
 }
@@ -120,12 +123,12 @@ resource "aws_lambda_function" "dlq_consumer_function" {
 
   environment {
     variables = {
-      TESSDATA_PREFIX    = "/opt/share/tessdata"
-      LD_LIBRARY_PATH    = "/opt/lib"
-      PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
-      TMP                = "/tmp"
-      DLQ_QUEUE_URL = var.dlq_queue_arn
-      TABLE_NAME = var.table_name
+      TESSDATA_PREFIX = "/opt/share/tessdata"
+      LD_LIBRARY_PATH = "/opt/lib"
+      PATH            = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
+      TMP             = "/tmp"
+      DLQ_QUEUE_URL   = var.dlq_queue_arn
+      TABLE_NAME      = var.table_name
     }
   }
 }
@@ -134,10 +137,10 @@ resource "aws_lambda_function" "dlq_consumer_function" {
 # AWS Lambda Layer to hold Python dependencies with pre-built layer.
 # FIXME: Automate layer creation
 resource "aws_lambda_layer_version" "lambda_layer" {
-  filename            = "layers.zip"
+  filename            = "new-layer.zip"
   layer_name          = "ndnp-open-ocr-layer"
   compatible_runtimes = ["python3.8"]
-  source_code_hash    = filebase64sha256("layers.zip")
+  source_code_hash    = filebase64sha256("new-layer.zip")
 }
 
 # Log group for scheduler

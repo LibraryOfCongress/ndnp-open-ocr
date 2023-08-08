@@ -14,7 +14,7 @@ def sync_s3_batch(bucket, prefix, output_dir, overwrite, local_batch):
 
     print("Copying local batch...")
     # Copy the batch directory to output_batch directory
-    # shutil.copytree(local_batch, output_dir, dirs_exist_ok=True)
+    shutil.copytree(local_batch, output_dir, dirs_exist_ok=True)
     print("Local batch copy complete...")
 
     s3 = boto3.client('s3')
@@ -29,9 +29,13 @@ def sync_s3_batch(bucket, prefix, output_dir, overwrite, local_batch):
             if not file_key.endswith('.pdf') and not file_key.endswith('.xml'):
                 continue
 
-            # Ignore prefix directory name
-            file_key_without_prefix = file_key.replace(prefix + '/', '', 1)
+            # Skip the first component in the path
+            components = file_key.split('/')
+            file_key_without_prefix = '/'.join(components[1:])
+
             local_path = os.path.join(output_dir, file_key_without_prefix)
+
+            print(file_key_without_prefix)
 
             # Ensure the folder structure for the file exists
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
