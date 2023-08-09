@@ -4,7 +4,7 @@ data "archive_file" "zip" {
   output_path = var.output_path
 }
 
-# Scheduler to create 1 message per issue/sample that needs to be processed by a
+# Scheduler to create 1 message per issue that needs to be processed by a
 # NDNP Open OCR consumer/worker.
 resource "aws_lambda_function" "scheduler_function" {
   function_name    = "ndnp-open-ocr-scheduler-lambda-function-dev"
@@ -35,7 +35,7 @@ resource "aws_lambda_function" "scheduler_function" {
 }
 
 
-# Consumer to catch messages published by the scheduler
+# Consumer to catch PDF SQS messages published by the scheduler
 resource "aws_lambda_function" "consumer_function" {
   function_name    = "ndnp-open-ocr-consumer-lambda-function-dev"
   filename         = var.output_path
@@ -44,7 +44,7 @@ resource "aws_lambda_function" "consumer_function" {
   runtime          = "python3.8"
   timeout          = 900
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  memory_size      = 10000
+  memory_size      = 6000
 
 
   layers = [
@@ -70,7 +70,7 @@ resource "aws_lambda_function" "consumer_function" {
   }
 }
 
-# Consumer to catch messages published by the scheduler
+# Consumer to catch ALTO SQS messages published by the scheduler
 resource "aws_lambda_function" "alto_consumer_function" {
   function_name    = "ndnp-open-ocr-alto-consumer-lambda-function-dev"
   filename         = var.output_path
@@ -149,13 +149,13 @@ resource "aws_cloudwatch_log_group" "scheduler_function_log_group" {
   retention_in_days = 14
 }
 
-# Log group for consumer
+# Log group for PDF consumer
 resource "aws_cloudwatch_log_group" "consumer_function_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.consumer_function.function_name}"
   retention_in_days = 14
 }
 
-# Log group for dlq_consumer
+# Log group for Deadletter Queue consumer
 resource "aws_cloudwatch_log_group" "dlq_consumer_function_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.dlq_consumer_function.function_name}"
   retention_in_days = 14

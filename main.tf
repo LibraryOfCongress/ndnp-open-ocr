@@ -1,3 +1,7 @@
+# Main Terraform file to declare NDNP Open OCR resources that have to be created
+# in AWS to run the pipeline.
+
+# IAM roles and permissions
 module "iam" {
   source = "./resources/iam"
 
@@ -5,16 +9,19 @@ module "iam" {
   lambda_iam_policy_name = "ndnp-open-ocr-lambda-policy"
 }
 
+# S3 bucket related resources.
 module "s3" {
   source = "./resources/s3"
   bucket_name = "ndnp-open-ocr-output-bucket-test"
 }
 
+# SQS related resources
 module "sqs" {
   source = "./resources/sqs"
   queue_name = "ndnp-open-ocr-queue"
 }
 
+# Lambda related resources
 module "lambda" {
   source = "./resources/lambda"
   source_dir = "./functions"
@@ -30,6 +37,7 @@ module "lambda" {
   table_name = var.table_name
 }
 
+# API Gateway related resources
 module "apigw" {
   source = "./resources/apigw"
   api_name = "ndnp-open-ocr-api"
@@ -42,6 +50,7 @@ module "apigw" {
   lambda_invoke_arn = module.lambda.scheduler_function_invoke_arn
 }
 
+# DynamoDB related resources
 module "dynamodb" {
   source = "./resources/dynamodb"
   table_name = var.table_name

@@ -6,7 +6,62 @@ This command line interface (CLI) enables you to trigger batch processing jobs o
 
 Before running the CLI, make sure that you have installed the required Python libraries listed in the accompanying `requirements.txt` file.
 
-## Installation
+## Installation: Using Poetry to Build and Distribute with Pip Install
+
+Poetry is a powerful packaging and dependency management tool that simplifies building and distributing Python packages. Here's how to use Poetry to manage the NDNP Open OCR package:
+
+### Installing Poetry
+
+If you don't have Poetry installed, you can install it by running:
+
+```bash
+pip install poetry
+```
+
+### Building the Package
+
+Navigate to the root directory of the project (where `pyproject.toml` is located) and run:
+
+```bash
+poetry build
+```
+
+This command will create a `dist` directory containing the packaged files, ready for distribution.
+
+### Installing the Package Locally
+
+To install the package locally for testing, use:
+
+```bash
+poetry install
+```
+
+This command will install the package and its dependencies in a virtual environment managed by Poetry.
+
+### Activating the Virtual Environment
+
+To activate the virtual environment managed by Poetry, run:
+
+```bash
+poetry shell
+```
+
+This allows you to run the CLI tool in the environment automatically spun up by Poetry.
+
+### Running the CLI Tool
+
+Once installed, you can run the CLI tool using the command defined in the `pyproject.toml` file (`ndnp_openocr`).
+
+For example, here is the command for running the "sync" command, to create a copy of a local batch and pull-down the new ALTO and PDF files from S3 that were created by the reprocessing job in AWS.
+
+```bash
+ndnp_openocr sync --prefix=batch_dlc_kite_ver01_____5ce7bcad-ec0e-4978-a760-cd6d457ab5c2 --output-dir=/Volumes/DLP1/batch_dlc_kite_ver03     --local-batch=/Volumes/DLP1/batch_dlc_kite_ver01
+```
+
+
+
+
+## Installation: From Scratch
 These will need to be installed using virtualenv and Python3.9 in the target VM environment.
 * dzdo yum install -y python39
 <!-- * sudo yum install python34-devel.x86_64 -->

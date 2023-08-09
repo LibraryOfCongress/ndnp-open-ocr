@@ -8,10 +8,13 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-
+# Sends out SQS messages to the ALTO and PDF Generation Queues to kickoff reprocessing job, where the consumers pick up
+# the SQS messages and process them independently, Lambda by Lambda, TIFF by TIFF.
 def handler(event, context):
-    job_id = str(uuid.uuid4())  # Generate a new job id
+    # Generate a new job id
+    job_id = str(uuid.uuid4())
     bucket_name = os.getenv('INPUT_BUCKET_NAME')
+    # Prefix to the "batch" data in INPUT_BUCKET, which for our cases is loc-preservation.
     prefix = event['pathParameters']['prefix']
     if bucket_name is None:
         raise Exception("No S3_BUCKET_NAME environment variable set")
@@ -30,10 +33,12 @@ def handler(event, context):
     total_files = 0
     try:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        # output_prefix = os.path.join(os.path.dirname(prefix), os.path.basename(prefix) + "-" + timestamp)
+
         # Get top-level directory input name
-        output_prefix = os.path.split(prefix)[1] + "_____" + job_id
+        output_prefix = os.path.split(prefix)[1] + "__" + job_id
         messages = []
+
+        # Loop through all TIFFs in the bucket.
         for object_summary in s3.Bucket(bucket_name).objects.filter(Prefix=prefix):
             file_name = object_summary.key
 
@@ -53,12 +58,15 @@ def handler(event, context):
 
                 total_files += 1
 
+            # Send messages in batches of 10 to speed up execution.
             if len(messages) == 10:
+                # Send Messages to PDF Queue
                 response = sqs.send_message_batch(
                     QueueUrl=queue_url,
                     Entries=messages
                 )
 
+                # Send Messages to ALTO Queue
                 response_alto = sqs.send_message_batch (
                     QueueUrl=alto_queue_url,
                     Entries=messages
@@ -67,10 +75,12 @@ def handler(event, context):
                 messages = []
 
         if messages:
+            # Send Messages to PDF Queue
             response = sqs.send_message_batch(
                 QueueUrl=queue_url,
                 Entries=messages
             )
+            # Send Messages to ALTO Queue
             response_alto = sqs.send_message_batch (
                 QueueUrl=alto_queue_url,
                 Entries=messages
