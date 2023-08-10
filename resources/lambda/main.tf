@@ -137,7 +137,7 @@ resource "aws_lambda_function" "dlq_consumer_function" {
 # AWS Lambda Layer to hold Python dependencies with pre-built layer.
 # FIXME: Automate layer creation
 resource "aws_lambda_layer_version" "lambda_layer" {
-  filename            = "new-layer.zip"
+  filename            = "Tesseract5.3.2Layer.zip"
   layer_name          = "ndnp-open-ocr-layer"
   compatible_runtimes = ["python3.8"]
   source_code_hash    = filebase64sha256("new-layer.zip")

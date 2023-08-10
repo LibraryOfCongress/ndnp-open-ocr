@@ -3,7 +3,7 @@
 # NDNP-Open-OCR
 
 ## Download Pre-Made Lambda Layer
-https://ndnp-open-ocr-dependencies.s3.amazonaws.com/layers.zip
+https://ndnp-open-ocr-dependencies.s3.amazonaws.com/Tesseract5.3.2Layer.zip
 
 # NDNP Open OCR Terraform Module
 
@@ -49,19 +49,6 @@ terraform plan
 terraform apply
 ```
 
-## Resources
-
-The following resources are created by this module:
-
-- AWS IAM roles
-- AWS IAM policies
-- AWS S3 bucket
-- AWS Lambda layers
-- AWS Lambda functions
-- AWS SQS queue
-- AWS API Gateway
-- AWS CloudWatch log groups
-
 ## Notes
 
 - Please make sure you have the necessary AWS permissions to create and manage these resources.
@@ -90,9 +77,19 @@ The pipeline will work on any subdirectories too; With that, for testing purpose
 
 passing that as the "prefix" will only reprocess batches in the 1877083101 directory.
 
+### To Retry Job (Needs work)
+
+To retry the failed messages in a job, simply cd into the functions directory and run the retry_job.py script, replacing the job_id with the job_id of the job you want to re-run failed messages on.
+
+
+
 
 
 ## Appendix: Generating Lambda Layer Instructions
+
+### DynamoDB (NoSQL) Design
+
+
 
 ### Tesseract
 https://github.com/bweigel/aws-lambda-tesseract-layer
