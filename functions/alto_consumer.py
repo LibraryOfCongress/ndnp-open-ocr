@@ -6,11 +6,21 @@ import pytesseract
 from PIL import Image
 import pikepdf
 import tempfile
-from src.ndnp_open_ocr.processors import OCRProcessor
 import logging
 import os
 import shutil
+import subprocess
+import sys
 
+try:
+    import cv2
+    print("OpenCV is already installed!")
+except ImportError:
+    print("OpenCV is not installed. Installing now...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target", "/tmp", "opencv-python-headless"])
+    sys.path.append('/tmp')
+
+from src.ndnp_open_ocr.processors import OCRProcessor
 logging.basicConfig(level=logging.DEBUG)
 
 # Directory paths to be added to the PATH
