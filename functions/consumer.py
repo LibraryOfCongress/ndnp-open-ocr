@@ -8,6 +8,13 @@ import subprocess
 sys.path.append("/opt/python/")
 dir_contents = os.listdir("/opt/python/lib/python3.8/site-packages")
 
+try:
+    import cv2
+    print("OpenCV is already installed!")
+except ImportError:
+    print("OpenCV is not installed. Installing now...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target", "/tmp", "opencv-python-headless"])
+    sys.path.append('/tmp')
 # Print each file or directory in the "/opt/" directory
 for item in dir_contents:
     print(item)
