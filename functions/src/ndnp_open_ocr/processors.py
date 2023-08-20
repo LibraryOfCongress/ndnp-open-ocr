@@ -186,6 +186,10 @@ class PDFProcessor:
                         {"Title": title_tag, "XMP:Title-en": title_tag},
                     )
 
+                description_value = old_tags.get(
+                    "XMP:Description-en", old_tags.get("XMP:Description", None)
+                )
+
                 et.set_tags(
                     self.postprocessed_pdf,
                     {
@@ -194,7 +198,7 @@ class PDFProcessor:
                         "PDF:CreateDate": new_tags["File:FileModifyDate"][0:14],
                         "PDF:ModifyDate": new_tags["File:FileModifyDate"][0:14],
                         "PDF:Producer": new_tags["PDF:Producer"],
-                        "XMP:Description": old_tags["XMP:Description-en"],
+                        "XMP:Description": description_value,
                         "XMP:Identifier": old_tags["XMP:Identifier"],
                     },
                 )
