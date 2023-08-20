@@ -44,7 +44,7 @@ resource "aws_lambda_function" "consumer_function" {
   runtime          = "python3.8"
   timeout          = 900
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  memory_size      = 6000
+  memory_size      = 4000
 
 
   layers = [
@@ -79,7 +79,7 @@ resource "aws_lambda_function" "alto_consumer_function" {
   runtime          = "python3.8"
   timeout          = 900
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  memory_size      = 6000
+  memory_size      = 4000
 
 
   layers = [

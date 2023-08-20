@@ -16,7 +16,7 @@ alto_queue_url = (
 
 def resubmit_message_to_sqs(message_body):
     """Resubmit the failed message back to the original SQS queue."""
-    # sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(message_body))
+    sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(message_body))
 
     sqs.send_message(
         QueueUrl=alto_queue_url,
@@ -24,7 +24,7 @@ def resubmit_message_to_sqs(message_body):
     )
 
 
-job_id = "45dd32bf-9b77-41c6-a17d-4333eebe8636"  # event.get("job_id")
+job_id = "1da03950-008f-4e9c-ab01-8fdaa1ec04b0"  # event.get("job_id")
 if not job_id:
     logging.error("job_id not provided in the event.")
     # return {"statusCode": 400, "body": "job_id is required"}
