@@ -237,6 +237,16 @@ class PDFProcessor:
         else:
             print("Output file does not exist or is not a regular file.")
 
+    def linearize_pdf(self):
+        try:
+            with pikepdf.Pdf.open(
+                self.postprocessed_pdf, allow_overwriting_input=True
+            ) as pdf:
+                pdf.save(self.postprocessed_pdf, linearize=True)
+        except Exception as e:
+            print(f"PDF Linearization failed: {self.postprocessed_pdf} {e}")
+
+
 
 # Class to run entire OCR reprocessing job on a single file.
 # It takes the input_filepath and the output_path in as input, where input_filepath is the
@@ -293,9 +303,6 @@ class OCRProcessor:
         else:  # original
             processed_img = image
 
-        # temp_gray_path = self.input_file_path + "_temp_gray.tif"
-        # cv2.imwrite(temp_gray_path, processed_img)
-
         return processed_img
 
     def generate_pdf(self):
@@ -317,31 +324,19 @@ class OCRProcessor:
             del pdf
 
             # os.remove(temp_gray_path)
-            self.postprocess_pdf()
-            self.linearize_pdf()
+            processor = PDFProcessor(self._get_old_pdf_path(), self._get_new_pdf_path(), self._get_postprocessed_pdf_path())
+            processor.postprocess_pdf()
+            processor.transfer_xmp()
+            processor.linearize_pdf()
 
-            # # Remove extra files being created
             os.remove(self._get_new_pdf_path())
-            # # Remove pikePdf .pdf_original file output
+            # Remove pikePdf .pdf_original file output
             os.remove(
                 self._get_postprocessed_pdf_path().replace('.pdf', '.pdf_original')
             )
         except Exception as e:
             print(f"PDF generation failed: {self._get_file_name()} {e}")
 
-    def postprocess_pdf(self):
-        processor = PDFProcessor(self._get_old_pdf_path(), self._get_new_pdf_path(), self._get_postprocessed_pdf_path())
-        processor.postprocess_pdf()
-        processor.transfer_xmp()
-
-    def linearize_pdf(self):
-        try:
-            with pikepdf.Pdf.open(
-                self._get_postprocessed_pdf_path(), allow_overwriting_input=True
-            ) as pdf:
-                pdf.save(self._get_postprocessed_pdf_path(), linearize=True)
-        except Exception as e:
-            print(f"PDF Linearization failed: {self._get_file_name()} {e}")
 
     def generate_alto(self):
         try:
