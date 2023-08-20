@@ -1,7 +1,7 @@
 import boto3
 import click
 import requests
-from .helpers import sync_s3_batch
+from helpers import sync_s3_batch
 import json
 import time
 @click.group()
