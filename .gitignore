@@ -5,3 +5,4 @@
 *.zip
 **.vscode
 **layer**
+*.local.ipynb
