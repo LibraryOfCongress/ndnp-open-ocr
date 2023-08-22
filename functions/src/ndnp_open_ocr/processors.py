@@ -300,7 +300,7 @@ class OCRProcessor:
         if method == "adaptive":
             print("PERFORMING ADAPTIVE THRESHOLDING")
             processed_img = cv2.adaptiveThreshold(
-                image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+                image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, 5
             )
         elif method == "binary":
             _, processed_img = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY)
@@ -354,12 +354,9 @@ class OCRProcessor:
             # Preprocess with CV2.
             temp_gray_path = self._preprocess_image(method="adaptive")
 
-            print("TRY TO GENERATE ALTO")
             xml = pytesseract.image_to_alto_xml(temp_gray_path)
             with open(self._get_alto_file_path(), "w+b") as f:
                 f.write(xml)
-
-            print("GENERATED ALTO")
 
             image = Image.fromarray(temp_gray_path)
             dpi = image.info.get("dpi", (96, 96))
@@ -381,7 +378,7 @@ class OCRProcessor:
 
 if __name__ == "__main__":
     processor = OCRProcessor(
-        input_file_path="/Volumes/DLP1/notvalidated2/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0865.tif",
+        input_file_path="/Volumes/DLP1/dlc_kite_15/data/sn83030214/00206531290/1877050301/0021.tif",
         output_path="./",
     )
     processor.generate_pdf()

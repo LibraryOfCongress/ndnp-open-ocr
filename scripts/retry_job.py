@@ -24,7 +24,7 @@ def resubmit_message_to_sqs(message_body):
     )
 
 
-job_id = "1da03950-008f-4e9c-ab01-8fdaa1ec04b0"  # event.get("job_id")
+job_id = "24a587d7-e2fa-4747-a482-a18309cb4047"  # event.get("job_id")
 if not job_id:
     logging.error("job_id not provided in the event.")
     # return {"statusCode": 400, "body": "job_id is required"}
@@ -62,10 +62,10 @@ for item in response["Items"]:
             print(len(messages))
 
             # You can additionally delete or mark the message as reprocessed, if desired.
-
         except Exception as e:
             logging.error(
                 f"Failed to resubmit message {failed_message['MessageId']}: {e}"
             )
+    print("Retrying {} files".format(len(keys)))
 
 # return {"statusCode": 200, "body": "Job restart processing complete"}
