@@ -27,7 +27,6 @@ def handler(event, context):
     print("Number of messages left in queue: {}".format(len(event["Records"])))
     for message in event["Records"]:
         message = json.loads(message["body"])
-        # raise Exception("Throw exception.")
         with tempfile.TemporaryDirectory() as temp_dir:
             input_file_path = download_files_from_s3(
                 message["Bucket"], message["Key"], temp_dir

@@ -39,17 +39,7 @@ resource "aws_iam_policy" "iam_policy_for_lambda" {
      ],
      "Resource": "*",
      "Effect": "Allow"
- }, {
-     "Action": [
-       "s3:GetObject",
-       "s3:ListBucket"
-     ],
-     "Resource": [
-       "arn:aws:s3:::loc-preservation",
-       "arn:aws:s3:::loc-preservation/*"
-     ],
-     "Effect": "Allow"
-   }
+ }
  ]
 }
 EOF
