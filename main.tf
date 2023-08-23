@@ -12,7 +12,7 @@ module "iam" {
 # S3 bucket related resources.
 module "s3" {
   source = "./resources/s3"
-  bucket_name = "ndnp-open-ocr-output-bucket-test"
+  bucket_name = "ndnp-open-ocr-output-bucket-test-1"
 }
 
 # SQS related resources
@@ -27,13 +27,14 @@ module "lambda" {
   source_dir = "./functions"
   output_path = "./resources/lambda/functions.zip"
   lambda_role_arn = module.iam.lambda_role_arn
-  aws_s3_input_bucket = "loc-preservation"
+  aws_s3_input_bucket = "ndnp-open-ocr-bucket"
   aws_s3_output_bucket = module.s3.bucket_name
-  queue_url = module.sqs.queue_url
+  pdf_queue_url = module.sqs.pdf_queue_url
   alto_queue_arn = module.sqs.alto_queue_arn
   alto_queue_url = module.sqs.alto_queue_url
-  queue_arn = module.sqs.queue_arn
-  dlq_queue_arn = module.sqs.dlq_queue_arn
+  pdf_queue_arn = module.sqs.pdf_queue_arn
+  pdf_dlq_queue_arn = module.sqs.pdf_dlq_queue_arn
+  alto_dlq_queue_arn = module.sqs.alto_dlq_queue_arn
   table_name = var.table_name
 }
 

@@ -23,31 +23,35 @@ variable "aws_s3_output_bucket" {
   type        = string
 }
 
-variable "queue_url" {
-  description = "Queue URL of the SQS queue for processing job management"
+variable "pdf_queue_url" {
+  description = "PDF Queue URL of the SQS queue for processing job management"
   type = string
 }
 
 variable "alto_queue_arn" {
-  description = "Queue ARN of the SQS queue for processing job management"
+  description = "ALTO Queue ARN of the SQS queue for processing job management"
   type = string
 }
 
 variable "alto_queue_url" {
-  description = "Queue URL of the SQS queue for processing job management"
+  description = "ALTO Queue URL of the SQS queue for processing job management"
   type = string
 }
 
-variable "queue_arn" {
-  description = "Queue ARN of the SQS queue for processing job management"
+variable "pdf_queue_arn" {
+  description = "PDF Queue ARN of the SQS queue for processing job management"
   type = string
 }
 
-variable "dlq_queue_arn" {
-  description = "Queue ARN of the deadletter SQS queue for catching failed job messages from the main queue."
+variable "pdf_dlq_queue_arn" {
+  description = "PDF Queue ARN of the deadletter SQS queue for catching failed job messages from the main queue."
   type = string
 }
 
+variable "alto_dlq_queue_arn" {
+  description = "ALTO DLQ Queue ARN of the SQS queue for processing job management"
+  type = string
+}
 
 variable "table_name" {
   description = "DynamoDB table for SQS message tracking"

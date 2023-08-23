@@ -57,8 +57,8 @@ for item in response["Items"]:
                 pass
             else:
                 keys.append(failed_message["Key"])
-                resubmit_message_to_sqs(failed_message)
-                messages.append(failed_message)
+                # resubmit_message_to_sqs(failed_message)
+                # messages.append(failed_message)
             print(len(messages))
 
             # You can additionally delete or mark the message as reprocessed, if desired.
@@ -67,5 +67,6 @@ for item in response["Items"]:
                 f"Failed to resubmit message {failed_message['MessageId']}: {e}"
             )
     print("Retrying {} files".format(len(keys)))
+    print(keys)
 
 # return {"statusCode": 200, "body": "Job restart processing complete"}
