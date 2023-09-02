@@ -38,25 +38,37 @@ def handler(event, context):
         output_prefix = os.path.split(prefix)[1] + "__" + job_id
         messages = []
 
-        # Loop through all TIFFs in the bucket.
+        keys = []
         for object_summary in s3.Bucket(bucket_name).objects.filter(Prefix=prefix):
             file_name = object_summary.key
 
             if file_name.lower().endswith('.tif'):
-                message = {
-                    'Bucket': bucket_name,
-                    'Key': file_name,
-                    'OutputPrefix': output_prefix,
-                    'InputPrefix': prefix,
-                    'JobId': job_id
-                }
+                keys.append(file_name)
 
-                messages.append({
-                    'Id': str(uuid.uuid4()),
-                    'MessageBody': json.dumps(message)
-                })
+        table.put_item(
+            Item={
+                'pk': 'JOB',
+                'sk': job_id,
+                'TotalMessages': len(keys),
+                'RemainingMessages': len(keys),
+                'Timestamp': timestamp
+            }
+        )
 
-                total_files += 1
+        # Loop through all TIFFs in the bucket.
+        for key in keys:
+            message = {
+                'Bucket': bucket_name,
+                'Key': key,
+                'OutputPrefix': output_prefix,
+                'InputPrefix': prefix,
+                'JobId': job_id
+            }
+
+            messages.append({
+                'Id': str(uuid.uuid4()),
+                'MessageBody': json.dumps(message)
+            })
 
             # Send messages in batches of 10 to speed up execution.
             if len(messages) == 10:
@@ -85,16 +97,6 @@ def handler(event, context):
                 QueueUrl=alto_queue_url,
                 Entries=messages
             )
-
-        table.put_item(
-            Item={
-                'pk': 'JOB',
-                'sk': job_id,
-                'TotalMessages': total_files,
-                'RemainingMessages': total_files,
-                'Timestamp': timestamp
-            }
-        )
 
         return {
             "statusCode": 200,

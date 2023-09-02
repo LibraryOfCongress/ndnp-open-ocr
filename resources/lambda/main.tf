@@ -13,7 +13,7 @@ resource "aws_lambda_function" "scheduler_function" {
   role             = var.lambda_role_arn
   runtime          = "python3.8"
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  timeout          = 120
+  timeout          = 500
 
   environment {
     variables = {
