@@ -1,1 +1,1 @@
-[ /PageLayout /SinglePage /PageMode /UseNone /OpenAction << /D [/Fit] /S /GoTo >> /Page 1 /DOCVIEW pdfmark
+[ /PageLayout /SinglePage /PageMode /UseNone /OpenAction << /D [/Fit] /S /GoTo >> /Page 1 /DOCVIEW pdfmark ]

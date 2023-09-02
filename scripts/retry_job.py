@@ -8,9 +8,9 @@ sqs = boto3.client("sqs")
 
 # DynamoDB table and SQS queue details
 table_name = "ndnp-open-ocr-table"  # os.environ.get("TABLE_NAME")
-queue_url = "https://sqs.us-east-2.amazonaws.com/342134162356/ndnp-open-ocr-queue"  # os.environ.get("QUEUE_URL")
+queue_url = "https://sqs.us-east-2.amazonaws.com/342134162356/ndnp-open-ocr-pdf-consumer-sqs-queue"  # os.environ.get("QUEUE_URL")
 alto_queue_url = (
-    "https://sqs.us-east-2.amazonaws.com/342134162356/ndnp-open-ocr-alto-consumer-queue"
+    "https://sqs.us-east-2.amazonaws.com/342134162356/ndnp-open-ocr-alto-consumer-sqs-queue"
 )
 
 
@@ -57,8 +57,8 @@ for item in response["Items"]:
                 pass
             else:
                 keys.append(failed_message["Key"])
-                # resubmit_message_to_sqs(failed_message)
-                # messages.append(failed_message)
+                resubmit_message_to_sqs(failed_message)
+                messages.append(failed_message)
             print(len(messages))
 
             # You can additionally delete or mark the message as reprocessed, if desired.

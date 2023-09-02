@@ -19,9 +19,11 @@ try:
 except ImportError:
     print("OpenCV is not installed. Installing now...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "--target", "/tmp", "opencv-python-headless"])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target", "/tmp", "hocker"])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--target", "/tmp", "reportlab"])
     sys.path.append('/tmp')
 
-from src.ndnp_open_ocr.processors import OCRProcessor
+from src.ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
 
 def handler(event, context):
     print("Number of messages left in queue: {}".format(len(event["Records"])))
@@ -37,7 +39,7 @@ def handler(event, context):
                 make_directory(output_path)
 
                 # Run NDNP Open OCR Reprocessing on this input file.
-                processor = OCRProcessor(input_file_path, output_path)
+                processor = OCRProcessor(input_file_path, output_path, preprocessing_method=None)
                 processor.generate_alto()
             else:
                 logging.error(f"Failed to download {input_file_path}.")

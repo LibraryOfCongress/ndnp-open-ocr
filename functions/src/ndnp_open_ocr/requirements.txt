@@ -13,3 +13,4 @@ pytesseract==0.3.9
 typer==0.6.1
 rich==12.5.1
 beautifulsoup4==4.10.0
+hocker==1.0.4

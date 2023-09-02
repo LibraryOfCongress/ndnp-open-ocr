@@ -14,7 +14,10 @@ def sync_s3_batch(bucket, prefix, output_dir, overwrite, local_batch):
 
     print("Copying local batch...")
     # Copy the batch directory to output_batch directory
-    shutil.copytree(local_batch, output_dir, dirs_exist_ok=False)
+    try:
+        shutil.copytree(local_batch, output_dir, dirs_exist_ok=False)
+    except Exception as e:
+        print(e)
     print("Local batch copy complete...")
 
     s3 = boto3.client('s3')
