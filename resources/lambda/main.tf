@@ -110,7 +110,7 @@ resource "aws_lambda_function" "pdf_dlq_consumer_function" {
   handler          = "pdf_dlq_consumer.handler"
   role             = var.lambda_role_arn
   runtime          = "python3.8"
-  timeout          = 15
+  timeout          = 30
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   memory_size      = 1024
 
@@ -140,7 +140,7 @@ resource "aws_lambda_function" "alto_dlq_consumer_function" {
   handler          = "alto_dlq_consumer.handler"
   role             = var.lambda_role_arn
   runtime          = "python3.8"
-  timeout          = 15
+  timeout          = 30
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   memory_size      = 1024
 

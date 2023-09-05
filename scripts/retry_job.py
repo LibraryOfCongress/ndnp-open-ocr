@@ -24,7 +24,7 @@ def resubmit_message_to_sqs(message_body):
     )
 
 
-job_id = "24a587d7-e2fa-4747-a482-a18309cb4047"  # event.get("job_id")
+job_id = "354ad159-b8ba-47ba-a7a5-1de3f28b41c2"  # event.get("job_id")
 if not job_id:
     logging.error("job_id not provided in the event.")
     # return {"statusCode": 400, "body": "job_id is required"}
@@ -41,10 +41,9 @@ for item in response["Items"]:
     # items = list(set(item.get("failed_messages", [])))
     keys = []
     messages = []
-    for failed_message in item.get("failed_messages", []):
+    for failed_message in item.get("pdf_failed_messages", []):
         try:
             # Resubmit the failed message to SQS
-            print(failed_message)
             if (
                 failed_message["Key"] in keys
                 or "0001.tif" in failed_message["Key"]
@@ -57,8 +56,12 @@ for item in response["Items"]:
                 pass
             else:
                 keys.append(failed_message["Key"])
-                resubmit_message_to_sqs(failed_message)
+                sqs.send_message(
+                    QueueUrl=queue_url,
+                    MessageBody=json.dumps(failed_message)
+                    )
                 messages.append(failed_message)
+                print(failed_message)
             print(len(messages))
 
             # You can additionally delete or mark the message as reprocessed, if desired.
