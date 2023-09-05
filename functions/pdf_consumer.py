@@ -25,7 +25,9 @@ except ImportError:
 
 from src.ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
 
+
 def handler(event, context):
+    """Generates output PDF using NDNP Open OCR pipeline"""
     print("Number of messages left in queue: {}".format(len(event["Records"])))
     for message in event["Records"]:
         message = json.loads(message["body"])
@@ -39,7 +41,7 @@ def handler(event, context):
                 make_directory(output_path)
 
                 # Run NDNP Open OCR Reprocessing on this input
-                processor = OCRProcessor(input_file_path, output_path, preprocessing_method=None)
+                processor = OCRProcessor(input_file_path, output_path, preprocessing_method=PreprocessingMethod.ADAPTIVE)
                 processor.generate_pdf()
             else:
                 print("Failed to download {input_file_path}.")

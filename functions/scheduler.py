@@ -6,7 +6,7 @@ from datetime import datetime
 import logging
 
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 # Sends out SQS messages to the ALTO and PDF Generation Queues to kickoff reprocessing job, where the consumers pick up
 # the SQS messages and process them independently, Lambda by Lambda, TIFF by TIFF.
@@ -103,7 +103,7 @@ def handler(event, context):
             "body": json.dumps({
                 "job_id": job_id,
                 "prefix": output_prefix,
-                "num_issues": total_files
+                "num_issues": len(keys)
             })
         }
     except Exception as e:
