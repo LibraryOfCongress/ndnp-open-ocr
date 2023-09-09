@@ -41,7 +41,7 @@ def handler(event, context):
                 make_directory(output_path)
 
                 # Run NDNP Open OCR Reprocessing on this input
-                processor = OCRProcessor(input_file_path, output_path, preprocessing_method=PreprocessingMethod.ADAPTIVE)
+                processor = OCRProcessor(input_file_path, output_path, preprocessing_method=PreprocessingMethod.ORIGINAL)
                 processor.generate_pdf()
             else:
                 print("Failed to download {input_file_path}.")
