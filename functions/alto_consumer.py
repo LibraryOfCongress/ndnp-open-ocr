@@ -9,7 +9,6 @@ import subprocess
 import sys
 from helpers import \
     download_files_from_s3, \
-    update_remaining_messages, \
     upload_files_to_s3, \
     make_directory
 
@@ -52,5 +51,5 @@ def handler(event, context):
                     os.path.dirname(message["Key"]), message["InputPrefix"]
                 ),
             )
-    update_remaining_messages(message["JobId"], event)
+
     return {"statusCode": 200, "body": "Success"}
