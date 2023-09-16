@@ -105,15 +105,14 @@ resource "aws_lambda_function" "alto_consumer_function" {
 
 # Consumer for deadletter queue to catch failed issues for PDFs
 resource "aws_lambda_function" "pdf_dlq_consumer_function" {
-  function_name    = "ndnp-open-ocr-dlq-consumer-function"
+  function_name    = "ndnp-open-ocr-pdf-dlq-consumer-function"
   filename         = var.output_path
   handler          = "pdf_dlq_consumer.handler"
   role             = var.lambda_role_arn
   runtime          = "python3.8"
-  timeout          = 30
+  timeout          = 900
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  memory_size      = 1024
-
+  memory_size      = 4000
 
   layers = [
     aws_lambda_layer_version.lambda_layer.arn,
@@ -128,6 +127,9 @@ resource "aws_lambda_function" "pdf_dlq_consumer_function" {
       PATH            = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP             = "/tmp"
       DLQ_QUEUE_URL   = var.pdf_dlq_queue_arn
+      OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
+      INPUT_BUCKET_NAME  = var.aws_s3_input_bucket
+      TABLE_NAME         = var.table_name
       TABLE_NAME      = var.table_name
     }
   }
@@ -140,9 +142,9 @@ resource "aws_lambda_function" "alto_dlq_consumer_function" {
   handler          = "alto_dlq_consumer.handler"
   role             = var.lambda_role_arn
   runtime          = "python3.8"
-  timeout          = 30
+  timeout          = 900
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  memory_size      = 1024
+  memory_size      = 4000
 
 
   layers = [
@@ -158,6 +160,9 @@ resource "aws_lambda_function" "alto_dlq_consumer_function" {
       PATH            = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP             = "/tmp"
       DLQ_QUEUE_URL   = var.alto_dlq_queue_arn
+      OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
+      INPUT_BUCKET_NAME  = var.aws_s3_input_bucket
+      TABLE_NAME         = var.table_name
       TABLE_NAME      = var.table_name
     }
   }
@@ -203,14 +208,6 @@ resource "aws_cloudwatch_log_group" "alto_dlq_consumer_function_log_group" {
   retention_in_days = 14
 }
 
-
-# Permission for API Gateway to invoke the scheduler function
-resource "aws_lambda_permission" "apigw" {
-  statement_id  = "AllowExecutionFromAPIGatewayScheduler"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.scheduler_function.function_name
-  principal     = "apigateway.amazonaws.com"
-}
 
 # Connect Consumer to Queue
 resource "aws_lambda_event_source_mapping" "pdf_event_source_mapping" {

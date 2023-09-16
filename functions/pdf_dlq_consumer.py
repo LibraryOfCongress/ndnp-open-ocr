@@ -12,7 +12,7 @@ from helpers import \
     update_remaining_messages, \
     upload_files_to_s3, \
     make_directory
-
+import boto3
 try:
     import cv2
     print("OpenCV is already installed!")
@@ -35,6 +35,7 @@ def handler(event, context):
 
     for message in event["Records"]:
         message = json.loads(message["body"])
+        job_id = message['JobId']
         with tempfile.TemporaryDirectory() as temp_dir:
             input_file_path = download_files_from_s3(
                 message["Bucket"], message["Key"], temp_dir
