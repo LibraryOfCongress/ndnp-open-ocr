@@ -27,7 +27,6 @@ module "lambda" {
   source_dir           = "./functions"
   output_path          = "./resources/lambda/functions.zip"
   lambda_role_arn      = module.iam.lambda_role_arn
-  aws_s3_input_bucket  = "loc-preservation"
   aws_s3_output_bucket = module.s3.bucket_name
   pdf_queue_url        = module.sqs.pdf_queue_url
   alto_queue_arn       = module.sqs.alto_queue_arn

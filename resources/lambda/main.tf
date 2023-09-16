@@ -21,7 +21,6 @@ resource "aws_lambda_function" "scheduler_function" {
       LD_LIBRARY_PATH   = "/opt/lib"
       PATH              = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP               = "/tmp",
-      INPUT_BUCKET_NAME = var.aws_s3_input_bucket
       QUEUE_URL         = var.pdf_queue_url,
       TABLE_NAME        = var.table_name,
       ALTO_QUEUE_URL    = var.alto_queue_url
@@ -62,7 +61,6 @@ resource "aws_lambda_function" "pdf_consumer_function" {
       OMP_THREAD_LIMIT   = 1
       TMP                = "/tmp"
       OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
-      INPUT_BUCKET_NAME  = var.aws_s3_input_bucket
       QUEUE_URL          = var.pdf_queue_url,
       ALTO_QUEUE_URL     = var.alto_queue_url,
       TABLE_NAME         = var.table_name
@@ -96,7 +94,6 @@ resource "aws_lambda_function" "alto_consumer_function" {
       PYTHONPATH         = "/opt/python/:/opt/python/lib/python3.8/site-packages"
       TMP                = "/tmp"
       OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
-      INPUT_BUCKET_NAME  = var.aws_s3_input_bucket
       QUEUE_URL          = var.alto_queue_url,
       TABLE_NAME         = var.table_name
     }
@@ -128,7 +125,6 @@ resource "aws_lambda_function" "pdf_dlq_consumer_function" {
       TMP             = "/tmp"
       DLQ_QUEUE_URL   = var.pdf_dlq_queue_arn
       OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
-      INPUT_BUCKET_NAME  = var.aws_s3_input_bucket
       TABLE_NAME         = var.table_name
       TABLE_NAME      = var.table_name
     }
@@ -161,7 +157,6 @@ resource "aws_lambda_function" "alto_dlq_consumer_function" {
       TMP             = "/tmp"
       DLQ_QUEUE_URL   = var.alto_dlq_queue_arn
       OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
-      INPUT_BUCKET_NAME  = var.aws_s3_input_bucket
       TABLE_NAME         = var.table_name
       TABLE_NAME      = var.table_name
     }
