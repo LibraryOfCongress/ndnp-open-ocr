@@ -5,6 +5,8 @@ import requests
 import shutil
 import uuid
 import logging
+
+
 # Creates a new batch using a combination of the old batch and new PDF and ALTO files stored in S3 with mirrored directory structure (NDNP batch)
 def sync_s3_batch(bucket, prefix, output_dir, overwrite, local_batch):
     """Syncs an S3 bucket with local files."""
@@ -56,9 +58,7 @@ def sync_s3_batch(bucket, prefix, output_dir, overwrite, local_batch):
                 print(f"{local_path} is up to date")
 
 
-def find_missing_pdfs(
-    input_bucket, input_prefix, output_bucket, output_prefix, sqs_queue_url
-):
+def find_missing_pdfs(input_bucket, input_prefix, output_bucket, output_prefix):
     """Finds missing PDFs in the output bucket and sends them to the SQS queue."""
 
     # Initialize boto3 clients and resources
@@ -87,7 +87,4 @@ def find_missing_pdfs(
     }
     logging.info(f"{len(missing_keys)} MISSING PDFs total in the batch")
 
-
     return filtered_elements
-
-find_missing_pdfs("loc-preservation", "")
