@@ -17,10 +17,7 @@ def handler(event, context):
     # bucket_name = os.getenv("INPUT_BUCKET_NAME")
     # Prefix to the "batch" data in INPUT_BUCKET, which for our cases is loc-preservation.
     prefix = event["pathParameters"]["prefix"]
-    bucket_name = event['pathParameters']["bucketName"]
-
-    if bucket_name is None:
-        raise Exception("No S3_BUCKET_NAME environment variable set")
+    bucket_name = event["pathParameters"]["bucketName"]
 
     s3 = boto3.resource("s3")
     sqs = boto3.client("sqs")
@@ -33,7 +30,7 @@ def handler(event, context):
     alto_queue_url = os.environ.get("ALTO_QUEUE_URL")
 
     logger.info("Queue URL: %s", queue_url)
-    total_files = 0
+
     try:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
