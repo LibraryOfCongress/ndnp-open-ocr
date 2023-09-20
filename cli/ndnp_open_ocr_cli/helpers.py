@@ -8,7 +8,7 @@ import logging
 
 
 # Creates a new batch using a combination of the old batch and new PDF and ALTO files stored in S3 with mirrored directory structure (NDNP batch)
-def sync_s3_batch(bucket, prefix, output_dir, overwrite, local_batch):
+def sync_s3_batch(bucket, job, output_dir, overwrite, local_batch):
     """Syncs an S3 bucket with local files."""
     # Ensure the local batch directory exists
     if not os.path.isdir(local_batch):
@@ -26,7 +26,7 @@ def sync_s3_batch(bucket, prefix, output_dir, overwrite, local_batch):
     s3 = boto3.client("s3")
 
     paginator = s3.get_paginator("list_objects_v2")
-    for result in paginator.paginate(Bucket=bucket, Prefix=prefix):
+    for result in paginator.paginate(Bucket=bucket, Prefix=job):
         # Download each file individually
         for file in result.get("Contents", []):
             file_key = file["Key"]
@@ -59,7 +59,7 @@ def sync_s3_batch(bucket, prefix, output_dir, overwrite, local_batch):
 
 
 def find_missing_pdfs(input_bucket, input_prefix, output_bucket, output_prefix):
-    """Finds missing PDFs in the output bucket and sends them to the SQS queue."""
+    """Finds missing PDFs in the output bucket and sends them to the SQS queue. FIXME: Move to AWS Lambda function at later date."""
 
     # Initialize boto3 clients and resources
     session = boto3.Session(profile_name=os.environ["AWS_PROFILE"])

@@ -36,6 +36,7 @@ def handler(event, context):
 
         # Get top-level directory input name
         output_prefix = os.path.split(prefix)[1] + "__" + job_id
+        job_id = output_prefix
         messages = []
 
         keys = []
@@ -48,9 +49,9 @@ def handler(event, context):
         table.put_item(
             Item={
                 "pk": "JOB",
-                "sk": job_id,
-                "TotalMessages": len(keys),
-                "RemainingMessages": len(keys),
+                "sk": output_prefix,
+                "RemainingPDFMessages": len(keys),
+                "RemainingALTOMessages": len(keys),
                 "Timestamp": timestamp,
             }
         )
@@ -62,7 +63,7 @@ def handler(event, context):
                 "Key": key,
                 "OutputPrefix": output_prefix,
                 "InputPrefix": prefix,
-                "JobId": job_id,
+                "JobId": output_prefix,
             }
 
             messages.append(
@@ -92,7 +93,7 @@ def handler(event, context):
         return {
             "statusCode": 200,
             "body": json.dumps(
-                {"job_id": job_id, "prefix": output_prefix, "num_issues": len(keys)}
+                {"job": job_id, "num_issues": len(keys)}
             ),
         }
     except Exception as e:
