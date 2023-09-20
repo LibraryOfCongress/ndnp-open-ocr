@@ -8,3 +8,4 @@
 *.local.ipynb
 terraform.tfstate.d/sd*
 **batch**
+**jupyter**
