@@ -7,6 +7,7 @@ import logging
 import os
 import subprocess
 import sys
+import boto3
 from helpers import \
     download_files_from_s3, \
     upload_files_to_s3, \
@@ -50,6 +51,17 @@ def handler(event, context):
                 os.path.relpath(
                     os.path.dirname(message["Key"]), message["InputPrefix"]
                 ),
+            )
+            job_id = message["JobId"]
+            dynamodb = boto3.resource("dynamodb")
+            table = dynamodb.Table(os.getenv("TABLE_NAME"))
+            resp = table.update_item(
+                Key={"pk": "JOB", "sk": job_id},
+                UpdateExpression="SET RemainingALTOMessages = RemainingALTOMessages - :dec",
+                ExpressionAttributeValues={
+                    ":dec": len(event["Records"]),
+                },
+                ReturnValues="UPDATED_NEW",
             )
 
     return {"statusCode": 200, "body": "Success"}

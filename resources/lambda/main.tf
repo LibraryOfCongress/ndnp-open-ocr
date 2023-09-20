@@ -33,6 +33,23 @@ resource "aws_lambda_function" "scheduler_function" {
 
 }
 
+resource "aws_lambda_function" "get_job_function" {
+  function_name    = "ndnp-open-ocr-get-job-lambda-function-dev"
+  filename         = var.output_path
+  handler          = "get_job.handler"
+  role             = var.lambda_role_arn
+  runtime          = "python3.8"
+  source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
+  timeout          = 500
+
+  environment {
+    variables = {
+      TABLE_NAME        = var.table_name,
+    }
+  }
+
+}
+
 
 # Consumer to catch PDF SQS messages published by the scheduler
 resource "aws_lambda_function" "pdf_consumer_function" {
