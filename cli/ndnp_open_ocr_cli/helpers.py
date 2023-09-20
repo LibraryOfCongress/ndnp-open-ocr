@@ -88,3 +88,9 @@ def find_missing_pdfs(input_bucket, input_prefix, output_bucket, output_prefix):
     logging.info(f"{len(missing_keys)} MISSING PDFs total in the batch")
 
     return filtered_elements
+<<<<<<< Updated upstream
+=======
+
+
+find_missing_pdfs("loc-preservation", "")
+>>>>>>> Stashed changes
