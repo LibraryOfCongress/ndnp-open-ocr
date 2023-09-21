@@ -208,7 +208,7 @@
 
 # ENTRYPOINT [ "tesseract", "--version" ]
 
-FROM python:3.11.0
+FROM python:3.9.0
 
 RUN apt-get update
 RUN apt-get install -y ghostscript
@@ -249,6 +249,7 @@ RUN wget https://exiftool.org/Image-ExifTool-12.58.tar.gz && tar xvf Image-ExifT
 WORKDIR /app
 COPY . .
 
+RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 # Run the application -- any command line args will carry over from the CLI command
