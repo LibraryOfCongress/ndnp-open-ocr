@@ -2,7 +2,7 @@ from processors import OCRProcessor, PDFProcessor, PreprocessingMethod
 
 if __name__ == "__main__":
     processor = OCRProcessor(
-        input_file_path="/Users/dillonpeterson/LOC_Batches/notvalidated2//Users/dillonpeterson/LOC_Batches/notvalidated2/batch_dlc_sampleissue/2010270501/00237285074/0187.tif",
+        input_file_path="/Volumes/ExtremeSSD/batch_dlc_alice_ver02/data/sn83030213/00206530674/1861010901/0056.tif",
         output_path="./",
         preprocessing_method=PreprocessingMethod.ORIGINAL,
     )
