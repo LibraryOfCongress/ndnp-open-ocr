@@ -32,16 +32,32 @@ RUN wget https://exiftool.org/Image-ExifTool-12.58.tar.gz && \
     perl Makefile.PL && make && make test && make install
 
 RUN yum -y install libxml2-devel libxslt-devel
-
+RUN yum install zip -y
 
 # Copy application code and install Python dependencies
-COPY packages/ndnp_open_ocr /var/task/
-WORKDIR /var/task
-COPY . .
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+# COPY packages/ndnp_open_ocr /var/task/
+# WORKDIR /var/task
+# COPY . .
+# RUN pip install --upgrade pip && \
+#     pip install -r requirements.txt
 
-RUN ls
+# RUN ls
 
-# Set the CMD to your handler (adjust the file and method names accordingly)
-CMD ["lambdas/scheduler.handler"]
+# # Set the CMD to your handler (adjust the file and method names accordingly)
+# CMD ["lambdas/scheduler.handler"]
+
+# Layer directory
+WORKDIR /opt/layer
+COPY requirements.txt .
+# Create necessary directories
+RUN mkdir -p bin lib python
+
+# Copy binaries and libraries
+RUN cp /usr/local/bin/* bin/ && \
+    cp -r /usr/local/lib/* lib/
+
+# Copy Python dependencies
+RUN pip install --target=python -r requirements.txt
+
+# ZIP the layer
+RUN zip -r /tmp/layer.zip .
