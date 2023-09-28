@@ -34,30 +34,26 @@ RUN wget https://exiftool.org/Image-ExifTool-12.58.tar.gz && \
 RUN yum -y install libxml2-devel libxslt-devel
 RUN yum install zip -y
 
-# Copy application code and install Python dependencies
-# COPY packages/ndnp_open_ocr /var/task/
-# WORKDIR /var/task
-# COPY . .
-# RUN pip install --upgrade pip && \
-#     pip install -r requirements.txt
-
-# RUN ls
-
-# # Set the CMD to your handler (adjust the file and method names accordingly)
-# CMD ["lambdas/scheduler.handler"]
-
 # Layer directory
 WORKDIR /opt/layer
 COPY requirements.txt .
 # Create necessary directories
-RUN mkdir -p bin lib python
+RUN mkdir -p bin lib python share/tessdata
 
 # Copy binaries and libraries
-RUN cp /usr/local/bin/* bin/ && \
+# RUN cp /usr/local/bin/* bin/ && \
+#     cp -r /usr/local/lib/* lib/
+# Copy the specific binaries and libraries
+# Copy binaries and libraries
+RUN cp /usr/local/bin/exiftool bin/ && \
+    cp /usr/local/bin/tesseract bin/ && \
     cp -r /usr/local/lib/* lib/
 
-# Copy Python dependencies
-RUN pip install --target=python -r requirements.txt
+RUN cp -r /usr/local/share/tessdata/* share/tessdata/
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --target python/lib/python3.9/site-packages -r requirements.txt
 
 # ZIP the layer
 RUN zip -r /tmp/layer.zip .
