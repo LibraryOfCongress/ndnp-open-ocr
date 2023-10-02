@@ -84,7 +84,7 @@ ndnp_openocr sync --job=batch_dlc_kite_ver01_____5ce7bcad-ec0e-4978-a760-cd6d457
 
 
 ## Installation: From Scratch
-These will need to be installed using virtualenv and Python3.9 in the target VM environment.
+These will need to be installed using virtualenv and python3.8 in the target VM environment.
 * dzdo yum install -y python39
 <!-- * sudo yum install python34-devel.x86_64 -->
 * sudo yum install git
@@ -98,7 +98,7 @@ pip3.9 install virtualenv
 * git clone ssh://git@git.loc.gov:7999/NDNP/openocr.git
 * cd scripts
 
-* python3.9 -m virtualenv _env
+* python3.8 -m virtualenv _env
 * source _env/bin/activate
 * export PYTHONPATH=/opt/ndnp/openocr/
 <!-- * pip install -r requirements.txt -->

@@ -1,11 +1,11 @@
 from bs4 import BeautifulSoup
 import exiftool
-from rich import print
+# from rich import print
 import subprocess
 import os
-import pikepdf
+# import pikepdf
 import pytesseract
-from PIL import Image
+# from PIL import Image
 import datetime
 import cv2
 from enum import Enum
@@ -399,7 +399,7 @@ class OCRProcessor:
             )
             processor.postprocess_pdf()
             processor.transfer_xmp()
-            processor.linearize_pdf()
+            # processor.linearize_pdf()
 
             os.remove(self._get_new_pdf_path())
             # Remove pikePdf .pdf_original file output
@@ -422,8 +422,9 @@ class OCRProcessor:
             with open(self._get_alto_file_path(), "w+b") as f:
                 f.write(xml)
 
-            image = Image.fromarray(temp_gray_path)
-            dpi = image.info.get("dpi", (96, 96))
+            # image = Image.fromarray(temp_gray_path)
+            # dpi = image.info.get("dpi", (96, 96))
+            dpi = (300,300)
 
             alto_processor = AltoProcessor(self._get_alto_file_path())
             alto_processor.add_description_tags()

@@ -74,7 +74,7 @@ resource "aws_lambda_function" "pdf_consumer_function" {
       TESSDATA_PREFIX    = "/opt/share/tessdata"
       LD_LIBRARY_PATH    = "/opt/lib"
       PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin:/opt/python/lib/python3.8/site-packages"
-      PYTHONPATH         = "/opt/python/:/opt/python/lib/python3.8/site-packages"
+      PYTHONPATH         = "/opt/python/:/opt/python/lib/python3.8/site-packages:/tmp"
       OMP_THREAD_LIMIT   = 1
       TMP                = "/tmp"
       OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
@@ -184,10 +184,10 @@ resource "aws_lambda_function" "alto_dlq_consumer_function" {
 # AWS Lambda Layer to hold Python dependencies with pre-built layer.
 # FIXME: Automate layer creation
 resource "aws_lambda_layer_version" "lambda_layer" {
-  filename            = "Tesseract5.3.2Layer.zip"
+  filename            = "layer.zip"
   layer_name          = "ndnp-open-ocr-layer"
-  compatible_runtimes = ["python3.8"]
-  source_code_hash    = filebase64sha256("Tesseract5.3.2Layer.zip")
+  compatible_runtimes = ["python3.8", "python3.9"]
+  source_code_hash    = filebase64sha256("layer.zip")
 }
 
 # Log group for scheduler
@@ -229,11 +229,11 @@ resource "aws_lambda_event_source_mapping" "pdf_event_source_mapping" {
 }
 
 # Connect PDF DLQ Consumer to PDF DLQ Queue
-resource "aws_lambda_event_source_mapping" "pdf_dlq_event_source_mapping" {
-  event_source_arn = var.pdf_dlq_queue_arn
-  function_name    = aws_lambda_function.pdf_dlq_consumer_function.function_name
-  batch_size       = 1
-}
+# resource "aws_lambda_event_source_mapping" "pdf_dlq_event_source_mapping" {
+#   event_source_arn = var.pdf_dlq_queue_arn
+#   function_name    = aws_lambda_function.pdf_dlq_consumer_function.function_name
+#   batch_size       = 1
+# }
 
 # Connect ALTO Consumer to ALTO Queue
 resource "aws_lambda_event_source_mapping" "alto_event_source_mapping" {
@@ -242,9 +242,9 @@ resource "aws_lambda_event_source_mapping" "alto_event_source_mapping" {
   batch_size       = 1
 }
 
-# Connect ALTO Consumer to ALTO DLQ Queue
-resource "aws_lambda_event_source_mapping" "alto_dlq_event_source_mapping" {
-  event_source_arn = var.alto_dlq_queue_arn
-  function_name    = aws_lambda_function.alto_dlq_consumer_function.function_name
-  batch_size       = 1
-}
+# # Connect ALTO Consumer to ALTO DLQ Queue
+# resource "aws_lambda_event_source_mapping" "alto_dlq_event_source_mapping" {
+#   event_source_arn = var.alto_dlq_queue_arn
+#   function_name    = aws_lambda_function.alto_dlq_consumer_function.function_name
+#   batch_size       = 1
+# }

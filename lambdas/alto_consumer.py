@@ -1,7 +1,7 @@
 
 import json
 import os
-from PIL import Image
+# from PIL import Image
 import tempfile
 import logging
 import os

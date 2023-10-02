@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/python:3.9
+FROM public.ecr.aws/lambda/python:3.8
 
 # Update the package listing and install basic dependencies
 RUN yum -y update && \
@@ -33,27 +33,37 @@ RUN wget https://exiftool.org/Image-ExifTool-12.58.tar.gz && \
 
 RUN yum -y install libxml2-devel libxslt-devel
 RUN yum install zip -y
+RUN yum install qpdf-devel -y
 
 # Layer directory
-WORKDIR /opt/layer
-COPY requirements.txt .
 # Create necessary directories
 RUN mkdir -p bin lib python share/tessdata
+COPY requirements.txt .
+RUN cp -r /usr/local/bin/* bin/ && \
+    cp /usr/local/bin/tesseract bin/ && \
+    cp /usr/local/lib/libtesseract.so lib/libtesseract.so && \
+    cp /usr/local/lib/liblept.so lib/liblept.so
+
+#find /usr/local/lib/ -name '*.so' -exec cp --parents \{\} lib/ \;
+
+RUN cp -r /usr/local/share/tessdata/* share/tessdata/
+
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --target "${LAMBDA_TASK_ROOT}" -r requirements.txt
+
+
+# Copy the contents of the Lambda function directory into the container
+COPY lambdas/. ${LAMBDA_TASK_ROOT}/
 
 # Copy binaries and libraries
 # RUN cp /usr/local/bin/* bin/ && \
 #     cp -r /usr/local/lib/* lib/
 # Copy the specific binaries and libraries
 # Copy binaries and libraries
-RUN cp /usr/local/bin/exiftool bin/ && \
-    cp /usr/local/bin/tesseract bin/ && \
-    cp -r /usr/local/lib/* lib/
 
-RUN cp -r /usr/local/share/tessdata/* share/tessdata/
-
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --target python/lib/python3.9/site-packages -r requirements.txt
+# COPY packages/ndnp_open_ocr /opt/layer/python/lib/python3.8/site-packages/ndnp_open_ocr
 
 # ZIP the layer
 RUN zip -r /tmp/layer.zip .

@@ -5,7 +5,7 @@ import tempfile
 import sys
 import subprocess
 from helpers import download_files_from_s3, upload_files_to_s3, make_directory
-
+sys.path.append("/tmp")
 try:
     import cv2
 
@@ -24,12 +24,17 @@ except ImportError:
         ]
     )
     subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "--target", "/tmp", "hocker"]
+        [sys.executable, "-m", "pip", "install", "--target", "/tmp", "-r", "requirements.txt"]
     )
-    subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "--target", "/tmp", "reportlab"]
-    )
+    # subprocess.check_call(
+    #     [sys.executable, "-m", "pip", "install", "--target", "/tmp", "reportlab"]
+    # )
     sys.path.append("/tmp")
+sys.path.append("/tmp")
+# contents = os.listdir("/opt/python/lib/python3.8/site-packages")
+# print(f"Contents of /opt:")
+# for item in contents:
+#     print(item)
 
 from src.ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
 import boto3
