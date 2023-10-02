@@ -24,7 +24,7 @@ module "sqs" {
 # Lambda related resources
 module "lambda" {
   source               = "./resources/lambda"
-  source_dir           = "./functions"
+  source_dir           = "./lambdas"
   output_path          = "./resources/lambda/functions.zip"
   lambda_role_arn      = module.iam.lambda_role_arn
   aws_s3_output_bucket = module.s3.bucket_name

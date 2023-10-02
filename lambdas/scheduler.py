@@ -90,6 +90,8 @@ def handler(event, context):
                 QueueUrl=alto_queue_url, Entries=messages
             )
 
+        print(messages)
+
         return {
             "statusCode": 200,
             "body": json.dumps(
