@@ -2,8 +2,8 @@ from processors import OCRProcessor, PDFProcessor, PreprocessingMethod
 
 if __name__ == "__main__":
     processor = OCRProcessor(
-        input_file_path="/Volumes/ExtremeSSD/batch_dlc_alice_ver02/data/sn83030213/00206530674/1861010901/0056.tif",
-        output_path="./",
+        input_file_path="./0001.tif",
+        output_path="./output",
         preprocessing_method=PreprocessingMethod.ORIGINAL,
     )
     processor.generate_pdf()
