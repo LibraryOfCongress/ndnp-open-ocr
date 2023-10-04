@@ -1,11 +1,9 @@
 from bs4 import BeautifulSoup
 import exiftool
-# from rich import print
 import subprocess
 import os
 import pikepdf
 import pytesseract
-# from PIL import Image
 import datetime
 import cv2
 from enum import Enum
