@@ -5,6 +5,12 @@ import tempfile
 import sys
 import subprocess
 from helpers import download_files_from_s3, upload_files_to_s3, make_directory
+
+contents = os.listdir("/opt/bin")
+print(f"Contents of /opt:")
+for item in contents:
+    print(item)
+
 sys.path.append("/tmp")
 try:
     import cv2
@@ -23,18 +29,33 @@ except ImportError:
             "opencv-python-headless",
         ]
     )
-    subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "--target", "/tmp", "-r", "requirements.txt"]
+    output = subprocess.check_output(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--target",
+            "/tmp",
+            "-r",
+            "requirements.txt",
+        ],
+        stderr=subprocess.STDOUT,
     )
+    print(output.decode())
     # subprocess.check_call(
     #     [sys.executable, "-m", "pip", "install", "--target", "/tmp", "reportlab"]
     # )
     sys.path.append("/tmp")
 sys.path.append("/tmp")
-# contents = os.listdir("/opt/python/lib/python3.8/site-packages")
-# print(f"Contents of /opt:")
-# for item in contents:
-#     print(item)
+contents = os.listdir("/tmp")
+print(f"Contents of /opt:")
+for item in contents:
+    print(item)
+print(sys.path)
+print(
+    f"Available space in /tmp: {os.statvfs('/tmp').f_bavail * os.statvfs('/tmp').f_frsize / (1024*1024):.2f} MB"
+)
 
 from src.ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
 import boto3
