@@ -1,4 +1,4 @@
-FROM lambci/lambda-base-2:build
+FROM public.ecr.aws/lambda/python:3.8
 
 # Update the package listing and install basic dependencies
 RUN yum -y update && \
@@ -14,7 +14,6 @@ RUN wget http://www.leptonica.org/source/leptonica-1.80.0.tar.gz && \
 
 
 #### TESSERACT INSTALL #####
-
 ARG TESSERACT_DATA_SUFFIX=_fast
 ARG TESSERACT_DATA_VERSION=4.1.0
 
@@ -77,9 +76,12 @@ RUN curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/ra
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-# COPY ./gs /opt/layer/bin/
-# COPY packages/ndnp_open_ocr /opt/layer/python/lib/python3.8/site-packages/ndnp_open_ocr
+# Install Ghostscript
 RUN yum install ghostscript -y
+
+# Copy Ghostscript libraries and binaries (please note that the paths may vary based on your distribution and installation paths)
+RUN cp /usr/bin/gs bin/ && \
+    cp /usr/lib64/libgs.so.* lib/
 
 # ZIP the layer
 WORKDIR /opt/layer
