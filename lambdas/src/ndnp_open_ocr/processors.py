@@ -3,7 +3,7 @@ import exiftool
 # from rich import print
 import subprocess
 import os
-# import pikepdf
+import pikepdf
 import pytesseract
 # from PIL import Image
 import datetime
@@ -399,7 +399,7 @@ class OCRProcessor:
             )
             processor.postprocess_pdf()
             processor.transfer_xmp()
-            # processor.linearize_pdf()
+            processor.linearize_pdf()
 
             os.remove(self._get_new_pdf_path())
             # Remove pikePdf .pdf_original file output
