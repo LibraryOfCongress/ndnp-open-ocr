@@ -63,10 +63,11 @@ resource "aws_lambda_function" "pdf_consumer_function" {
   memory_size      = 4000
 
 
+
   layers = [
     aws_lambda_layer_version.lambda_layer.arn,
-    "arn:aws:lambda:us-east-2:764866452798:layer:ghostscript:13",
-    "arn:aws:lambda:us-east-2:445285296882:layer:perl-5-32-runtime-al2:2"
+    # "arn:aws:lambda:us-east-2:764866452798:layer:ghostscript:13",
+    # "arn:aws:lambda:us-east-2:445285296882:layer:perl-5-32-runtime-al2:2"
   ]
 
   environment {
