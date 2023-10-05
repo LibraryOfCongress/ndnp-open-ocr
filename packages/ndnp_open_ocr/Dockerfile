@@ -1,8 +1,7 @@
 FROM python:3.8.0
 
 RUN apt-get update
-RUN apt-get install -y ghostscript
-RUN apt-get install -y qpdf
+RUN apt-get install -y ghostscript -y qpdf -y exiftool
 
 # Update and install depedencies
 RUN apt-get update && \
@@ -20,12 +19,6 @@ WORKDIR /opt
 RUN wget https://github.com/tesseract-ocr/tesseract/archive/refs/heads/main.zip && \
     unzip main.zip && cd tesseract-main && \
     ./autogen.sh && ./configure && make && make install
-
-# Install Exiftool
-RUN apt-get install perl make
-#RUN apt-get install -y exiftool
-RUN wget https://exiftool.org/Image-ExifTool-12.58.tar.gz && tar xvf Image-ExifTool-12.58.tar.gz && cd Image-ExifTool-12.58/ && perl Makefile.PL && make && make test && make install
-
 
 # Copy files from same directory as Dockerfile to /app
 WORKDIR /app
