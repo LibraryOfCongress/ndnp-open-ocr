@@ -5,8 +5,8 @@ RUN apt-get install -y ghostscript
 RUN apt-get install -y qpdf
 
 # Update and install depedencies
-# RUN apt-get update && \
-#     apt-get install -y wget unzip bc vim python3-pip libleptonica-dev git
+RUN apt-get update && \
+    apt-get install -y wget unzip bc vim python3-pip libleptonica-dev git
 RUN apt-get install -y software-properties-common
 
 # Packages to complie Tesseract
@@ -15,19 +15,11 @@ RUN apt-get install -y --reinstall make && \
      libpng-dev libjpeg62-turbo-dev libtiff5-dev libicu-dev \
      libpango1.0-dev autoconf-archive
 
-# Install Tesseract 5 by adding Tesseract OCR 5 PPA to the system
-# RUN add-apt-repository ppa:alex-p/tesseract-ocr-devel
-RUN apt-get install apt-transport-https
-RUN echo "deb https://notesalexp.org/tesseract-ocr5/$(lsb_release -cs)/ $(lsb_release -cs) main" \
-tee /etc/apt/sources.list.d/notesalexp.list > /dev/null
-RUN echo "deb https://notesalexp.org/tesseract-ocr-dev/$(lsb_release -cs)/ $(lsb_release -cs) main" \
-| tee /etc/apt/sources.list.d/notesalexp.list > /dev/null
-
-RUN wget -O - https://notesalexp.org/debian/alexp_key.asc | apt-key add -
-RUN apt-get update
-# RUN apt-get update -oAcquire::AllowInsecureRepositories=true
-# RUN apt-get install notesalexp-keyring -oAcquire::AllowInsecureRepositories=true
-RUN apt-get install -y tesseract-ocr
+# Install Tesseract (compiling from source as it may not be available in Amazon Linux repositories)
+WORKDIR /opt
+RUN wget https://github.com/tesseract-ocr/tesseract/archive/refs/heads/main.zip && \
+    unzip main.zip && cd tesseract-main && \
+    ./autogen.sh && ./configure && make && make install
 
 # Install Exiftool
 RUN apt-get install perl make
