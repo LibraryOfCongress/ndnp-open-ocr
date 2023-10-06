@@ -49,7 +49,7 @@ module "ecs-fargate" {
   execution_role_arn  = module.iam.lambda_role_arn
   task_role_arn       = module.iam.lambda_role_arn
   container_name      = "ndnp-open-ocr-container"
-  container_image     = "my-docker-image-url:latest"
+  container_image     = "420280634985.dkr.ecr.us-east-2.amazonaws.com"
   service_name        = "ndnp-open-ocr-service"
   subnets             = ["subnet-094288b377c1b73fb", "subnet-0eb39d3cafcc5fb1a"]
   security_groups     = ["sg-0656ba0feeab2cc21"]
