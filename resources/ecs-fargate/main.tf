@@ -22,6 +22,16 @@ resource "aws_ecs_task_definition" "task_def" {
       containerPort = var.container_port
       hostPort      = var.container_port
     }]
+    environment = [
+      {
+        name  = "SQS_QUEUE_URL",
+        value = var.sqs_queue_url
+      },
+      {
+        name  = "TABLE_NAME",
+        value = "AnotherValue"
+      }
+    ]
   }])
 }
 
@@ -33,7 +43,7 @@ resource "aws_ecs_service" "service" {
   desired_count   = var.desired_count
 
   network_configuration {
-    subnets = var.subnets
+    subnets         = var.subnets
     security_groups = var.security_groups
   }
 }

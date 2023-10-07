@@ -20,9 +20,19 @@ RUN wget https://github.com/tesseract-ocr/tesseract/archive/refs/heads/main.zip 
     unzip main.zip && cd tesseract-main && \
     ./autogen.sh && ./configure && make && make install
 
+#### TESSERACT INSTALL #####
+ARG TESSERACT_DATA_SUFFIX=_best
+ARG TESSERACT_DATA_VERSION=4.1.0
+
+RUN curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/raw/${TESSERACT_DATA_VERSION}/osd.traineddata > /usr/local/share/tessdata/osd.traineddata && \
+    curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/raw/${TESSERACT_DATA_VERSION}/eng.traineddata > /usr/local/share/tessdata/eng.traineddata
+
 # Copy files from same directory as Dockerfile to /app
-WORKDIR /app
+WORKDIR /app/ndnp_open_ocr
 COPY . .
 
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
+
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/lib
+ENV TESSDATA_PREFIX /usr/local/share/tessdata

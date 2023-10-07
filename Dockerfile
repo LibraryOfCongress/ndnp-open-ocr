@@ -1,4 +1,4 @@
 FROM ndnp_open_ocr:latest
 
 WORKDIR /app
-COPY functions functions
+COPY main.py main.py

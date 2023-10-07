@@ -197,29 +197,29 @@ resource "aws_cloudwatch_log_group" "scheduler_function_log_group" {
   retention_in_days = 14
 }
 
-# Log group for PDF consumer
-resource "aws_cloudwatch_log_group" "pdf_consumer_function_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.pdf_consumer_function.function_name}"
-  retention_in_days = 14
-}
+# # Log group for PDF consumer
+# resource "aws_cloudwatch_log_group" "pdf_consumer_function_log_group" {
+#   name              = "/aws/lambda/${aws_lambda_function.pdf_consumer_function.function_name}"
+#   retention_in_days = 14
+# }
 
-# Log group for Deadletter Queue consumer
-resource "aws_cloudwatch_log_group" "dlq_consumer_function_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.pdf_dlq_consumer_function.function_name}"
-  retention_in_days = 14
-}
+# # Log group for Deadletter Queue consumer
+# resource "aws_cloudwatch_log_group" "dlq_consumer_function_log_group" {
+#   name              = "/aws/lambda/${aws_lambda_function.pdf_dlq_consumer_function.function_name}"
+#   retention_in_days = 14
+# }
 
-# Log group for alto_consumer
-resource "aws_cloudwatch_log_group" "alto_consumer_function_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.alto_consumer_function.function_name}"
-  retention_in_days = 14
-}
+# # Log group for alto_consumer
+# resource "aws_cloudwatch_log_group" "alto_consumer_function_log_group" {
+#   name              = "/aws/lambda/${aws_lambda_function.alto_consumer_function.function_name}"
+#   retention_in_days = 14
+# }
 
-# Log group for alto_dlq_consumer
-resource "aws_cloudwatch_log_group" "alto_dlq_consumer_function_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.alto_dlq_consumer_function.function_name}"
-  retention_in_days = 14
-}
+# # Log group for alto_dlq_consumer
+# resource "aws_cloudwatch_log_group" "alto_dlq_consumer_function_log_group" {
+#   name              = "/aws/lambda/${aws_lambda_function.alto_dlq_consumer_function.function_name}"
+#   retention_in_days = 14
+# }
 
 
 # Connect Consumer to Queue
