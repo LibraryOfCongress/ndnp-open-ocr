@@ -14,6 +14,9 @@ build_fargate:
 	docker build --platform linux/arm64 -t ndnp_open_ocr:latest ./packages/ndnp_open_ocr
 	docker build --platform linux/arm64 -t ndnp_open_ocr_deploy:latest .
 
+run_fargate:
+	docker run -it -v /Volumes/ExtremeSSD/:/Volumes/ExtremeSSD -w /app ndnp_open_ocr_deploy:latest bash
+
 push_fargate:
 	docker build -t ndnp-open-ocr-container-repo .
 	docker tag ndnp-open-ocr-container-repo:latest 420280634985.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo:latest

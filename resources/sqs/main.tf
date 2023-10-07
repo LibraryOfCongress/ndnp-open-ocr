@@ -1,12 +1,12 @@
 # Queue to serve as source messages for Lambda OCR Reprocessing consumers.
-resource "aws_sqs_queue" "pdf_queue" {
-  name                       = "ndnp-open-ocr-pdf-consumer-sqs-queue"
+resource "aws_sqs_queue" "queue" {
+  name                       = "ndnp-open-ocr-consumer-sqs-queue"
   delay_seconds              = 0
   max_message_size           = 1024
   message_retention_seconds  = 345600
   visibility_timeout_seconds = 900
   redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.pdf_dlq.arn
+    deadLetterTargetArn = aws_sqs_queue.dlq.arn
     maxReceiveCount     = 1
   })
 }
@@ -25,8 +25,8 @@ resource "aws_sqs_queue" "pdf_queue" {
 # }
 
 # Dead letter queue to catch failed PDF jobs
-resource "aws_sqs_queue" "pdf_dlq" {
-  name = "${var.queue_name}_pdf_dlq"
+resource "aws_sqs_queue" "dlq" {
+  name = "${var.queue_name}_dlq"
   visibility_timeout_seconds = 60
 }
 

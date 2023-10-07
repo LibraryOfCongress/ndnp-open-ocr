@@ -53,5 +53,5 @@ module "ecs-fargate" {
   service_name        = "ndnp-open-ocr-service"
   subnets             = ["subnet-094288b377c1b73fb", "subnet-0eb39d3cafcc5fb1a"]
   security_groups     = ["sg-0656ba0feeab2cc21"]
-
+  sqs_queue_url = module.sqs.queue_url
 }

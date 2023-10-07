@@ -49,3 +49,8 @@ variable "security_groups" {
   description = "List of security groups for the service"
   type        = list(string)
 }
+
+variable "sqs_queue_url" {
+  description = "Source SQS Queue Url"
+  type        = string
+}
