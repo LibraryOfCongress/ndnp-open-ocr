@@ -9,6 +9,9 @@ import cv2
 from enum import Enum
 import hocker as hkr
 from xml.etree import ElementTree as ET
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AltoProcessor:
@@ -150,7 +153,7 @@ class AltoProcessor:
                     f.write(str(soup))
                     f.close()
         except Exception as e:
-            print("ALTO file hyphenation fix failed: {}".format(e))
+            logging.error("ALTO file hyphenation fix failed: {}".format(e))
 
     def save(self, output_file):
         with open(output_file, "w") as f:
@@ -192,7 +195,7 @@ class PDFProcessor:
                     "XMP:Description-en", old_tags.get("XMP:Description", None)
                 )
 
-                print(new_tags)
+                logging.info("New Tags from PDF: {new_tags}")
 
                 et.set_tags(
                     self.postprocessed_pdf,
@@ -211,15 +214,15 @@ class PDFProcessor:
                     },
                 )
         except Exception as e:
-            print(
-                f"Failure transferring XMP data from {self.old_pdf} to {self.postprocessed_pdf}: {e}"
+            logging.error(
+                "Failure transferring XMP data from {self.old_pdf} to {self.postprocessed_pdf}: {e}"
             )
             return False
 
     def postprocess_pdf(self):
         """Set resolution, Display type, etc... on final PDF output"""
         current_directory = os.path.dirname(os.path.abspath(__file__))
-        pdf_marks_path = os.path.join(current_directory, 'pdf_marks.txt')
+        pdf_marks_path = os.path.join(current_directory, "pdf_marks.txt")
         args = [
             "gs",
             "-q",
@@ -247,13 +250,13 @@ class PDFProcessor:
         ]
 
         result = subprocess.run(args, check=True)
-        print("stdout:", result.stdout)
-        print("stderr:", result.stderr)
+        logging.info("stdout: %s", result.stdout)
+        logging.error("stderr: %s", result.stderr)
 
         if os.path.isfile(self.new_pdf):
-            print(f"Output file exists and is a regular file: {self.new_pdf}")
+            logging.info("Output file exists and is a regular file: {self.new_pdf}")
         else:
-            print("Output file does not exist or is not a regular file.")
+            logging.info("Output file does not exist or is not a regular file.")
 
     def linearize_pdf(self):
         """Linearize the final output PDF"""
@@ -263,7 +266,7 @@ class PDFProcessor:
             ) as pdf:
                 pdf.save(self.postprocessed_pdf, linearize=True)
         except Exception as e:
-            print(f"PDF Linearization failed: {self.postprocessed_pdf} {e}")
+            logging.error(f"PDF Linearization failed: {self.postprocessed_pdf} {e}")
 
 
 class PreprocessingMethod(Enum):
@@ -323,7 +326,7 @@ class OCRProcessor:
 
         # Preprocessing methods
         if self.preprocessing_method == PreprocessingMethod.ADAPTIVE:
-            print("PERFORMING ADAPTIVE THRESHOLDING")
+            logging.info("PERFORMING ADAPTIVE THRESHOLDING")
             processed_img = cv2.adaptiveThreshold(
                 image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, 5
             )
@@ -336,7 +339,7 @@ class OCRProcessor:
                 image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
             )
         else:  # original
-            print("ORIGINAL IMAGE")
+            logging.info("USING ORIGINAL IMAGE")
             processed_img = image
 
         return processed_img
@@ -407,7 +410,7 @@ class OCRProcessor:
                 self._get_postprocessed_pdf_path().replace(".pdf", ".pdf_original")
             )
         except Exception as e:
-            print(f"PDF generation failed: {self._get_file_name()} {e}")
+            logging.error(f"PDF generation failed: {self._get_file_name()} {e}")
 
     def generate_alto(self):
         """Generate a new OCR ALTO file, using a given image, with the NDNP Open OCR pipeline. This
@@ -424,7 +427,7 @@ class OCRProcessor:
 
             # image = Image.fromarray(temp_gray_path)
             # dpi = image.info.get("dpi", (96, 96))
-            dpi = (300,300)
+            dpi = (300, 300)
 
             alto_processor = AltoProcessor(self._get_alto_file_path())
             alto_processor.add_description_tags()
@@ -432,35 +435,9 @@ class OCRProcessor:
             alto_processor.save(self._get_alto_file_path())
             del xml
         except Exception as e:
-            print(f"ALTO generation failed: {self._get_file_name()} {e}")
+            logging.error(f"ALTO generation failed: {self._get_file_name()} {e}")
 
     def process(self):
         """OCR an issue in an NDNP batch, generates a new PDF and ALTO file to replace the originals."""
         self.generate_pdf()
         self.generate_alto()
-
-
-# if __name__ == "__main__":
-#     processor = OCRProcessor(
-#         input_file_path="/Volumes/DLP1/batch_dlc_kite_ver19/data/sn83030214/00206531290/0001.tif",
-#         output_path="./",
-#         preprocessing_method=PreprocessingMethod.ORIGINAL,
-#     )
-#     processor.generate_pdf()
-#     processor = OCRProcessor(
-#         input_file_path="/Volumes/DLP1/batch_dlc_kite_ver19/data/sn83030214/00206531290/0001.tif",
-#         output_path="./",
-#         preprocessing_method=PreprocessingMethod.ADAPTIVE,
-#     )
-#     processor.generate_pdf()
-    # processor.transfer_xmp()
-    # processor = PDFProcessor(
-    #     old_pdf='/Volumes/DLP1/batch_dlc_kite_ver18/data/sn83030214/00206531290/1877050301/0021.pdf',  # original PDF
-    #     new_pdf='./0021_new.pdf',  # new PDF
-    #     postprocessed_pdf='./0021.pdf'  # where to save final PDF, after all post-processing steps are complete.
-    # )
-
-    # processor.transfer_xmp()
-
-    # print(f"The script took {end_time - start_time} seconds to complete.")
-    # print("Job Complete")
