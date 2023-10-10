@@ -15,7 +15,7 @@ build_fargate:
 	docker build --platform linux/arm64 -t ndnp_open_ocr_deploy:latest .
 
 run_fargate:
-	docker run -it -v /Volumes/ExtremeSSD/:/Volumes/ExtremeSSD -w /app ndnp_open_ocr_deploy:latest bash
+	docker run -it -e AWS_PROFILE=loc -e PYTHONPATH=packages -v ~/.aws:/root/.aws -v $(PWD):/app -w /app ndnp_open_ocr_deploy:latest bash
 
 push_fargate:
 	docker build -t ndnp-open-ocr-container-repo .

@@ -218,6 +218,8 @@ class PDFProcessor:
 
     def postprocess_pdf(self):
         """Set resolution, Display type, etc... on final PDF output"""
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+        pdf_marks_path = os.path.join(current_directory, 'pdf_marks.txt')
         args = [
             "gs",
             "-q",
@@ -241,7 +243,7 @@ class PDFProcessor:
             "-dColorImageFilter=/DCTEncode",
             "-dGrayImageFilter=/DCTEncode",
             self.new_pdf,
-            "pdf_marks.txt",
+            pdf_marks_path,
         ]
 
         result = subprocess.run(args, check=True)

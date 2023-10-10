@@ -10,10 +10,15 @@ import datetime
 import shutil
 import logging
 
+# Set Logging Level to DEBUG
+logging.basicConfig(filename="logs.log", level=logging.INFO)
+
 # S3 client
-s3 = boto3.client("s3")
-# DynamoDB resource
+sqs = boto3.client("sqs", region_name="us-east-2")
+sqs_queue_url = "https://sqs.us-east-2.amazonaws.com/420280634985/ndnp-open-ocr-consumer-sqs-queue"  # os.getenv("SQS_QUEUE_URL")
 dynamodb = boto3.resource("dynamodb")
+table = dynamodb.Table("ndnp-open-ocr-table")  # dynamodb.Table(os.getenv("TABLE_NAME"))
+s3 = boto3.client("s3")
 
 
 def make_directory(path):
@@ -41,36 +46,23 @@ def download_files_from_s3(bucket_name, key, temp_dir):
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         try:
-            print(f"{current_time} - Attempting to download:", s3_key)
+            logging.info(f"{current_time} - Attempting to download: {s3_key}")
             s3.download_file(bucket_name, s3_key, download_path)
-            print(f"{current_time} - Successfully downloaded:", s3_key)
+            logging.info(f"{current_time} - Successfully downloaded: {s3_key}")
         except Exception as e:
-            print(f"{current_time} - Error downloading", s3_key, ". Error:", str(e))
+            logging.info(f"{current_time} - Error downloading {s3_key}. Error: {e} ")
 
     return input_file_path
 
 
 def upload_files_to_s3(output_dir, output_bucket_name, output_prefix, difference):
     for output_file in os.listdir(output_dir):
-        print(output_file)
+        logging.info(output_file)
         output_file_path = os.path.join(output_dir, output_file)
         output_key = os.path.join(output_prefix, difference, output_file)
-        print("OUTPUT KEY", output_key)
+        logging.info("OUTPUT KEY: %s", output_key)
         s3.upload_file(output_file_path, output_bucket_name, output_key)
     clear_tmp_directory()
-
-
-def update_remaining_messages(job_id, event):
-    table = dynamodb.Table(os.getenv("TABLE_NAME"))
-    resp = table.update_item(
-        Key={"pk": "JOB", "sk": job_id},
-        UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
-        ExpressionAttributeValues={
-            ":dec": len(event["Records"]),
-        },
-        ReturnValues="UPDATED_NEW",
-    )
-    logging.debug(resp)
 
 
 def clear_tmp_directory():
@@ -83,14 +75,7 @@ def clear_tmp_directory():
             elif os.path.isdir(file_path):
                 shutil.rmtree(file_path)
         except Exception as e:
-            print(f"Failed to delete {file_path}. Reason: {e}")
-
-
-# Initialization
-sqs = boto3.client("sqs")
-sqs_queue_url = os.getenv("SQS_QUEUE_URL")
-dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table(os.getenv("TABLE_NAME"))
+            logging.info(f"Failed to delete {file_path}. Reason: {e}")
 
 
 def process_message(message_body):
@@ -98,7 +83,31 @@ def process_message(message_body):
     message = json.loads(message_body)
     job_id = message["JobId"]
     with tempfile.TemporaryDirectory() as temp_dir:
-        # ... Rest of your processing code ...
+        # Download files from S3
+        input_file_path = download_files_from_s3(
+            message["Bucket"], message["Key"], temp_dir
+        )
+
+        if os.path.exists(input_file_path):
+            logging.info(f"{input_file_path} has been downloaded successfully.")
+            output_path = os.path.join(temp_dir, "output")
+            make_directory(output_path)
+
+            logging.info("INPUT FILE PATH: %s", input_file_path)
+            logging.info("OUTPUT PATH: %s", output_path)
+
+            logging.info("Starting NDNP Open OCR Reprocessing...")
+
+            # Run NDNP Open OCR Reprocessing on this input
+            processor = OCRProcessor(
+                input_file_path,
+                output_path,
+                preprocessing_method=PreprocessingMethod.ORIGINAL,
+            )
+            processor.generate_pdf()
+            processor.generate_alto()
+        else:
+            logging.info("Failed to download {input_file_path}.")
 
         upload_files_to_s3(
             output_path,
@@ -132,7 +141,7 @@ def poll_sqs_and_process():
                         QueueUrl=sqs_queue_url, ReceiptHandle=message["ReceiptHandle"]
                     )
                 except Exception as e:
-                    print(f"Failed to process message: {e}")
+                    logging.info(f"Failed to process message: {e}")
 
 
 if __name__ == "__main__":
