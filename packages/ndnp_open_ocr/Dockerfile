@@ -1,8 +1,7 @@
 FROM python:3.8.0
 
 RUN apt-get update
-RUN apt-get install -y ghostscript -y qpdf -y exiftool
-
+RUN apt-get install -y ghostscript -y qpdf
 # Update and install depedencies
 RUN apt-get update && \
     apt-get install -y wget unzip bc vim python3-pip libleptonica-dev git
@@ -11,8 +10,8 @@ RUN apt-get install -y software-properties-common
 # Packages to complie Tesseract
 RUN apt-get install -y --reinstall make && \
     apt-get install -y g++ autoconf automake libtool pkg-config \
-     libpng-dev libjpeg62-turbo-dev libtiff5-dev libicu-dev \
-     libpango1.0-dev autoconf-archive
+    libpng-dev libjpeg62-turbo-dev libtiff5-dev libicu-dev \
+    libpango1.0-dev autoconf-archive
 
 # Install Tesseract (compiling from source as it may not be available in Amazon Linux repositories)
 WORKDIR /opt
@@ -26,6 +25,10 @@ ARG TESSERACT_DATA_VERSION=4.1.0
 
 RUN curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/raw/${TESSERACT_DATA_VERSION}/osd.traineddata > /usr/local/share/tessdata/osd.traineddata && \
     curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/raw/${TESSERACT_DATA_VERSION}/eng.traineddata > /usr/local/share/tessdata/eng.traineddata
+
+#### ExifTool INSTALL #####
+RUN wget --no-check-certificate https://exiftool.org/Image-ExifTool-12.58.tar.gz && tar xvf Image-ExifTool-12.58.tar.gz && cd Image-ExifTool-12.58/ && perl Makefile.PL && make && make test && make install
+
 
 # Copy files from same directory as Dockerfile to /app
 WORKDIR /app/ndnp_open_ocr
