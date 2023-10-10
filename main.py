@@ -57,11 +57,12 @@ def download_files_from_s3(bucket_name, key, temp_dir):
 
 def upload_files_to_s3(output_dir, output_bucket_name, output_prefix, difference):
     for output_file in os.listdir(output_dir):
-        logging.info(output_file)
         output_file_path = os.path.join(output_dir, output_file)
         output_key = os.path.join(output_prefix, difference, output_file)
-        logging.info("OUTPUT KEY: %s", output_key)
         s3.upload_file(output_file_path, output_bucket_name, output_key)
+
+        logging.info("Successfully Uploaded %s to %s", output_file_path, output_key)
+
     clear_tmp_directory()
 
 
