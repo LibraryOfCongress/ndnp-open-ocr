@@ -1,0 +1,92 @@
+INFO:root:2023-10-10 01:10:52 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 01:10:52 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 01:10:52 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:2023-10-10 01:10:52 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:/tmp/tmpkdxxnqrh/0000.tif has been downloaded successfully.
+INFO:root:INPUT FILE PATH: /tmp/tmpkdxxnqrh/0000.tif
+INFO:root:OUTPUT PATH: /tmp/tmpkdxxnqrh/output
+INFO:root:Starting NDNP Open OCR Reprocessing...
+INFO:root:0000.xml
+INFO:root:OUTPUT KEY: notvalidated__72a7cebc-18ea-4aee-9120-717601f823fa/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:Failed to process message: expected string or bytes-like object
+INFO:root:2023-10-10 19:49:52 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 19:49:52 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 19:49:52 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:2023-10-10 19:49:52 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:/tmp/tmpos40_4mk/0000.tif has been downloaded successfully.
+INFO:root:INPUT FILE PATH: /tmp/tmpos40_4mk/0000.tif
+INFO:root:OUTPUT PATH: /tmp/tmpos40_4mk/output
+INFO:root:Starting NDNP Open OCR Reprocessing...
+INFO:root:0000.xml
+INFO:root:OUTPUT KEY: notvalidated__72a7cebc-18ea-4aee-9120-717601f823fa/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:Failed to process message: expected string or bytes-like object
+INFO:root:2023-10-10 20:00:38 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 20:00:38 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 20:00:38 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:2023-10-10 20:00:38 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:/tmp/tmpd00tg307/0000.tif has been downloaded successfully.
+INFO:root:INPUT FILE PATH: /tmp/tmpd00tg307/0000.tif
+INFO:root:OUTPUT PATH: /tmp/tmpd00tg307/output
+INFO:root:Starting NDNP Open OCR Reprocessing...
+INFO:root:USING ORIGINAL IMAGE
+INFO:root:stdout: None
+ERROR:root:stderr: None
+INFO:root:Output file exists and is a regular file: {self.new_pdf}
+INFO:root:New Tags from PDF: {new_tags}
+INFO:root:USING ORIGINAL IMAGE
+INFO:root:0000.xml
+INFO:root:OUTPUT KEY: notvalidated__72a7cebc-18ea-4aee-9120-717601f823fa/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:Failed to process message: expected string or bytes-like object
+INFO:root:2023-10-10 20:02:46 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 20:02:46 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 20:02:47 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:2023-10-10 20:02:47 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:/tmp/tmp735pgxkq/0000.tif has been downloaded successfully.
+INFO:root:INPUT FILE PATH: /tmp/tmp735pgxkq/0000.tif
+INFO:root:OUTPUT PATH: /tmp/tmp735pgxkq/output
+INFO:root:Starting NDNP Open OCR Reprocessing...
+INFO:root:USING ORIGINAL IMAGE
+INFO:root:stdout: None
+ERROR:root:stderr: None
+INFO:root:Output file exists and is a regular file: {self.new_pdf}
+INFO:root:New Tags from PDF: {'SourceFile': '/tmp/tmp735pgxkq/output/0000.pdf', 'ExifTool:ExifToolVersion': 12.58, 'File:FileName': '0000.pdf', 'File:Directory': '/tmp/tmp735pgxkq/output', 'File:FileSize': 1804806, 'File:FileModifyDate': '2023:10:10 20:02:50+00:00', 'File:FileAccessDate': '2023:10:10 20:02:50+00:00', 'File:FileInodeChangeDate': '2023:10:10 20:02:50+00:00', 'File:FilePermissions': 100644, 'File:FileType': 'PDF', 'File:FileTypeExtension': 'PDF', 'File:MIMEType': 'application/pdf', 'PDF:PDFVersion': 1.7, 'PDF:Linearized': True, 'PDF:Producer': 'GPL Ghostscript 9.27', 'PDF:CreateDate': '2023:10:10 20:02:50Z', 'PDF:ModifyDate': '2023:10:10 20:02:50Z', 'PDF:Title': '', 'PDF:PageCount': 1, 'PDF:PageLayout': 'SinglePage', 'PDF:PageMode': 'UseNone', 'XMP:XMPToolkit': 'XMP toolkit 2.9.1-13, framework 1.6', 'XMP:About': 'uuid:8a0680d1-9fc4-11f9-0000-9c2221b553b6', 'XMP:Producer': 'GPL Ghostscript 9.27', 'XMP:ModifyDate': '2023:10:10 20:02:50Z', 'XMP:CreateDate': '2023:10:10 20:02:50Z', 'XMP:CreatorTool': 'UnknownApplication', 'XMP:DocumentID': 'uuid:8a0680d1-9fc4-11f9-0000-9c2221b553b6', 'XMP:Format': 'application/pdf', 'XMP:Title': ''}
+INFO:root:USING ORIGINAL IMAGE
+INFO:root:0000.xml
+INFO:root:OUTPUT KEY: notvalidated__72a7cebc-18ea-4aee-9120-717601f823fa/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:Failed to process message: expected string or bytes-like object
+INFO:root:2023-10-10 20:03:54 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 20:03:54 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 20:03:54 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:2023-10-10 20:03:54 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:/tmp/tmp4k3eq593/0000.tif has been downloaded successfully.
+INFO:root:INPUT FILE PATH: /tmp/tmp4k3eq593/0000.tif
+INFO:root:OUTPUT PATH: /tmp/tmp4k3eq593/output
+INFO:root:Starting NDNP Open OCR Reprocessing...
+INFO:root:USING ORIGINAL IMAGE
+INFO:root:stdout: None
+ERROR:root:stderr: None
+INFO:root:Output file exists and is a regular file: {self.new_pdf}
+INFO:root:New Tags from PDF: {'SourceFile': '/tmp/tmp4k3eq593/output/0000.pdf', 'ExifTool:ExifToolVersion': 12.58, 'File:FileName': '0000.pdf', 'File:Directory': '/tmp/tmp4k3eq593/output', 'File:FileSize': 1804806, 'File:FileModifyDate': '2023:10:10 20:03:58+00:00', 'File:FileAccessDate': '2023:10:10 20:03:58+00:00', 'File:FileInodeChangeDate': '2023:10:10 20:03:58+00:00', 'File:FilePermissions': 100644, 'File:FileType': 'PDF', 'File:FileTypeExtension': 'PDF', 'File:MIMEType': 'application/pdf', 'PDF:PDFVersion': 1.7, 'PDF:Linearized': True, 'PDF:Producer': 'GPL Ghostscript 9.27', 'PDF:CreateDate': '2023:10:10 20:03:57Z', 'PDF:ModifyDate': '2023:10:10 20:03:57Z', 'PDF:Title': '', 'PDF:PageCount': 1, 'PDF:PageLayout': 'SinglePage', 'PDF:PageMode': 'UseNone', 'XMP:XMPToolkit': 'XMP toolkit 2.9.1-13, framework 1.6', 'XMP:About': 'uuid:b1f5e452-9fc4-11f9-0000-9c2221b553b6', 'XMP:Producer': 'GPL Ghostscript 9.27', 'XMP:ModifyDate': '2023:10:10 20:03:57Z', 'XMP:CreateDate': '2023:10:10 20:03:57Z', 'XMP:CreatorTool': 'UnknownApplication', 'XMP:DocumentID': 'uuid:b1f5e452-9fc4-11f9-0000-9c2221b553b6', 'XMP:Format': 'application/pdf', 'XMP:Title': ''}
+INFO:root:PDF Generation successful: 0000
+INFO:root:USING ORIGINAL IMAGE
+INFO:root:ALTO Generation successful: 0000
+INFO:root:0000.xml
+INFO:root:OUTPUT KEY: notvalidated__72a7cebc-18ea-4aee-9120-717601f823fa/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:Failed to process message: expected string or bytes-like object
+INFO:root:2023-10-10 20:10:59 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 20:10:59 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.pdf
+INFO:root:2023-10-10 20:10:59 - Attempting to download: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:2023-10-10 20:10:59 - Successfully downloaded: notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.xml
+INFO:root:/tmp/tmp2teqcz0c/0000.tif has been downloaded successfully.
+INFO:root:INPUT FILE PATH: /tmp/tmp2teqcz0c/0000.tif
+INFO:root:OUTPUT PATH: /tmp/tmp2teqcz0c/output
+INFO:root:Starting NDNP Open OCR Reprocessing...
+INFO:root:USING ORIGINAL IMAGE
+INFO:root:stdout: None
+ERROR:root:stderr: None
+INFO:root:Output file exists and is a regular file: {self.new_pdf}
+INFO:root:New Tags from PDF: {'SourceFile': '/tmp/tmp2teqcz0c/output/0000.pdf', 'ExifTool:ExifToolVersion': 12.58, 'File:FileName': '0000.pdf', 'File:Directory': '/tmp/tmp2teqcz0c/output', 'File:FileSize': 1804806, 'File:FileModifyDate': '2023:10:10 20:11:02+00:00', 'File:FileAccessDate': '2023:10:10 20:11:02+00:00', 'File:FileInodeChangeDate': '2023:10:10 20:11:02+00:00', 'File:FilePermissions': 100644, 'File:FileType': 'PDF', 'File:FileTypeExtension': 'PDF', 'File:MIMEType': 'application/pdf', 'PDF:PDFVersion': 1.7, 'PDF:Linearized': True, 'PDF:Producer': 'GPL Ghostscript 9.27', 'PDF:CreateDate': '2023:10:10 20:11:02Z', 'PDF:ModifyDate': '2023:10:10 20:11:02Z', 'PDF:Title': '', 'PDF:PageCount': 1, 'PDF:PageLayout': 'SinglePage', 'PDF:PageMode': 'UseNone', 'XMP:XMPToolkit': 'XMP toolkit 2.9.1-13, framework 1.6', 'XMP:About': 'uuid:af47bed6-9fc5-11f9-0000-9c2221b553b6', 'XMP:Producer': 'GPL Ghostscript 9.27', 'XMP:ModifyDate': '2023:10:10 20:11:02Z', 'XMP:CreateDate': '2023:10:10 20:11:02Z', 'XMP:CreatorTool': 'UnknownApplication', 'XMP:DocumentID': 'uuid:af47bed6-9fc5-11f9-0000-9c2221b553b6', 'XMP:Format': 'application/pdf', 'XMP:Title': ''}
+INFO:root:PDF Generation successful: 0000
+INFO:root:USING ORIGINAL IMAGE
+INFO:root:ALTO Generation successful: 0000
+ERROR:root:Failed to process message: expected string or bytes-like object
