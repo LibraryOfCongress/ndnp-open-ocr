@@ -141,7 +141,7 @@ def poll_sqs_and_process():
                         QueueUrl=sqs_queue_url, ReceiptHandle=message["ReceiptHandle"]
                     )
                 except Exception as e:
-                    logging.info(f"Failed to process message: {e}")
+                    logging.error(f"Failed to process message: {e}")
 
 
 if __name__ == "__main__":

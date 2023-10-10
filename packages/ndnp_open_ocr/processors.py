@@ -195,7 +195,7 @@ class PDFProcessor:
                     "XMP:Description-en", old_tags.get("XMP:Description", None)
                 )
 
-                logging.info("New Tags from PDF: {new_tags}")
+                logging.info(f"New Tags from PDF: {new_tags}")
 
                 et.set_tags(
                     self.postprocessed_pdf,
@@ -409,6 +409,7 @@ class OCRProcessor:
             os.remove(
                 self._get_postprocessed_pdf_path().replace(".pdf", ".pdf_original")
             )
+            logging.info(f"PDF Generation successful: {self._get_file_name()}")
         except Exception as e:
             logging.error(f"PDF generation failed: {self._get_file_name()} {e}")
 
@@ -434,6 +435,7 @@ class OCRProcessor:
             alto_processor.convert_pixels_to_inches(dpi)
             alto_processor.save(self._get_alto_file_path())
             del xml
+            logging.info(f"ALTO Generation successful: {self._get_file_name()}")
         except Exception as e:
             logging.error(f"ALTO generation failed: {self._get_file_name()} {e}")
 
