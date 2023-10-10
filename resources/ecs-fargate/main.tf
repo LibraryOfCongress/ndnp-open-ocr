@@ -14,38 +14,38 @@ resource "aws_ecs_cluster" "cluster" {
   }
 }
 
-# resource "aws_ecs_task_definition" "task_def" {
-#   family                   = var.task_family
-#   network_mode             = "awsvpc"
-#   requires_compatibilities = ["FARGATE"]
-#   cpu                      = 256
-#   memory                   = 512
-#   execution_role_arn       = var.execution_role_arn
-#   task_role_arn            = var.task_role_arn
+resource "aws_ecs_task_definition" "task_def" {
+  family                   = var.task_family
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = var.execution_role_arn
+  task_role_arn            = var.task_role_arn
 
-#   container_definitions = jsonencode([{
-#     name  = var.container_name
-#     image = var.container_image
-#     portMappings = [{
-#       containerPort = var.container_port
-#       hostPort      = var.container_port
-#     }]
-#     environment = [
-#       {
-#         name  = "SQS_QUEUE_URL",
-#         value = var.sqs_queue_url
-#       },
-#       {
-#         name  = "TABLE_NAME",
-#         value = "AnotherValue"
-#       }
-#     ]
-#   }])
+  container_definitions = jsonencode([{
+    name  = var.container_name
+    image = var.container_image
+    portMappings = [{
+      containerPort = var.container_port
+      hostPort      = var.container_port
+    }]
+    environment = [
+      {
+        name  = "SQS_QUEUE_URL",
+        value = var.sqs_queue_url
+      },
+      {
+        name  = "TABLE_NAME",
+        value = "AnotherValue"
+      }
+    ]
+  }])
 
-#   tags = {
-#     Name = "ndnp-open-ocr"
-#   }
-# }
+  tags = {
+    Name = "ndnp-open-ocr"
+  }
+}
 
 # resource "aws_ecs_service" "service" {
 #   name            = var.service_name
