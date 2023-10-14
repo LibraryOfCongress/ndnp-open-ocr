@@ -21,15 +21,10 @@ resource "aws_lambda_function" "scheduler_function" {
       LD_LIBRARY_PATH   = "/opt/lib"
       PATH              = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP               = "/tmp",
-      QUEUE_URL         = var.pdf_queue_url,
+      QUEUE_URL         = var.queue_url,
       TABLE_NAME        = var.table_name,
-      ALTO_QUEUE_URL    = var.alto_queue_url
     }
   }
-
-  layers = [
-    aws_lambda_layer_version.lambda_layer.arn,
-  ]
 
 }
 

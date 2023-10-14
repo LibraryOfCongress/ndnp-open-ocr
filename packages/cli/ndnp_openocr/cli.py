@@ -1,7 +1,7 @@
 import boto3
 import click
 import requests
-from helpers import sync_s3_batch, find_missing_pdfs
+from ndnp_openocr.helpers import sync_s3_batch, find_missing_pdfs
 import json
 import time
 import logging
@@ -19,12 +19,15 @@ def cli(ctx):
     # Store bucket in the context (change to ndnp-open-ocr-output-bucket-test for testing purposes)
     ctx.obj["INPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
     ctx.obj["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
-    ctx.obj[
-        "QUEUE_URL"
-    ] = "https://sqs.us-east-1.amazonaws.com/342134162356/ndnp-open-ocr-queue"
+    # ctx.obj[
+    #     "QUEUE_URL"
+    # ] = "https://sqs.us-east-1.amazonaws.com/342134162356/ndnp-open-ocr-queue"
+    # ctx.obj[
+    #     "SCHEDULER_ARN"
+    # ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-scheduler-lambda-function-dev"
     ctx.obj[
         "SCHEDULER_ARN"
-    ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-scheduler-lambda-function-dev"
+    ] = "arn:aws:lambda:us-east-2:420280634985:function:ndnp-open-ocr-scheduler-lambda-function-dev"
     ctx.obj[
         "GET_JOB_ARN"
     ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-get-job-lambda-function-dev"
@@ -51,9 +54,12 @@ def sync(ctx, job: str, output_dir: str, overwrite: bool, local_batch: str):
 
 def reprocess_batch(ctx, batch_name: str, bucket: str):
     """Kicks off reprocessing job for a certain S3 NDNP batch."""
-    lambda_client = boto3.client("lambda")
+    lambda_client = boto3.client("lambda", region_name="us-east-2")
     # This is the prefix from the loc-preservation bucket...should stick to this if we can.
-    prefix = os.path.join("loc-preservation/lcbp/ndnp/dlc/", batch_name)
+    if bucket == "loc-preservation":
+        prefix = os.path.join("loc-preservation/lcbp/ndnp/dlc/", batch_name)
+    else:
+        prefix = batch_name
     payload = {
         "pathParameters": {
             "prefix": prefix,
