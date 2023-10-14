@@ -19,6 +19,9 @@ def handler(event, context):
     prefix = event["pathParameters"]["prefix"]
     bucket_name = event["pathParameters"]["bucketName"]
 
+    print("Bucket name: " + bucket_name)
+    print("Prefix: " + prefix)
+
     s3 = boto3.resource("s3")
     sqs = boto3.client("sqs")
     dynamodb = boto3.resource("dynamodb")
@@ -27,7 +30,6 @@ def handler(event, context):
     logger.info("Environment variables: %s", os.environ)
 
     queue_url = os.environ.get("QUEUE_URL")
-    alto_queue_url = os.environ.get("ALTO_QUEUE_URL")
 
     logger.info("Queue URL: %s", queue_url)
 
@@ -50,8 +52,7 @@ def handler(event, context):
             Item={
                 "pk": "JOB",
                 "sk": output_prefix,
-                "RemainingPDFMessages": len(keys),
-                "RemainingALTOMessages": len(keys),
+                "RemainingMessages": len(keys),
                 "Timestamp": timestamp,
             }
         )
@@ -75,28 +76,17 @@ def handler(event, context):
                 # Send Messages to PDF Queue
                 response = sqs.send_message_batch(QueueUrl=queue_url, Entries=messages)
 
-                # Send Messages to ALTO Queue
-                response_alto = sqs.send_message_batch(
-                    QueueUrl=alto_queue_url, Entries=messages
-                )
-
                 messages = []
 
         if messages:
-            # Send Messages to PDF Queue
+            # Send Messages to Queue
             response = sqs.send_message_batch(QueueUrl=queue_url, Entries=messages)
-            # Send Messages to ALTO Queue
-            response_alto = sqs.send_message_batch(
-                QueueUrl=alto_queue_url, Entries=messages
-            )
 
         print(messages)
 
         return {
             "statusCode": 200,
-            "body": json.dumps(
-                {"job": job_id, "num_issues": len(keys)}
-            ),
+            "body": json.dumps({"job": job_id, "num_issues": len(keys)}),
         }
     except Exception as e:
         logger.error("Error occurred: %s", e)

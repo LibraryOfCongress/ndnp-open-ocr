@@ -11,7 +11,12 @@ import shutil
 import logging
 
 # Set Logging Level to DEBUG
-logging.basicConfig(filename="logs.log", level=logging.INFO)
+logging.basicConfig(
+    filename="logs.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 # S3 client
 sqs = boto3.client("sqs", region_name="us-east-2")
@@ -60,8 +65,9 @@ def upload_files_to_s3(output_dir, output_bucket_name, output_prefix, difference
         logging.info(output_file)
         output_file_path = os.path.join(output_dir, output_file)
         output_key = os.path.join(output_prefix, difference, output_file)
-        logging.info("OUTPUT KEY: %s", output_key)
+        logging.info("OUTPUT BUCKET NAME: %s", output_bucket_name)
         s3.upload_file(output_file_path, output_bucket_name, output_key)
+        logging.info(f"Successfully uploaded {output_file_path} to {output_key}")
     clear_tmp_directory()
 
 
@@ -115,12 +121,12 @@ def process_message(message_body):
             message["OutputPrefix"],
             os.path.relpath(os.path.dirname(message["Key"]), message["InputPrefix"]),
         )
-        resp = table.update_item(
-            Key={"pk": "JOB", "sk": job_id},
-            UpdateExpression="SET RemainingPDFMessages = RemainingPDFMessages - :dec",
-            ExpressionAttributeValues={":dec": 1},
-            ReturnValues="UPDATED_NEW",
-        )
+        # resp = table.update_item(
+        #     Key={"pk": "JOB", "sk": job_id},
+        #     UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
+        #     ExpressionAttributeValues={":dec": 1},
+        #     ReturnValues="UPDATED_NEW",
+        # )
 
 
 def poll_sqs_and_process():
@@ -135,6 +141,7 @@ def poll_sqs_and_process():
         if "Messages" in response:
             for message in response["Messages"]:
                 try:
+                    logging.info("Incoming Message: %s", message)
                     process_message(message["Body"])
                     # Delete the processed SQS message
                     sqs.delete_message(

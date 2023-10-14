@@ -22,20 +22,16 @@ module "sqs" {
 }
 
 # Lambda related resources
-# module "lambda" {
-#   source               = "./resources/lambda"
-#   source_dir           = "./lambdas"
-#   output_path          = "./resources/lambda/functions.zip"
-#   lambda_role_arn      = module.iam.lambda_role_arn
-#   aws_s3_output_bucket = module.s3.bucket_name
-#   pdf_queue_url        = module.sqs.pdf_queue_url
-#   alto_queue_arn       = module.sqs.alto_queue_arn
-#   alto_queue_url       = module.sqs.alto_queue_url
-#   pdf_queue_arn        = module.sqs.pdf_queue_arn
-#   pdf_dlq_queue_arn    = module.sqs.pdf_dlq_queue_arn
-#   alto_dlq_queue_arn   = module.sqs.alto_dlq_queue_arn
-#   table_name           = var.table_name
-# }
+module "lambda" {
+  source               = "./resources/lambda"
+  source_dir           = "./functions"
+  output_path          = "./resources/lambda/functions.zip"
+  lambda_role_arn      = module.iam.lambda_role_arn
+  aws_s3_output_bucket = module.s3.bucket_name
+  queue_url        = module.sqs.queue_url
+  queue_arn       = module.sqs.queue_arn
+  table_name           = var.table_name
+}
 
 # # DynamoDB related resources
 module "dynamodb" {
