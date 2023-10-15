@@ -35,7 +35,9 @@ resource "aws_iam_policy" "iam_policy_for_lambda" {
        "sqs:DeleteMessage",
        "sqs:*",
        "s3:*",
-       "dynamodb:*"
+       "dynamodb:*",
+       "ecs:*",
+       "ecr:*"
      ],
      "Resource": "*",
      "Effect": "Allow"
@@ -46,12 +48,12 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "attach_iam_policy_to_iam_role" {
-  role       = aws_iam_role.lambda_role.name
+  role       = aws_iam_role.trust_for_lambda.name
   policy_arn = aws_iam_policy.iam_policy_for_lambda.arn
 }
 
-resource "aws_iam_role" "iam_for_lambda" {
-  name = "ndnp-open-ocr-lambda-service-role-dev"
+resource "aws_iam_role" "trust_for_lambda" {
+  name = "ndnp-open-ocr-fargate-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -60,6 +62,20 @@ resource "aws_iam_role" "iam_for_lambda" {
         Action = "sts:AssumeRole",
         Principal = {
           Service = "lambda.amazonaws.com"
+        },
+        Effect = "Allow",
+      },
+      {
+        Action = "sts:AssumeRole",
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        },
+        Effect = "Allow",
+      },
+       {
+        Action = "sts:AssumeRole",
+        Principal = {
+          Service = "ecs.amazonaws.com"
         },
         Effect = "Allow",
       },

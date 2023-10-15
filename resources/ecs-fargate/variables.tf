@@ -54,3 +54,8 @@ variable "sqs_queue_url" {
   description = "Source SQS Queue Url"
   type        = string
 }
+
+variable "sqs_queue_name" {
+  description = "Source SQS Queue Name"
+  type        = string
+}
