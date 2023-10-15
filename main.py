@@ -1,3 +1,4 @@
+print("TEST")
 import json
 import os
 import errno
@@ -10,9 +11,11 @@ import datetime
 import shutil
 import logging
 
+print("TEST")
+
 # Set Logging Level to DEBUG
 logging.basicConfig(
-    filename="logs.log",
+    # filename="logs.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",

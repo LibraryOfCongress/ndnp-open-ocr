@@ -42,12 +42,13 @@ module "dynamodb" {
 module "ecs-fargate" {
   source = "./resources/ecs-fargate"
   task_family         = "ndnp-open-ocr"
-  execution_role_arn  = module.iam.lambda_role_arn
-  task_role_arn       = module.iam.lambda_role_arn
+  execution_role_arn  = module.iam.service_role_arn
+  task_role_arn       = module.iam.service_role_arn
   container_name      = "ndnp-open-ocr-container"
   container_image     = "420280634985.dkr.ecr.us-east-2.amazonaws.com"
   service_name        = "ndnp-open-ocr-service"
   subnets             = ["subnet-094288b377c1b73fb", "subnet-0eb39d3cafcc5fb1a"]
   security_groups     = ["sg-0656ba0feeab2cc21"]
   sqs_queue_url = module.sqs.queue_url
+  sqs_queue_name = module.sqs.queue_name
 }
