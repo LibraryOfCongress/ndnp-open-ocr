@@ -1,3 +1,49 @@
+# VPC Networking Resources to Deploy Fargate Into:
+
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+  tags = {
+    Name = "ndnp-open-ocr-vpc"
+  }
+}
+
+resource "aws_subnet" "subnet_1" {
+  vpc_id     = aws_vpc.main.id
+  cidr_block = "10.0.1.0/24"
+  availability_zone = "us-east-2a"
+  map_public_ip_on_launch = true
+  tags = {
+    Name = "ndnp-open-ocr-subnet-1"
+  }
+}
+
+resource "aws_subnet" "subnet_2" {
+  vpc_id     = aws_vpc.main.id
+  cidr_block = "10.0.2.0/24"
+  availability_zone = "us-east-2b"
+  map_public_ip_on_launch = true
+  tags = {
+    Name = "ndnp-open-ocr-subnet-2"
+  }
+}
+
+resource "aws_security_group" "main_sg" {
+  vpc_id = aws_vpc.main.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "ndnp-open-ocr-sg"
+  }
+}
+
+
+
 resource "aws_ecr_repository" "repo" {
   name = "ndnp-open-ocr-container-repo"
 }
@@ -88,8 +134,8 @@ resource "aws_ecs_service" "service" {
   desired_count   = var.desired_count
 
   network_configuration {
-    subnets         = var.subnets
-    security_groups = var.security_groups
+    subnets         = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
+    security_groups = [aws_security_group.main_sg.id]
   }
 }
 
