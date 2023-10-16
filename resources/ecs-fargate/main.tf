@@ -61,6 +61,10 @@ resource "aws_ecs_task_definition" "task_def" {
       {
         name = "ECS_AVAILABLE_LOGGING_DRIVERS",
         value = "awslogs"
+      },
+      {
+        name = "OUTPUT_BUCKET_NAME",
+        value="ndnp-open-ocr-output-bucket-test-2"
       }
     ]
 
@@ -88,3 +92,22 @@ resource "aws_ecs_service" "service" {
     security_groups = var.security_groups
   }
 }
+
+# // AUTOSCALING FOR FARGATE TASKS
+# resource "aws_cloudwatch_metric_alarm" "sqs_alarm" {
+#   alarm_name          = "SQSMessagesVisibleAlarm"
+#   comparison_operator = "GreaterThanOrEqualToThreshold"
+#   evaluation_periods  = "1"
+#   metric_name         = "ApproximateNumberOfMessagesVisible"
+#   namespace           = "AWS/SQS"
+#   period              = "300"
+#   statistic           = "Average"
+#   threshold           = "10" # Adjust this threshold based on when you want scaling to occur
+#   alarm_description   = "Alarm when SQS messages are too high"
+#   alarm_actions       = [aws_appautoscaling_policy.scale_out.arn]
+#   ok_actions          = [aws_appautoscaling_policy.scale_in.arn]
+
+#   dimensions = {
+#     QueueName = var.sqs_queue_name # Make sure you have the queue name variable
+#   }
+# }
