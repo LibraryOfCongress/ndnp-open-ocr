@@ -49,6 +49,8 @@ module "ecs-fargate" {
   service_name        = "ndnp-open-ocr-service"
   subnets             = ["subnet-094288b377c1b73fb", "subnet-0eb39d3cafcc5fb1a"]
   security_groups     = ["sg-0656ba0feeab2cc21"]
+  aws_s3_output_bucket = module.s3.bucket_name
   sqs_queue_url = module.sqs.queue_url
   sqs_queue_name = module.sqs.queue_name
+  table_name = var.table_name
 }

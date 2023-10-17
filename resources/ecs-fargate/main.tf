@@ -1,9 +1,9 @@
 # VPC Networking Resources to Deploy Fargate Into:
 
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
-  enable_dns_support = true
+  enable_dns_support   = true
   tags = {
     Name = "ndnp-open-ocr-vpc"
   }
@@ -38,9 +38,9 @@ resource "aws_route_table_association" "b" {
 }
 
 resource "aws_subnet" "subnet_1" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = "10.0.1.0/24"
-  availability_zone = "us-east-2a"
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "us-east-2a"
   map_public_ip_on_launch = true
   tags = {
     Name = "ndnp-open-ocr-subnet-1"
@@ -48,9 +48,9 @@ resource "aws_subnet" "subnet_1" {
 }
 
 resource "aws_subnet" "subnet_2" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = "10.0.2.0/24"
-  availability_zone = "us-east-2b"
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "us-east-2b"
   map_public_ip_on_launch = true
   tags = {
     Name = "ndnp-open-ocr-subnet-2"
@@ -114,7 +114,7 @@ resource "aws_ecs_cluster" "cluster" {
 
 resource "aws_cloudwatch_log_group" "log_group" {
   name              = "/ecs/ndnp-open-ocr"
-  retention_in_days = 30  # adjust as necessary
+  retention_in_days = 30 # adjust as necessary
 }
 
 resource "aws_ecs_task_definition" "task_def" {
@@ -140,15 +140,15 @@ resource "aws_ecs_task_definition" "task_def" {
       },
       {
         name  = "TABLE_NAME",
-        value = "AnotherValue"
+        value = var.table_name
       },
       {
-        name = "ECS_AVAILABLE_LOGGING_DRIVERS",
+        name  = "ECS_AVAILABLE_LOGGING_DRIVERS",
         value = "awslogs"
       },
       {
-        name = "OUTPUT_BUCKET_NAME",
-        value="ndnp-open-ocr-output-bucket-test-2"
+        name  = "OUTPUT_BUCKET_NAME",
+        value = var.aws_s3_output_bucket
       }
     ]
 
@@ -157,7 +157,7 @@ resource "aws_ecs_task_definition" "task_def" {
       options = {
         "awslogs-create-group"  = "true",
         "awslogs-group"         = "/ecs/ndnp-open-ocr1",
-        "awslogs-region"        = "us-east-2",  # Replace with your AWS region
+        "awslogs-region"        = "us-east-2", # Replace with your AWS region
         "awslogs-stream-prefix" = "ecs"
       }
     }
@@ -172,8 +172,8 @@ resource "aws_ecs_service" "service" {
   desired_count   = var.desired_count
 
   network_configuration {
-    subnets         = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
-    security_groups = [aws_security_group.main_sg.id]
+    subnets          = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
+    security_groups  = [aws_security_group.main_sg.id]
     assign_public_ip = true
   }
 

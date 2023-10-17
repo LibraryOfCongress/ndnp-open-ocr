@@ -32,7 +32,7 @@ logging.basicConfig(
 sqs = boto3.client("sqs", region_name="us-east-2")
 sqs_queue_url = "https://sqs.us-east-2.amazonaws.com/420280634985/ndnp-open-ocr-consumer-sqs-queue"  # os.getenv("SQS_QUEUE_URL")
 dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table("ndnp-open-ocr-table")  # dynamodb.Table(os.getenv("TABLE_NAME"))
+table = dynamodb.Table(os.getenv("TABLE_NAME"))
 s3 = boto3.client("s3")
 
 
@@ -131,12 +131,12 @@ def process_message(message_body):
             message["OutputPrefix"],
             os.path.relpath(os.path.dirname(message["Key"]), message["InputPrefix"]),
         )
-        # resp = table.update_item(
-        #     Key={"pk": "JOB", "sk": job_id},
-        #     UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
-        #     ExpressionAttributeValues={":dec": 1},
-        #     ReturnValues="UPDATED_NEW",
-        # )
+        resp = table.update_item(
+            Key={"pk": "JOB", "sk": job_id},
+            UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
+            ExpressionAttributeValues={":dec": 1},
+            ReturnValues="UPDATED_NEW",
+        )
 
 
 def poll_sqs_and_process():
