@@ -16,3 +16,4 @@ beautifulsoup4==4.10.0
 hocker==1.0.4
 opencv-python-headless
 reportlab
+flask

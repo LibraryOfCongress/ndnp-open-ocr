@@ -26,7 +26,7 @@ message = {
     "Key": "notvalidated_small/batch_dlc_sampleissue/2010270501/00237285074/0000.tif",
     "OutputPrefix": output_prefix,
     "InputPrefix": prefix,
-    "JobId": job_id
+    "JobId": "TEST"
 }
 
 messages.append(
