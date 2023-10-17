@@ -84,10 +84,6 @@ resource "aws_security_group" "main_sg" {
 
 resource "aws_ecr_repository" "repo" {
   name = "ndnp-open-ocr-container-repo"
-
-  tags = {
-    Name = "ndnp-open-ocr"
-  }
 }
 
 resource "aws_ecr_lifecycle_policy" "example" {
@@ -115,7 +111,7 @@ resource "aws_ecr_lifecycle_policy" "example" {
 resource "aws_ecs_cluster" "cluster" {
   name = "ndnp-open-ocr-fargate-cluster"
 
-  tags = {
+   tags = {
     Name = "ndnp-open-ocr"
   }
 }
@@ -170,11 +166,8 @@ resource "aws_ecs_task_definition" "task_def" {
       }
     }
   }])
+}
 
-<<<<<<< HEAD
-  tags = {
-    Name = "ndnp-open-ocr"
-=======
 resource "aws_ecs_service" "service" {
   name            = var.service_name
   cluster         = aws_ecs_cluster.cluster.id
@@ -216,7 +209,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_alarm" {
 
 resource "aws_appautoscaling_target" "ecs_target" {
   max_capacity       = 10 # Adjust based on your max tasks
-  min_capacity       = 1  # Adjust based on your min tasks
+  min_capacity       = 0  # Adjust based on your min tasks
   resource_id        = "service/${aws_ecs_cluster.cluster.name}/${aws_ecs_service.service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
@@ -257,51 +250,5 @@ resource "aws_appautoscaling_policy" "scale_in" {
       metric_interval_upper_bound = 0
       scaling_adjustment          = -5 # Decrease by 1 task. Adjust as necessary.
     }
->>>>>>> CHRONAM-2278-fargate-migrate
-  }
-}
-
-# resource "aws_ecs_service" "service" {
-#   name            = var.service_name
-#   cluster         = aws_ecs_cluster.cluster.id
-#   task_definition = aws_ecs_task_definition.task_def.arn
-#   launch_type     = "FARGATE"
-#   desired_count   = var.desired_count
-
-#   network_configuration {
-#     subnets         = var.subnets
-#     security_groups = var.security_groups
-#   }
-
-#   tags = {
-#     Name = "ndnp-open-ocr"
-#   }
-# }
-
-resource "aws_vpc" "vpc" {
-  cidr_block = "10.0.0.0/16"
-
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-
-  tags = {
-    Name = "ndnp-open-ocr"
-  }
-}
-
-resource "aws_security_group" "ecs_tasks" {
-  vpc_id = aws_vpc.vpc.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Add more ingress/egress rules as needed.
-
-  tags = {
-    Name = "ndnp-open-ocr"
   }
 }
