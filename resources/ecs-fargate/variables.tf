@@ -37,7 +37,7 @@ variable "container_port" {
 variable "desired_count" {
   description = "Number of desired tasks for the service"
   type        = number
-  default     = 1
+  default     = 0
 }
 
 variable "subnets" {
@@ -57,5 +57,15 @@ variable "sqs_queue_url" {
 
 variable "sqs_queue_name" {
   description = "Source SQS Queue Name"
+  type        = string
+}
+
+variable "table_name" {
+  description = "DynamoDB Table Name"
+  type        = string
+}
+
+variable "aws_s3_output_bucket" {
+  description = "Name of the S3 bucket that Lambda will use for storing outputs"
   type        = string
 }
