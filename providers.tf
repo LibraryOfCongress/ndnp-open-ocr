@@ -9,7 +9,7 @@ variable "aws_region" {
 variable "aws_profile" {
   description = "AWS profile"
   type        = string
-  default     = "loc"
+  default     = "NDNP_OPEN_OCR_DEVELOPER_DEV_profile"
 }
 
 provider "aws" {
