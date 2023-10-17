@@ -1,4 +1,3 @@
-print("TEST")
 import json
 import os
 import errno
@@ -10,8 +9,16 @@ from ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
 import datetime
 import shutil
 import logging
+from flask import Flask, jsonify
+import threading
 
-print("TEST")
+app = Flask(__name__)
+
+
+@app.route("/health", methods=["GET"])
+def health_check():
+    return jsonify(status="healthy"), 200
+
 
 # Set Logging Level to DEBUG
 logging.basicConfig(
@@ -133,12 +140,13 @@ def process_message(message_body):
 
 
 def poll_sqs_and_process():
+    logging.info("Listening for messages on %s", sqs_queue_url)
     while True:
         response = sqs.receive_message(
             QueueUrl=sqs_queue_url,
             AttributeNames=["All"],
-            MaxNumberOfMessages=10,  # Adjust as needed
-            WaitTimeSeconds=10,
+            MaxNumberOfMessages=5,  # Adjust as needed
+            WaitTimeSeconds=5,
         )
 
         if "Messages" in response:
@@ -154,5 +162,11 @@ def poll_sqs_and_process():
                     logging.error(f"Failed to process message: {e}")
 
 
+def run_flask_app():
+    app.run(host="0.0.0.0", port=8080)
+
+
 if __name__ == "__main__":
+    logging.info("Starting NDNP Open OCR Reprocessing Consumer...")
+    threading.Thread(target=run_flask_app).start()
     poll_sqs_and_process()

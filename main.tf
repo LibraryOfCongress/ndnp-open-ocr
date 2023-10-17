@@ -26,7 +26,7 @@ module "lambda" {
   source               = "./resources/lambda"
   source_dir           = "./functions"
   output_path          = "./resources/lambda/functions.zip"
-  lambda_role_arn      = module.iam.lambda_role_arn
+  lambda_role_arn      = module.iam.service_role_arn
   aws_s3_output_bucket = module.s3.bucket_name
   queue_url        = module.sqs.queue_url
   queue_arn       = module.sqs.queue_arn
