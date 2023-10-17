@@ -17,8 +17,8 @@ def cli(ctx):
     # Initialize the context dict (these probably should somehow be populated by Terraform in the future...)
     ctx.ensure_object(dict)
     # Store bucket in the context (change to ndnp-open-ocr-output-bucket-test for testing purposes)
-    ctx.obj["INPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
-    ctx.obj["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
+    ctx.obj["INPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test-2"
+    ctx.obj["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test-2"
     # ctx.obj[
     #     "QUEUE_URL"
     # ] = "https://sqs.us-east-1.amazonaws.com/342134162356/ndnp-open-ocr-queue"
@@ -66,6 +66,7 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
             "bucketName": bucket,
         }
     }
+    print(payload)
     try:
         # Async invoke the scheduler Lambda function passing the prefix and bucket name
         # as path parameters (modeled from API Gateway request, should be changed later).
@@ -74,6 +75,8 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
             InvocationType="RequestResponse",
             Payload=json.dumps(payload).encode("utf-8"),
         )
+
+        print(response)
         response_payload = json.loads(response["Payload"].read())
 
         print(response_payload)
