@@ -9,3 +9,5 @@
 terraform.tfstate.d/sd*
 **batch**
 **jupyter**
+*.tar*
+*.whl

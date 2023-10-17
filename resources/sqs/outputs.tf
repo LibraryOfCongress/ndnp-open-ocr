@@ -7,3 +7,8 @@ output "queue_arn" {
     description = "The queue ARN for the PDF SQS queue"
     value = aws_sqs_queue.queue.arn
 }
+
+output "queue_name" {
+    description = "The queue name for the PDF SQS queue"
+    value = aws_sqs_queue.queue.name
+}

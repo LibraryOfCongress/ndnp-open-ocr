@@ -9,15 +9,30 @@ from ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
 import datetime
 import shutil
 import logging
+from flask import Flask, jsonify
+import threading
+
+app = Flask(__name__)
+
+
+@app.route("/health", methods=["GET"])
+def health_check():
+    return jsonify(status="healthy"), 200
+
 
 # Set Logging Level to DEBUG
-logging.basicConfig(filename="logs.log", level=logging.INFO)
+logging.basicConfig(
+    # filename="logs.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 # S3 client
 sqs = boto3.client("sqs", region_name="us-east-2")
 sqs_queue_url = "https://sqs.us-east-2.amazonaws.com/420280634985/ndnp-open-ocr-consumer-sqs-queue"  # os.getenv("SQS_QUEUE_URL")
 dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table("ndnp-open-ocr-table")  # dynamodb.Table(os.getenv("TABLE_NAME"))
+table = dynamodb.Table(os.getenv("TABLE_NAME"))
 s3 = boto3.client("s3")
 
 
@@ -59,10 +74,9 @@ def upload_files_to_s3(output_dir, output_bucket_name, output_prefix, difference
     for output_file in os.listdir(output_dir):
         output_file_path = os.path.join(output_dir, output_file)
         output_key = os.path.join(output_prefix, difference, output_file)
+        logging.info("OUTPUT BUCKET NAME: %s", output_bucket_name)
         s3.upload_file(output_file_path, output_bucket_name, output_key)
-
-        logging.info("Successfully Uploaded %s to %s", output_file_path, output_key)
-
+        logging.info(f"Successfully uploaded {output_file_path} to {output_key}")
     clear_tmp_directory()
 
 
@@ -118,24 +132,26 @@ def process_message(message_body):
         )
         resp = table.update_item(
             Key={"pk": "JOB", "sk": job_id},
-            UpdateExpression="SET RemainingPDFMessages = RemainingPDFMessages - :dec",
+            UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
             ExpressionAttributeValues={":dec": 1},
             ReturnValues="UPDATED_NEW",
         )
 
 
 def poll_sqs_and_process():
+    logging.info("Listening for messages on %s", sqs_queue_url)
     while True:
         response = sqs.receive_message(
             QueueUrl=sqs_queue_url,
             AttributeNames=["All"],
-            MaxNumberOfMessages=10,  # Adjust as needed
-            WaitTimeSeconds=10,
+            MaxNumberOfMessages=5,  # Adjust as needed
+            WaitTimeSeconds=5,
         )
 
         if "Messages" in response:
             for message in response["Messages"]:
                 try:
+                    logging.info("Incoming Message: %s", message)
                     process_message(message["Body"])
                     # Delete the processed SQS message
                     sqs.delete_message(
@@ -145,5 +161,11 @@ def poll_sqs_and_process():
                     logging.error(f"Failed to process message: {e}")
 
 
+def run_flask_app():
+    app.run(host="0.0.0.0", port=8080)
+
+
 if __name__ == "__main__":
+    logging.info("Starting NDNP Open OCR Reprocessing Consumer...")
+    threading.Thread(target=run_flask_app).start()
     poll_sqs_and_process()
