@@ -21,7 +21,6 @@ resource "aws_lambda_function" "scheduler_function" {
       LD_LIBRARY_PATH   = "/opt/lib"
       PATH              = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP               = "/tmp",
-      INPUT_BUCKET_NAME = var.aws_s3_input_bucket
       QUEUE_URL         = var.pdf_queue_url,
       TABLE_NAME        = var.table_name,
       ALTO_QUEUE_URL    = var.alto_queue_url
@@ -31,6 +30,23 @@ resource "aws_lambda_function" "scheduler_function" {
   layers = [
     aws_lambda_layer_version.lambda_layer.arn,
   ]
+
+}
+
+resource "aws_lambda_function" "get_job_function" {
+  function_name    = "ndnp-open-ocr-get-job-lambda-function-dev"
+  filename         = var.output_path
+  handler          = "get_job.handler"
+  role             = var.lambda_role_arn
+  runtime          = "python3.8"
+  source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
+  timeout          = 500
+
+  environment {
+    variables = {
+      TABLE_NAME        = var.table_name,
+    }
+  }
 
 }
 
@@ -47,10 +63,11 @@ resource "aws_lambda_function" "pdf_consumer_function" {
   memory_size      = 4000
 
 
+
   layers = [
     aws_lambda_layer_version.lambda_layer.arn,
-    "arn:aws:lambda:us-east-2:764866452798:layer:ghostscript:13",
-    "arn:aws:lambda:us-east-2:445285296882:layer:perl-5-32-runtime-al2:2"
+    # "arn:aws:lambda:us-east-2:764866452798:layer:ghostscript:13",
+    # "arn:aws:lambda:us-east-2:445285296882:layer:perl-5-32-runtime-al2:2"
   ]
 
   environment {
@@ -58,11 +75,10 @@ resource "aws_lambda_function" "pdf_consumer_function" {
       TESSDATA_PREFIX    = "/opt/share/tessdata"
       LD_LIBRARY_PATH    = "/opt/lib"
       PATH               = "/opt/bin:/usr/local/bin:/usr/bin:/bin:/opt/python/lib/python3.8/site-packages"
-      PYTHONPATH         = "/opt/python/:/opt/python/lib/python3.8/site-packages"
+      PYTHONPATH         = "/opt/python/:/opt/python/lib/python3.8/site-packages:/tmp"
       OMP_THREAD_LIMIT   = 1
       TMP                = "/tmp"
       OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
-      INPUT_BUCKET_NAME  = var.aws_s3_input_bucket
       QUEUE_URL          = var.pdf_queue_url,
       ALTO_QUEUE_URL     = var.alto_queue_url,
       TABLE_NAME         = var.table_name
@@ -96,7 +112,6 @@ resource "aws_lambda_function" "alto_consumer_function" {
       PYTHONPATH         = "/opt/python/:/opt/python/lib/python3.8/site-packages"
       TMP                = "/tmp"
       OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
-      INPUT_BUCKET_NAME  = var.aws_s3_input_bucket
       QUEUE_URL          = var.alto_queue_url,
       TABLE_NAME         = var.table_name
     }
@@ -105,15 +120,14 @@ resource "aws_lambda_function" "alto_consumer_function" {
 
 # Consumer for deadletter queue to catch failed issues for PDFs
 resource "aws_lambda_function" "pdf_dlq_consumer_function" {
-  function_name    = "ndnp-open-ocr-dlq-consumer-function"
+  function_name    = "ndnp-open-ocr-pdf-dlq-consumer-function"
   filename         = var.output_path
   handler          = "pdf_dlq_consumer.handler"
   role             = var.lambda_role_arn
   runtime          = "python3.8"
-  timeout          = 30
+  timeout          = 900
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  memory_size      = 1024
-
+  memory_size      = 4000
 
   layers = [
     aws_lambda_layer_version.lambda_layer.arn,
@@ -128,6 +142,8 @@ resource "aws_lambda_function" "pdf_dlq_consumer_function" {
       PATH            = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP             = "/tmp"
       DLQ_QUEUE_URL   = var.pdf_dlq_queue_arn
+      OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
+      TABLE_NAME         = var.table_name
       TABLE_NAME      = var.table_name
     }
   }
@@ -140,9 +156,9 @@ resource "aws_lambda_function" "alto_dlq_consumer_function" {
   handler          = "alto_dlq_consumer.handler"
   role             = var.lambda_role_arn
   runtime          = "python3.8"
-  timeout          = 30
+  timeout          = 900
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  memory_size      = 1024
+  memory_size      = 4000
 
 
   layers = [
@@ -158,6 +174,8 @@ resource "aws_lambda_function" "alto_dlq_consumer_function" {
       PATH            = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP             = "/tmp"
       DLQ_QUEUE_URL   = var.alto_dlq_queue_arn
+      OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
+      TABLE_NAME         = var.table_name
       TABLE_NAME      = var.table_name
     }
   }
@@ -167,10 +185,10 @@ resource "aws_lambda_function" "alto_dlq_consumer_function" {
 # AWS Lambda Layer to hold Python dependencies with pre-built layer.
 # FIXME: Automate layer creation
 resource "aws_lambda_layer_version" "lambda_layer" {
-  filename            = "Tesseract5.3.2Layer.zip"
+  filename            = "layer.zip"
   layer_name          = "ndnp-open-ocr-layer"
-  compatible_runtimes = ["python3.8"]
-  source_code_hash    = filebase64sha256("Tesseract5.3.2Layer.zip")
+  compatible_runtimes = ["python3.8", "python3.9"]
+  source_code_hash    = filebase64sha256("layer.zip")
 }
 
 # Log group for scheduler
@@ -204,14 +222,6 @@ resource "aws_cloudwatch_log_group" "alto_dlq_consumer_function_log_group" {
 }
 
 
-# Permission for API Gateway to invoke the scheduler function
-resource "aws_lambda_permission" "apigw" {
-  statement_id  = "AllowExecutionFromAPIGatewayScheduler"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.scheduler_function.function_name
-  principal     = "apigateway.amazonaws.com"
-}
-
 # Connect Consumer to Queue
 resource "aws_lambda_event_source_mapping" "pdf_event_source_mapping" {
   event_source_arn = var.pdf_queue_arn
@@ -220,11 +230,11 @@ resource "aws_lambda_event_source_mapping" "pdf_event_source_mapping" {
 }
 
 # Connect PDF DLQ Consumer to PDF DLQ Queue
-resource "aws_lambda_event_source_mapping" "pdf_dlq_event_source_mapping" {
-  event_source_arn = var.pdf_dlq_queue_arn
-  function_name    = aws_lambda_function.pdf_dlq_consumer_function.function_name
-  batch_size       = 1
-}
+# resource "aws_lambda_event_source_mapping" "pdf_dlq_event_source_mapping" {
+#   event_source_arn = var.pdf_dlq_queue_arn
+#   function_name    = aws_lambda_function.pdf_dlq_consumer_function.function_name
+#   batch_size       = 1
+# }
 
 # Connect ALTO Consumer to ALTO Queue
 resource "aws_lambda_event_source_mapping" "alto_event_source_mapping" {
@@ -233,9 +243,9 @@ resource "aws_lambda_event_source_mapping" "alto_event_source_mapping" {
   batch_size       = 1
 }
 
-# Connect ALTO Consumer to ALTO DLQ Queue
-resource "aws_lambda_event_source_mapping" "alto_dlq_event_source_mapping" {
-  event_source_arn = var.alto_dlq_queue_arn
-  function_name    = aws_lambda_function.alto_dlq_consumer_function.function_name
-  batch_size       = 1
-}
+# # Connect ALTO Consumer to ALTO DLQ Queue
+# resource "aws_lambda_event_source_mapping" "alto_dlq_event_source_mapping" {
+#   event_source_arn = var.alto_dlq_queue_arn
+#   function_name    = aws_lambda_function.alto_dlq_consumer_function.function_name
+#   batch_size       = 1
+# }

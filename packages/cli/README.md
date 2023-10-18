@@ -2,6 +2,28 @@
 
 This command line interface (CLI) enables you to trigger batch processing jobs on NDNP (National Digital Newspaper Program) data stored in Amazon S3, monitor the progress of these jobs, and download the results once the jobs are completed.
 
+## Test Commands to Run Presently:
+
+To kickoff batch processing job
+```sh
+python cli.py reprocess --batch_name=notvalidated --bucket=ndnp-open-ocr-output-bucket-test
+```
+
+To check status of reprocessing job:
+
+```sh
+python cli.py check-status --job JOB_ID (output of previous command)
+```
+
+To check for missing files between loc-preservation batch and S3 output for given job id:
+
+```sh
+ python cli.py get-missing --job JOB_ID
+```
+
+
+
+
 ## Requirements
 
 Before running the CLI, make sure that you have installed the required Python libraries listed in the accompanying `requirements.txt` file.
@@ -55,14 +77,14 @@ Once installed, you can run the CLI tool using the command defined in the `pypro
 For example, here is the command for running the "sync" command, to create a copy of a local batch and pull-down the new ALTO and PDF files from S3 that were created by the reprocessing job in AWS.
 
 ```bash
-ndnp_openocr sync --prefix=batch_dlc_kite_ver01_____5ce7bcad-ec0e-4978-a760-cd6d457ab5c2 --output-dir=/Volumes/DLP1/batch_dlc_kite_ver03     --local-batch=/Volumes/DLP1/batch_dlc_kite_ver01
+ndnp_openocr sync --job=batch_dlc_kite_ver01_____5ce7bcad-ec0e-4978-a760-cd6d457ab5c2 --output-dir=/Volumes/DLP1/batch_dlc_kite_ver03     --local-batch=/Volumes/DLP1/batch_dlc_kite_ver01
 ```
 
 
 
 
 ## Installation: From Scratch
-These will need to be installed using virtualenv and Python3.9 in the target VM environment.
+These will need to be installed using virtualenv and python3.8 in the target VM environment.
 * dzdo yum install -y python39
 <!-- * sudo yum install python34-devel.x86_64 -->
 * sudo yum install git
@@ -76,7 +98,7 @@ pip3.9 install virtualenv
 * git clone ssh://git@git.loc.gov:7999/NDNP/openocr.git
 * cd scripts
 
-* python3.9 -m virtualenv _env
+* python3.8 -m virtualenv _env
 * source _env/bin/activate
 * export PYTHONPATH=/opt/ndnp/openocr/
 <!-- * pip install -r requirements.txt -->
@@ -100,11 +122,11 @@ The usage of each command is detailed below:
 ## 1. `sync`
 
 ```
-python cli.py sync --prefix [PREFIX] --output-dir [OUTPUT_DIR] --overwrite [OVERWRITE_FLAG] --local-batch [LOCAL_BATCH_PATH]
+python cli.py sync --job [PREFIX] --output-dir [OUTPUT_DIR] --overwrite [OVERWRITE_FLAG] --local-batch [LOCAL_BATCH_PATH]
 ```
 
 Options:
-- `--prefix`: The prefix to the batch in S3 (i.e. "/batches/dlc_euclid_ver02_reprocessed/")
+- `--job`: The prefix to the batch in S3 (i.e. "/batches/dlc_euclid_ver02_reprocessed/" aka JOB_ID)
 - `--output-dir`: The local directory to output the new files to.
 - `--overwrite`: Overwrite existing files. (optional)
 - `--local-batch`: The path to local batch data (i.e. "/nfs_mounts/group5/ndnp/dlc_euclid_ver01")
