@@ -166,6 +166,10 @@ resource "aws_ecs_task_definition" "task_def" {
       }
     }
   }])
+
+  tags = {
+    Name = "ndnp-open-ocr"
+  }
 }
 
 resource "aws_ecs_service" "service" {
@@ -205,6 +209,10 @@ resource "aws_cloudwatch_metric_alarm" "sqs_alarm" {
   dimensions = {
     QueueName = var.sqs_queue_name # Make sure you have the queue name variable
   }
+
+  tags = {
+    Name="ndnp-open-ocr"
+  }
 }
 
 resource "aws_appautoscaling_target" "ecs_target" {
@@ -213,6 +221,16 @@ resource "aws_appautoscaling_target" "ecs_target" {
   resource_id        = "service/${aws_ecs_cluster.cluster.name}/${aws_ecs_service.service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
+
+  lifecycle {
+    ignore_changes = [
+      tags_all
+    ]
+  }
+
+  tags = {
+    Name = "ndnp-open-ocr"
+  }
 }
 
 resource "aws_appautoscaling_policy" "scale_out" {
