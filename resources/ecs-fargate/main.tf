@@ -270,3 +270,46 @@ resource "aws_appautoscaling_policy" "scale_in" {
     }
   }
 }
+
+# VPC Endpoints to give private subnets access to AWS services.
+resource "aws_vpc_endpoint" "s3_endpoint" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.us-east-2.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids = [aws_route_table.main.id]
+}
+
+resource "aws_vpc_endpoint" "ecr_api_endpoint" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.us-east-2.ecr.api"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
+}
+
+resource "aws_vpc_endpoint" "ecr_dkr_endpoint" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.us-east-2.ecr.dkr"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
+}
+
+resource "aws_vpc_endpoint" "dynamodb_endpoint" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.us-east-2.dynamodb"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids = [aws_route_table.main.id]
+}
+
+resource "aws_vpc_endpoint" "logs_endpoint" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.us-east-2.logs"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
+}
+
+resource "aws_vpc_endpoint" "events_endpoint" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.us-east-2.events"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
+}
