@@ -1,8 +1,0 @@
-lxml==4.9.1
-pikepdf==5.4.2
-PyExifTool==0.5.3
-pyparsing==3.0.9
-pytesseract==0.3.9
-beautifulsoup4==4.10.0
-hocker==1.0.4
-reportlab

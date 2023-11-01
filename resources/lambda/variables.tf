@@ -18,33 +18,13 @@ variable "aws_s3_output_bucket" {
   type        = string
 }
 
-variable "pdf_queue_url" {
+variable "queue_url" {
   description = "PDF Queue URL of the SQS queue for processing job management"
   type = string
 }
 
-variable "alto_queue_arn" {
+variable "queue_arn" {
   description = "ALTO Queue ARN of the SQS queue for processing job management"
-  type = string
-}
-
-variable "alto_queue_url" {
-  description = "ALTO Queue URL of the SQS queue for processing job management"
-  type = string
-}
-
-variable "pdf_queue_arn" {
-  description = "PDF Queue ARN of the SQS queue for processing job management"
-  type = string
-}
-
-variable "pdf_dlq_queue_arn" {
-  description = "PDF Queue ARN of the deadletter SQS queue for catching failed job messages from the main queue."
-  type = string
-}
-
-variable "alto_dlq_queue_arn" {
-  description = "ALTO DLQ Queue ARN of the SQS queue for processing job management"
   type = string
 }
 
