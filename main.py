@@ -30,7 +30,7 @@ logging.basicConfig(
 
 # S3 client
 sqs = boto3.client("sqs", region_name="us-east-2")
-sqs_queue_url = "https://sqs.us-east-2.amazonaws.com/420280634985/ndnp-open-ocr-consumer-sqs-queue"  # os.getenv("SQS_QUEUE_URL")
+sqs_queue_url = "https://sqs.us-east-2.amazonaws.com/342134162356/ndnp-open-ocr-consumer-sqs-queue"  # os.getenv("SQS_QUEUE_URL")
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(os.getenv("TABLE_NAME"))
 s3 = boto3.client("s3")

@@ -132,7 +132,7 @@ resource "aws_ecs_task_definition" "task_def" {
 
   container_definitions = jsonencode([{
     name  = var.container_name
-    image = "420280634985.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo:latest"
+    image = "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo"
     portMappings = [{
       containerPort = var.container_port
       hostPort      = var.container_port
