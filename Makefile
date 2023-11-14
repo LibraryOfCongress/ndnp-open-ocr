@@ -15,7 +15,7 @@ build_fargate:
 	docker build --platform linux/arm64 -t ndnp_open_ocr_deploy:latest .
 
 run_fargate:
-	docker run -it -e AWS_PROFILE=loc -e PYTHONPATH=packages -e OUTPUT_BUCKET_NAME=ndnp-open-ocr-output-bucket-test-2 -v ~/.aws:/root/.aws -v $(PWD):/app -w /app ndnp_open_ocr_deploy:latest bash
+	docker run -it -e AWS_PROFILE=NDNP_OPEN_OCR_DEVELOPER_DEV_profile -e PYTHONPATH=packages -e TABLE_NAME=ndnp-open-ocr-table -e OUTPUT_BUCKET_NAME=ndnp-open-ocr-output-bucket-test -v ~/.aws:/root/.aws -v $(PWD):/app -w /app ndnp_open_ocr_deploy:latest bash
 
 push_fargate:
 	aws ecr get-login-password --region us-east-2 --profile NDNP_OPEN_OCR_DEVELOPER_DEV_profile | docker login --username AWS --password-stdin 342134162356.dkr.ecr.us-east-2.amazonaws.com

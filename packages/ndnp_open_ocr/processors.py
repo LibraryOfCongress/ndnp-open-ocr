@@ -350,6 +350,7 @@ class OCRProcessor:
         input, then will postprocess the PDF to make it compliant with NDNP specifications for content.
         """
         try:
+            logging.info("Generating PDF file")
             temp_gray_path = self._preprocess_image()
 
             if self.preprocessing_method == PreprocessingMethod.ORIGINAL:
@@ -420,6 +421,7 @@ class OCRProcessor:
         """
         try:
             # Preprocess with CV2.
+            logging.info("Generating ALTO file")
             temp_gray_path = self._preprocess_image()
 
             xml = pytesseract.image_to_alto_xml(temp_gray_path)

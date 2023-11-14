@@ -1,7 +1,7 @@
 import boto3
 import click
 import requests
-from ndnp_openocr.helpers import sync_s3_batch, find_missing_pdfs
+from helpers import sync_s3_batch, find_missing_pdfs
 import json
 import time
 import logging
@@ -22,12 +22,12 @@ def cli(ctx):
     # ctx.obj[
     #     "QUEUE_URL"
     # ] = "https://sqs.us-east-1.amazonaws.com/342134162356/ndnp-open-ocr-queue"
-    # ctx.obj[
-    #     "SCHEDULER_ARN"
-    # ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-scheduler-lambda-function-dev"
     ctx.obj[
         "SCHEDULER_ARN"
-    ] = "arn:aws:lambda:us-east-2:420280634985:function:ndnp-open-ocr-scheduler-lambda-function-dev"
+    ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-scheduler-lambda-function-dev"
+    # ctx.obj[
+    #     "SCHEDULER_ARN"
+    # ] = "arn:aws:lambda:us-east-2:420280634985:function:ndnp-open-ocr-scheduler-lambda-function-dev"
     ctx.obj[
         "GET_JOB_ARN"
     ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-get-job-lambda-function-dev"
