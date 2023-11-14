@@ -144,9 +144,11 @@ def poll_sqs_and_process():
         response = sqs.receive_message(
             QueueUrl=sqs_queue_url,
             AttributeNames=["All"],
-            MaxNumberOfMessages=5,  # Adjust as needed
+            MaxNumberOfMessages=1,
             WaitTimeSeconds=5,
         )
+
+        logging.info("RESPONSE MESSAGES %s", response['Messages'])
 
         if "Messages" in response:
             for message in response["Messages"]:
@@ -161,11 +163,11 @@ def poll_sqs_and_process():
                     logging.error(f"Failed to process message: {e}")
 
 
-def run_flask_app():
-    app.run(host="0.0.0.0", port=8080)
+# def run_flask_app():
+#     app.run(host="0.0.0.0", port=8080)
 
 
 if __name__ == "__main__":
     logging.info("Starting NDNP Open OCR Reprocessing Consumer...")
-    threading.Thread(target=run_flask_app).start()
+    # threading.Thread(target=run_flask_app).start()
     poll_sqs_and_process()
