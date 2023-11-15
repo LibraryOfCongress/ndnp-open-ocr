@@ -41,7 +41,7 @@ resource "aws_subnet" "subnet_1" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "us-east-2a"
-  map_public_ip_on_launch = false
+  map_public_ip_on_launch = true
   tags = {
     Name = "ndnp-open-ocr-subnet-1"
   }
@@ -51,7 +51,7 @@ resource "aws_subnet" "subnet_2" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.2.0/24"
   availability_zone       = "us-east-2b"
-  map_public_ip_on_launch = false
+  map_public_ip_on_launch = true
   tags = {
     Name = "ndnp-open-ocr-subnet-2"
   }
@@ -60,13 +60,6 @@ resource "aws_subnet" "subnet_2" {
 resource "aws_security_group" "main_sg" {
   vpc_id = aws_vpc.main.id
 
-  # Inbound connections
-  ingress {
-    from_port   = 0
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   # Outbound connections
   egress {
@@ -111,7 +104,7 @@ resource "aws_ecr_lifecycle_policy" "example" {
 resource "aws_ecs_cluster" "cluster" {
   name = "ndnp-open-ocr-fargate-cluster"
 
-   tags = {
+  tags = {
     Name = "ndnp-open-ocr"
   }
 }
@@ -129,6 +122,7 @@ resource "aws_ecs_task_definition" "task_def" {
   memory                   = 2048
   execution_role_arn       = var.execution_role_arn
   task_role_arn            = var.task_role_arn
+
 
   container_definitions = jsonencode([{
     name  = var.container_name
@@ -165,6 +159,7 @@ resource "aws_ecs_task_definition" "task_def" {
         "awslogs-stream-prefix" = "ecs"
       }
     }
+
   }])
 
   tags = {
@@ -182,7 +177,7 @@ resource "aws_ecs_service" "service" {
   network_configuration {
     subnets          = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
     security_groups  = [aws_security_group.main_sg.id]
-    assign_public_ip = false
+    assign_public_ip = true
   }
 
   force_new_deployment = true
@@ -211,7 +206,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_alarm" {
   }
 
   tags = {
-    Name="ndnp-open-ocr"
+    Name = "ndnp-open-ocr"
   }
 }
 
@@ -261,7 +256,7 @@ resource "aws_appautoscaling_policy" "scale_in" {
 
   step_scaling_policy_configuration {
     adjustment_type         = "ChangeInCapacity"
-    cooldown                = 300
+    cooldown                = 20
     metric_aggregation_type = "Average"
 
     step_adjustment {
@@ -269,47 +264,4 @@ resource "aws_appautoscaling_policy" "scale_in" {
       scaling_adjustment          = -10
     }
   }
-}
-
-# VPC Endpoints to give private subnets access to AWS services.
-resource "aws_vpc_endpoint" "s3_endpoint" {
-  vpc_id       = aws_vpc.main.id
-  service_name = "com.amazonaws.us-east-2.s3"
-  vpc_endpoint_type = "Gateway"
-  route_table_ids = [aws_route_table.main.id]
-}
-
-resource "aws_vpc_endpoint" "ecr_api_endpoint" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.us-east-2.ecr.api"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
-}
-
-resource "aws_vpc_endpoint" "ecr_dkr_endpoint" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.us-east-2.ecr.dkr"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
-}
-
-resource "aws_vpc_endpoint" "dynamodb_endpoint" {
-  vpc_id       = aws_vpc.main.id
-  service_name = "com.amazonaws.us-east-2.dynamodb"
-  vpc_endpoint_type = "Gateway"
-  route_table_ids = [aws_route_table.main.id]
-}
-
-resource "aws_vpc_endpoint" "logs_endpoint" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.us-east-2.logs"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
-}
-
-resource "aws_vpc_endpoint" "events_endpoint" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.us-east-2.events"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
 }
