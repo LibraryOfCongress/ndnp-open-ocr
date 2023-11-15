@@ -5,57 +5,39 @@ import requests
 import shutil
 import uuid
 import logging
-
+import subprocess
 
 # Creates a new batch using a combination of the old batch and new PDF and ALTO files stored in S3 with mirrored directory structure (NDNP batch)
-def sync_s3_batch(bucket, job, output_dir, overwrite, local_batch):
-    """Syncs an S3 bucket with local files."""
-    # Ensure the local batch directory exists
-    if not os.path.isdir(local_batch):
+
+def sync_s3_batch(bucket, job, local_batch, new_batch_dir):
+    """Syncs an S3 bucket with local files and merges it with a local batch."""
+    # Step 1: Clone S3 contents into /tmp directory
+    s3_uri = f"s3://{bucket}/{job}"
+    tmp_dir = "/tmp/s3_contents"
+    if not os.path.exists(tmp_dir):
+        os.makedirs(tmp_dir)
+
+    sync_command = f"aws s3 sync {s3_uri} {tmp_dir}"
+    subprocess.run(sync_command, shell=True, check=True)
+    print("S3 contents cloned to /tmp directory.")
+
+    # Step 2: Copy local_batch contents into new_batch_dir
+    if os.path.exists(local_batch):
+        shutil.copytree(local_batch, new_batch_dir, dirs_exist_ok=True)
+        print("Local batch contents copied to new batch directory.")
+    else:
         print(f"Local batch directory {local_batch} does not exist!")
-        return
 
-    print("Copying local batch...")
-    # Copy the batch directory to output_batch directory
-    try:
-        shutil.copytree(local_batch, output_dir, dirs_exist_ok=False)
-    except Exception as e:
-        print(e)
-    print("Local batch copy complete...")
+    # Step 3: Copy /tmp directory contents into new_batch_dir, merging contents
+    for item in os.listdir(tmp_dir):
+        source_path = os.path.join(tmp_dir, item)
+        destination_path = os.path.join(new_batch_dir, item)
+        if os.path.isdir(source_path):
+            shutil.copytree(source_path, destination_path, dirs_exist_ok=True)
+        else:
+            shutil.copy2(source_path, destination_path)
 
-    s3 = boto3.client("s3")
-
-    paginator = s3.get_paginator("list_objects_v2")
-    for result in paginator.paginate(Bucket=bucket, Prefix=job):
-        # Download each file individually
-        for file in result.get("Contents", []):
-            file_key = file["Key"]
-
-            # Only consider .pdf and .xml files
-            if not file_key.endswith(".pdf") and not file_key.endswith(".xml"):
-                continue
-
-            # Skip the first component in the path
-            components = file_key.split("/")
-            file_key_without_prefix = "/".join(components[1:])
-
-            local_path = os.path.join(output_dir, file_key_without_prefix)
-
-            print(file_key_without_prefix)
-
-            # Ensure the folder structure for the file exists
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
-
-            # Only download the file if it does not exist, or is older than the file on S3
-            if (
-                overwrite
-                or not os.path.exists(local_path)
-                or os.path.getmtime(local_path) < file["LastModified"].timestamp()
-            ):
-                print(f"Downloading {file_key} to {local_path}")
-                s3.download_file(bucket, file_key, local_path)
-            else:
-                print(f"{local_path} is up to date")
+    print("Merged /tmp and local batch contents into new batch directory.")
 
 
 def find_missing_pdfs(input_bucket, input_prefix, output_bucket, output_prefix):
