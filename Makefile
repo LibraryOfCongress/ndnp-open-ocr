@@ -15,11 +15,11 @@ build_fargate:
 	docker build --platform linux/arm64 -t ndnp_open_ocr_deploy:latest .
 
 run_fargate:
-	docker run -it -e AWS_PROFILE=loc -e PYTHONPATH=packages -e OUTPUT_BUCKET_NAME=ndnp-open-ocr-output-bucket-test-2 -v ~/.aws:/root/.aws -v $(PWD):/app -w /app ndnp_open_ocr_deploy:latest bash
+	docker run -it -e AWS_PROFILE=NDNP_OPEN_OCR_DEVELOPER_DEV_profile -e PYTHONPATH=packages -e TABLE_NAME=ndnp-open-ocr-table -e OUTPUT_BUCKET_NAME=ndnp-open-ocr-output-bucket-test -v ~/.aws:/root/.aws -v $(PWD):/app -w /app ndnp_open_ocr_deploy:latest bash
 
 push_fargate:
-	aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 420280634985.dkr.ecr.us-east-2.amazonaws.com
+	aws ecr get-login-password --region us-east-2 --profile NDNP_OPEN_OCR_DEVELOPER_DEV_profile | docker login --username AWS --password-stdin 342134162356.dkr.ecr.us-east-2.amazonaws.com
 	docker build --platform linux/amd64 -t ndnp_open_ocr:latest ./packages/ndnp_open_ocr
 	docker build --platform linux/amd64 -t ndnp-open-ocr-container-repo .
-	docker tag ndnp-open-ocr-container-repo:latest 420280634985.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo:latest
-	docker push 420280634985.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo:latest
+	docker tag ndnp-open-ocr-container-repo:latest 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo:latest
+	docker push 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo:latest
