@@ -60,13 +60,6 @@ resource "aws_subnet" "subnet_2" {
 resource "aws_security_group" "main_sg" {
   vpc_id = aws_vpc.main.id
 
-  # Inbound connections
-  ingress {
-    from_port   = 0
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   # Outbound connections
   egress {
@@ -111,7 +104,7 @@ resource "aws_ecr_lifecycle_policy" "example" {
 resource "aws_ecs_cluster" "cluster" {
   name = "ndnp-open-ocr-fargate-cluster"
 
-   tags = {
+  tags = {
     Name = "ndnp-open-ocr"
   }
 }
@@ -130,9 +123,10 @@ resource "aws_ecs_task_definition" "task_def" {
   execution_role_arn       = var.execution_role_arn
   task_role_arn            = var.task_role_arn
 
+
   container_definitions = jsonencode([{
     name  = var.container_name
-    image = "420280634985.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo:latest"
+    image = "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo"
     portMappings = [{
       containerPort = var.container_port
       hostPort      = var.container_port
@@ -165,7 +159,12 @@ resource "aws_ecs_task_definition" "task_def" {
         "awslogs-stream-prefix" = "ecs"
       }
     }
+
   }])
+
+  tags = {
+    Name = "ndnp-open-ocr"
+  }
 }
 
 resource "aws_ecs_service" "service" {
@@ -205,14 +204,28 @@ resource "aws_cloudwatch_metric_alarm" "sqs_alarm" {
   dimensions = {
     QueueName = var.sqs_queue_name # Make sure you have the queue name variable
   }
+
+  tags = {
+    Name = "ndnp-open-ocr"
+  }
 }
 
 resource "aws_appautoscaling_target" "ecs_target" {
-  max_capacity       = 10 # Adjust based on your max tasks
+  max_capacity       = 50 # Adjust based on your max tasks
   min_capacity       = 0  # Adjust based on your min tasks
   resource_id        = "service/${aws_ecs_cluster.cluster.name}/${aws_ecs_service.service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
+
+  lifecycle {
+    ignore_changes = [
+      tags_all
+    ]
+  }
+
+  tags = {
+    Name = "ndnp-open-ocr"
+  }
 }
 
 resource "aws_appautoscaling_policy" "scale_out" {
@@ -229,7 +242,7 @@ resource "aws_appautoscaling_policy" "scale_out" {
 
     step_adjustment {
       metric_interval_lower_bound = 0
-      scaling_adjustment          = 5 # Increase by 2 tasks. Adjust as necessary.
+      scaling_adjustment          = 5
     }
   }
 }
@@ -243,12 +256,12 @@ resource "aws_appautoscaling_policy" "scale_in" {
 
   step_scaling_policy_configuration {
     adjustment_type         = "ChangeInCapacity"
-    cooldown                = 300
+    cooldown                = 20
     metric_aggregation_type = "Average"
 
     step_adjustment {
       metric_interval_upper_bound = 0
-      scaling_adjustment          = -5 # Decrease by 1 task. Adjust as necessary.
+      scaling_adjustment          = -10
     }
   }
 }

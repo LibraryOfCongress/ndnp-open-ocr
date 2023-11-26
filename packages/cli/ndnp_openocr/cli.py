@@ -1,7 +1,7 @@
 import boto3
 import click
 import requests
-from ndnp_openocr.helpers import sync_s3_batch, find_missing_pdfs
+from helpers import sync_s3_batch, find_missing_pdfs
 import json
 import time
 import logging
@@ -17,8 +17,8 @@ def cli(ctx):
     # Initialize the context dict (these probably should somehow be populated by Terraform in the future...)
     ctx.ensure_object(dict)
     # Store bucket in the context (change to ndnp-open-ocr-output-bucket-test for testing purposes)
-    ctx.obj["INPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test-2"
-    ctx.obj["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test-2"
+    ctx.obj["INPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
+    ctx.obj["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
     # ctx.obj[
     #     "QUEUE_URL"
     # ] = "https://sqs.us-east-1.amazonaws.com/342134162356/ndnp-open-ocr-queue"
@@ -34,7 +34,7 @@ def cli(ctx):
 
 
 @click.command()
-@click.option("--prefix", default="", help="The prefix in S3 bucket to filter files.")
+@click.option("--job", default="", help="The prefix in S3 bucket to filter files.")
 @click.option(
     "--output-dir", default=".", help="The directory to output the new files to."
 )
@@ -49,7 +49,7 @@ def sync(ctx, job: str, output_dir: str, overwrite: bool, local_batch: str):
     # Get bucket from the context
     bucket = ctx.obj["OUTPUT_BUCKET_NAME"]
     print(bucket)
-    sync_s3_batch(bucket, job, output_dir, overwrite, local_batch)
+    sync_s3_batch(bucket, job, local_batch, output_dir)
 
 
 def reprocess_batch(ctx, batch_name: str, bucket: str):
