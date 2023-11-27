@@ -9,6 +9,26 @@ import os
 
 logger = logging.getLogger(__name__)
 
+def setup_logging(log_filename='ndnp_open_ocr.log'):
+    current_directory = os.getcwd()
+    log_file_path = os.path.join(current_directory, log_filename)
+
+    logger = logging.getLogger(__name__)
+
+    logger.setLevel(logging.INFO)
+
+    file_handler = logging.FileHandler(log_file_path)
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+
+    return logger
+
+# Set up logging
+logger = setup_logging()
+
 
 @click.group()
 @click.pass_context
@@ -17,17 +37,17 @@ def cli(ctx):
     # Initialize the context dict (these probably should somehow be populated by Terraform in the future...)
     ctx.ensure_object(dict)
     # Store bucket in the context (change to ndnp-open-ocr-output-bucket-test for testing purposes)
-    ctx.obj["INPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
+    ctx.obj["INPUT_BUCKET_NAME"] = "loc-preservation"
     ctx.obj["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
     # ctx.obj[
     #     "QUEUE_URL"
     # ] = "https://sqs.us-east-1.amazonaws.com/342134162356/ndnp-open-ocr-queue"
-    # ctx.obj[
-    #     "SCHEDULER_ARN"
-    # ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-scheduler-lambda-function-dev"
     ctx.obj[
         "SCHEDULER_ARN"
-    ] = "arn:aws:lambda:us-east-2:420280634985:function:ndnp-open-ocr-scheduler-lambda-function-dev"
+    ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-scheduler-lambda-function-dev"
+    # ctx.obj[
+    #     "SCHEDULER_ARN"
+    # ] = "arn:aws:lambda:us-east-2:420280634985:function:ndnp-open-ocr-scheduler-lambda-function-dev"
     ctx.obj[
         "GET_JOB_ARN"
     ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-get-job-lambda-function-dev"
@@ -48,7 +68,6 @@ def sync(ctx, job: str, output_dir: str, overwrite: bool, local_batch: str):
 
     # Get bucket from the context
     bucket = ctx.obj["OUTPUT_BUCKET_NAME"]
-    print(bucket)
     sync_s3_batch(bucket, job, local_batch, output_dir)
 
 
@@ -76,10 +95,12 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
             Payload=json.dumps(payload).encode("utf-8"),
         )
 
-        print(response)
         response_payload = json.loads(response["Payload"].read())
+        job_id = json.loads(response_payload['body'])['job']
+        os.environ['JOB_ID'] = job_id
 
-        print(response_payload)
+        logger.info("Job_ID {} kicked off for {} prefix in {} bucket".format(job_id, prefix, bucket))
+
 
     except Exception as e:
         print(f"Failed to trigger Lambda function: {e}")
