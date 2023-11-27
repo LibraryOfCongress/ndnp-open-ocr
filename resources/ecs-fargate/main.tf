@@ -196,7 +196,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_alarm" {
   namespace           = "AWS/SQS"
   period              = "60"
   statistic           = "Average"
-  threshold           = "10" # Adjust this threshold based on when you want scaling to occur
+  threshold           = "1" # Adjust this threshold based on when you want scaling to occur
   alarm_description   = "Alarm when SQS messages are too high"
   alarm_actions       = [aws_appautoscaling_policy.scale_out.arn]
   ok_actions          = [aws_appautoscaling_policy.scale_in.arn]
@@ -256,7 +256,7 @@ resource "aws_appautoscaling_policy" "scale_in" {
 
   step_scaling_policy_configuration {
     adjustment_type         = "ChangeInCapacity"
-    cooldown                = 20
+    cooldown                = 900
     metric_aggregation_type = "Average"
 
     step_adjustment {
