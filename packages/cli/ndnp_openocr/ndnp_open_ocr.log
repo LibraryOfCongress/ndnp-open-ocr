@@ -1,1 +1,334 @@
 2023-11-27 13:29:12,328 - __main__ - INFO - Job_ID notvalidated__da553e85-a0d4-4bb7-a0ba-175cd6db0c80 kicked off for notvalidated prefix in ndnp-open-ocr-output-bucket-test bucket
+2023-11-27 14:00:09,634 - __main__ - INFO - Job_ID notvalidated__1a197f9b-e3eb-487b-9d79-cb66936cb9f0 kicked off for notvalidated prefix in ndnp-open-ocr-output-bucket-test bucket
+2023-11-27 15:27:39,097 - logger - INFO - Syncing outputs from notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e to local, and merging with local batch data.
+2023-11-27 15:27:40,127 - logger - INFO - S3 contents from s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e cloned to /tmp/s3_contents directory.
+2023-11-27 15:27:42,483 - logger - INFO - Local batch contents (/Volumes/ExtremeSSD/notvalidated_orig) copied to new batch directory. (/Volumes/ExtremeSSD/notvbal1)
+2023-11-27 15:27:42,621 - logger - INFO - Merged /tmp and local batch contents into new batch directory.
+2023-11-27 15:28:40,973 - logger - INFO - Syncing outputs from notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e to local, and merging with local batch data.
+2023-11-27 15:28:41,994 - logger - INFO - S3 contents from s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e cloned to /tmp/s3_contents directory.
+2023-11-27 15:28:43,781 - logger - INFO - Local batch contents (/Volumes/ExtremeSSD/notvalidated_orig) copied to new batch directory. (/Volumes/ExtremeSSD/notvbal1)
+2023-11-27 15:28:43,918 - logger - INFO - Merged /tmp and local batch contents into new batch directory.
+2023-11-27 15:28:51,746 - logger - INFO - Syncing outputs from notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e to local, and merging with local batch data.
+2023-11-27 15:28:52,618 - logger - INFO - S3 contents from s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e cloned to /tmp/s3_contents directory.
+2023-11-27 15:28:54,415 - logger - INFO - Local batch contents (/Volumes/ExtremeSSD/notvalidated_orig) copied to new batch directory. (/Volumes/ExtremeSSD/notvbal2)
+2023-11-27 15:28:54,531 - logger - INFO - Merged /tmp and local batch contents into new batch directory.
+2023-11-27 15:30:28,498 - logger - INFO - Syncing outputs from notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e to local, and merging with local batch data.
+2023-11-27 15:30:29,447 - logger - INFO - S3 contents from s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e cloned to /tmp/s3_contents directory.
+2023-11-27 15:30:31,067 - logger - INFO - Local batch contents (/Volumes/ExtremeSSD/notvalidated_orig) copied to new batch directory. (/Volumes/ExtremeSSD/notvbal2)
+2023-11-27 15:30:31,176 - logger - INFO - Merged /tmp and local batch contents into new batch directory.
+2023-11-27 15:30:31,181 - logger - INFO - Temporary directory /tmp/s3_contents successfully deleted.
+2023-11-27 15:30:39,598 - logger - INFO - Syncing outputs from notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e to local, and merging with local batch data.
+2023-11-27 15:30:51,088 - logger - INFO - S3 contents from s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e cloned to /tmp/s3_contents directory.
+2023-11-27 15:30:52,817 - logger - INFO - Local batch contents (/Volumes/ExtremeSSD/notvalidated_orig) copied to new batch directory. (/Volumes/ExtremeSSD/notvbal2)
+2023-11-27 15:30:52,942 - logger - INFO - Merged /tmp and local batch contents into new batch directory.
+2023-11-27 15:30:52,945 - logger - INFO - Temporary directory /tmp/s3_contents successfully deleted.
+2023-11-27 15:33:01,673 - logger - INFO - Syncing outputs from notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e to local, and merging with local batch data.
+2023-11-27 15:33:28,754 - logger - INFO - Completed 1.4 KiB/49.4 MiB (3.3 KiB/s) with 38 file(s) remaining
+Completed 2.8 KiB/49.4 MiB (6.6 KiB/s) with 38 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0582.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0582.xml
+Completed 2.8 KiB/49.4 MiB (6.6 KiB/s) with 37 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0187.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0187.xml
+Completed 2.8 KiB/49.4 MiB (6.6 KiB/s) with 36 file(s) remaining
+Completed 4.2 KiB/49.4 MiB (9.8 KiB/s) with 36 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0000.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0000.xml
+Completed 4.2 KiB/49.4 MiB (9.8 KiB/s) with 35 file(s) remaining
+Completed 8.2 KiB/49.4 MiB (18.0 KiB/s) with 35 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0771.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0771.xml
+Completed 8.2 KiB/49.4 MiB (18.0 KiB/s) with 34 file(s) remaining
+Completed 9.7 KiB/49.4 MiB (18.8 KiB/s) with 34 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0935.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0935.xml
+Completed 9.7 KiB/49.4 MiB (18.8 KiB/s) with 33 file(s) remaining
+Completed 11.2 KiB/49.4 MiB (19.4 KiB/s) with 33 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1200.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1200.xml
+Completed 11.2 KiB/49.4 MiB (19.4 KiB/s) with 32 file(s) remaining
+Completed 28.1 KiB/49.4 MiB (37.0 KiB/s) with 32 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1203.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1203.xml
+Completed 28.1 KiB/49.4 MiB (37.0 KiB/s) with 31 file(s) remaining
+Completed 284.1 KiB/49.4 MiB (318.0 KiB/s) with 31 file(s) remaining
+Completed 540.1 KiB/49.4 MiB (602.7 KiB/s) with 31 file(s) remaining
+Completed 782.2 KiB/49.4 MiB (843.8 KiB/s) with 31 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0935.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0935.pdf
+Completed 782.2 KiB/49.4 MiB (843.8 KiB/s) with 30 file(s) remaining
+Completed 1.0 MiB/49.4 MiB (1.1 MiB/s) with 30 file(s) remaining    
+Completed 1.0 MiB/49.4 MiB (996.8 KiB/s) with 30 file(s) remaining  
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1707.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1707.xml
+Completed 1.0 MiB/49.4 MiB (996.8 KiB/s) with 29 file(s) remaining
+Completed 1.0 MiB/49.4 MiB (918.2 KiB/s) with 29 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1262.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1262.xml
+Completed 1.0 MiB/49.4 MiB (918.2 KiB/s) with 28 file(s) remaining
+Completed 1.3 MiB/49.4 MiB (1.1 MiB/s) with 28 file(s) remaining  
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0257.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0257.xml
+Completed 1.3 MiB/49.4 MiB (1.1 MiB/s) with 27 file(s) remaining
+Completed 1.5 MiB/49.4 MiB (1.2 MiB/s) with 27 file(s) remaining
+Completed 1.7 MiB/49.4 MiB (1.4 MiB/s) with 27 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1262.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1262.pdf
+Completed 1.7 MiB/49.4 MiB (1.4 MiB/s) with 26 file(s) remaining
+Completed 1.7 MiB/49.4 MiB (1.4 MiB/s) with 26 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1708.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1708.xml
+Completed 1.7 MiB/49.4 MiB (1.4 MiB/s) with 25 file(s) remaining
+Completed 2.0 MiB/49.4 MiB (1.6 MiB/s) with 25 file(s) remaining
+Completed 2.2 MiB/49.4 MiB (1.7 MiB/s) with 25 file(s) remaining
+Completed 2.5 MiB/49.4 MiB (1.6 MiB/s) with 25 file(s) remaining
+Completed 2.7 MiB/49.4 MiB (1.7 MiB/s) with 25 file(s) remaining
+Completed 3.0 MiB/49.4 MiB (1.8 MiB/s) with 25 file(s) remaining
+Completed 3.2 MiB/49.4 MiB (1.9 MiB/s) with 25 file(s) remaining
+Completed 3.5 MiB/49.4 MiB (2.0 MiB/s) with 25 file(s) remaining
+Completed 3.7 MiB/49.4 MiB (2.0 MiB/s) with 25 file(s) remaining
+Completed 4.0 MiB/49.4 MiB (2.1 MiB/s) with 25 file(s) remaining
+Completed 4.2 MiB/49.4 MiB (2.2 MiB/s) with 25 file(s) remaining
+Completed 4.5 MiB/49.4 MiB (2.3 MiB/s) with 25 file(s) remaining
+Completed 4.7 MiB/49.4 MiB (2.4 MiB/s) with 25 file(s) remaining
+Completed 4.8 MiB/49.4 MiB (2.4 MiB/s) with 25 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0187.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0187.pdf
+Completed 4.8 MiB/49.4 MiB (2.4 MiB/s) with 24 file(s) remaining
+Completed 5.0 MiB/49.4 MiB (2.5 MiB/s) with 24 file(s) remaining
+Completed 5.3 MiB/49.4 MiB (2.6 MiB/s) with 24 file(s) remaining
+Completed 5.5 MiB/49.4 MiB (2.7 MiB/s) with 24 file(s) remaining
+Completed 5.8 MiB/49.4 MiB (2.6 MiB/s) with 24 file(s) remaining
+Completed 6.0 MiB/49.4 MiB (2.7 MiB/s) with 24 file(s) remaining
+Completed 6.3 MiB/49.4 MiB (2.8 MiB/s) with 24 file(s) remaining
+Completed 6.5 MiB/49.4 MiB (2.8 MiB/s) with 24 file(s) remaining
+Completed 6.8 MiB/49.4 MiB (2.8 MiB/s) with 24 file(s) remaining
+Completed 7.0 MiB/49.4 MiB (2.9 MiB/s) with 24 file(s) remaining
+Completed 7.3 MiB/49.4 MiB (2.9 MiB/s) with 24 file(s) remaining
+Completed 7.5 MiB/49.4 MiB (2.9 MiB/s) with 24 file(s) remaining
+Completed 7.8 MiB/49.4 MiB (3.0 MiB/s) with 24 file(s) remaining
+Completed 8.0 MiB/49.4 MiB (3.0 MiB/s) with 24 file(s) remaining
+Completed 8.3 MiB/49.4 MiB (3.1 MiB/s) with 24 file(s) remaining
+Completed 8.5 MiB/49.4 MiB (3.2 MiB/s) with 24 file(s) remaining
+Completed 8.8 MiB/49.4 MiB (3.2 MiB/s) with 24 file(s) remaining
+Completed 9.0 MiB/49.4 MiB (3.2 MiB/s) with 24 file(s) remaining
+Completed 9.3 MiB/49.4 MiB (3.3 MiB/s) with 24 file(s) remaining
+Completed 9.3 MiB/49.4 MiB (3.2 MiB/s) with 24 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0864.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0864.xml
+Completed 9.3 MiB/49.4 MiB (3.2 MiB/s) with 23 file(s) remaining
+Completed 9.6 MiB/49.4 MiB (3.3 MiB/s) with 23 file(s) remaining
+Completed 9.8 MiB/49.4 MiB (3.4 MiB/s) with 23 file(s) remaining
+Completed 9.9 MiB/49.4 MiB (3.4 MiB/s) with 23 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0771.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0771.pdf
+Completed 9.9 MiB/49.4 MiB (3.4 MiB/s) with 22 file(s) remaining
+Completed 10.1 MiB/49.4 MiB (3.4 MiB/s) with 22 file(s) remaining
+Completed 10.4 MiB/49.4 MiB (3.4 MiB/s) with 22 file(s) remaining
+Completed 10.6 MiB/49.4 MiB (3.5 MiB/s) with 22 file(s) remaining
+Completed 10.9 MiB/49.4 MiB (3.4 MiB/s) with 22 file(s) remaining
+Completed 11.1 MiB/49.4 MiB (3.4 MiB/s) with 22 file(s) remaining
+Completed 11.4 MiB/49.4 MiB (3.5 MiB/s) with 22 file(s) remaining
+Completed 11.6 MiB/49.4 MiB (3.5 MiB/s) with 22 file(s) remaining
+Completed 11.9 MiB/49.4 MiB (3.6 MiB/s) with 22 file(s) remaining
+Completed 12.1 MiB/49.4 MiB (3.6 MiB/s) with 22 file(s) remaining
+Completed 12.4 MiB/49.4 MiB (3.7 MiB/s) with 22 file(s) remaining
+Completed 12.6 MiB/49.4 MiB (3.6 MiB/s) with 22 file(s) remaining
+Completed 12.9 MiB/49.4 MiB (3.6 MiB/s) with 22 file(s) remaining
+Completed 13.1 MiB/49.4 MiB (3.7 MiB/s) with 22 file(s) remaining
+Completed 13.4 MiB/49.4 MiB (3.7 MiB/s) with 22 file(s) remaining
+Completed 13.6 MiB/49.4 MiB (3.7 MiB/s) with 22 file(s) remaining
+Completed 13.9 MiB/49.4 MiB (3.8 MiB/s) with 22 file(s) remaining
+Completed 14.1 MiB/49.4 MiB (3.8 MiB/s) with 22 file(s) remaining
+Completed 14.2 MiB/49.4 MiB (3.7 MiB/s) with 22 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0865.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0865.xml
+Completed 14.2 MiB/49.4 MiB (3.7 MiB/s) with 21 file(s) remaining
+Completed 14.4 MiB/49.4 MiB (3.8 MiB/s) with 21 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0257.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0257.pdf
+Completed 14.4 MiB/49.4 MiB (3.8 MiB/s) with 20 file(s) remaining
+Completed 14.6 MiB/49.4 MiB (3.8 MiB/s) with 20 file(s) remaining
+Completed 14.9 MiB/49.4 MiB (3.8 MiB/s) with 20 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1200.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1200.pdf
+Completed 14.9 MiB/49.4 MiB (3.8 MiB/s) with 19 file(s) remaining
+Completed 15.1 MiB/49.4 MiB (3.9 MiB/s) with 19 file(s) remaining
+Completed 15.4 MiB/49.4 MiB (3.9 MiB/s) with 19 file(s) remaining
+Completed 15.6 MiB/49.4 MiB (3.9 MiB/s) with 19 file(s) remaining
+Completed 15.9 MiB/49.4 MiB (3.9 MiB/s) with 19 file(s) remaining
+Completed 16.1 MiB/49.4 MiB (3.8 MiB/s) with 19 file(s) remaining
+Completed 16.4 MiB/49.4 MiB (3.8 MiB/s) with 19 file(s) remaining
+Completed 16.6 MiB/49.4 MiB (3.9 MiB/s) with 19 file(s) remaining
+Completed 16.9 MiB/49.4 MiB (3.9 MiB/s) with 19 file(s) remaining
+Completed 17.1 MiB/49.4 MiB (4.0 MiB/s) with 19 file(s) remaining
+Completed 17.4 MiB/49.4 MiB (4.0 MiB/s) with 19 file(s) remaining
+Completed 17.6 MiB/49.4 MiB (4.0 MiB/s) with 19 file(s) remaining
+Completed 17.9 MiB/49.4 MiB (4.1 MiB/s) with 19 file(s) remaining
+Completed 18.1 MiB/49.4 MiB (4.0 MiB/s) with 19 file(s) remaining
+Completed 18.4 MiB/49.4 MiB (4.0 MiB/s) with 19 file(s) remaining
+Completed 18.6 MiB/49.4 MiB (4.0 MiB/s) with 19 file(s) remaining
+Completed 18.9 MiB/49.4 MiB (4.1 MiB/s) with 19 file(s) remaining
+Completed 19.1 MiB/49.4 MiB (4.1 MiB/s) with 19 file(s) remaining
+Completed 19.4 MiB/49.4 MiB (4.2 MiB/s) with 19 file(s) remaining
+Completed 19.4 MiB/49.4 MiB (4.1 MiB/s) with 19 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0863.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0863.xml
+Completed 19.4 MiB/49.4 MiB (4.1 MiB/s) with 18 file(s) remaining
+Completed 19.7 MiB/49.4 MiB (4.2 MiB/s) with 18 file(s) remaining
+Completed 19.9 MiB/49.4 MiB (4.2 MiB/s) with 18 file(s) remaining
+Completed 20.2 MiB/49.4 MiB (4.1 MiB/s) with 18 file(s) remaining
+Completed 20.4 MiB/49.4 MiB (4.1 MiB/s) with 18 file(s) remaining
+Completed 20.7 MiB/49.4 MiB (4.2 MiB/s) with 18 file(s) remaining
+Completed 20.9 MiB/49.4 MiB (4.2 MiB/s) with 18 file(s) remaining
+Completed 21.2 MiB/49.4 MiB (4.3 MiB/s) with 18 file(s) remaining
+Completed 21.3 MiB/49.4 MiB (4.3 MiB/s) with 18 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1203.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1203.pdf
+Completed 21.3 MiB/49.4 MiB (4.3 MiB/s) with 17 file(s) remaining
+Completed 21.5 MiB/49.4 MiB (4.3 MiB/s) with 17 file(s) remaining
+Completed 21.8 MiB/49.4 MiB (4.3 MiB/s) with 17 file(s) remaining
+Completed 22.0 MiB/49.4 MiB (4.2 MiB/s) with 17 file(s) remaining
+Completed 22.3 MiB/49.4 MiB (4.2 MiB/s) with 17 file(s) remaining
+Completed 22.5 MiB/49.4 MiB (4.3 MiB/s) with 17 file(s) remaining
+Completed 22.8 MiB/49.4 MiB (4.3 MiB/s) with 17 file(s) remaining
+Completed 23.0 MiB/49.4 MiB (4.3 MiB/s) with 17 file(s) remaining
+Completed 23.3 MiB/49.4 MiB (4.3 MiB/s) with 17 file(s) remaining
+Completed 23.5 MiB/49.4 MiB (4.4 MiB/s) with 17 file(s) remaining
+Completed 23.8 MiB/49.4 MiB (4.3 MiB/s) with 17 file(s) remaining
+Completed 24.0 MiB/49.4 MiB (4.3 MiB/s) with 17 file(s) remaining
+Completed 24.3 MiB/49.4 MiB (4.3 MiB/s) with 17 file(s) remaining
+Completed 24.5 MiB/49.4 MiB (4.4 MiB/s) with 17 file(s) remaining
+Completed 24.8 MiB/49.4 MiB (4.4 MiB/s) with 17 file(s) remaining
+Completed 24.8 MiB/49.4 MiB (4.4 MiB/s) with 17 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0866.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0866.xml
+Completed 24.8 MiB/49.4 MiB (4.4 MiB/s) with 16 file(s) remaining
+Completed 25.1 MiB/49.4 MiB (4.5 MiB/s) with 16 file(s) remaining
+Completed 25.3 MiB/49.4 MiB (4.4 MiB/s) with 16 file(s) remaining
+Completed 25.6 MiB/49.4 MiB (4.5 MiB/s) with 16 file(s) remaining
+Completed 25.8 MiB/49.4 MiB (4.4 MiB/s) with 16 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0863.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0863.pdf
+Completed 25.8 MiB/49.4 MiB (4.4 MiB/s) with 15 file(s) remaining
+Completed 26.0 MiB/49.4 MiB (4.5 MiB/s) with 15 file(s) remaining
+Completed 26.3 MiB/49.4 MiB (4.5 MiB/s) with 15 file(s) remaining
+Completed 26.5 MiB/49.4 MiB (4.5 MiB/s) with 15 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1707.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1707.pdf
+Completed 26.5 MiB/49.4 MiB (4.5 MiB/s) with 14 file(s) remaining
+Completed 26.8 MiB/49.4 MiB (4.5 MiB/s) with 14 file(s) remaining
+Completed 27.0 MiB/49.4 MiB (4.5 MiB/s) with 14 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1708.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1708.pdf
+Completed 27.0 MiB/49.4 MiB (4.5 MiB/s) with 13 file(s) remaining
+Completed 27.3 MiB/49.4 MiB (4.5 MiB/s) with 13 file(s) remaining
+Completed 27.5 MiB/49.4 MiB (4.5 MiB/s) with 13 file(s) remaining
+Completed 27.8 MiB/49.4 MiB (4.5 MiB/s) with 13 file(s) remaining
+Completed 28.0 MiB/49.4 MiB (4.5 MiB/s) with 13 file(s) remaining
+Completed 28.3 MiB/49.4 MiB (4.5 MiB/s) with 13 file(s) remaining
+Completed 28.5 MiB/49.4 MiB (4.5 MiB/s) with 13 file(s) remaining
+Completed 28.8 MiB/49.4 MiB (4.5 MiB/s) with 13 file(s) remaining
+Completed 29.0 MiB/49.4 MiB (4.5 MiB/s) with 13 file(s) remaining
+Completed 29.0 MiB/49.4 MiB (4.5 MiB/s) with 13 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0867.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0867.xml
+Completed 29.0 MiB/49.4 MiB (4.5 MiB/s) with 12 file(s) remaining
+Completed 29.3 MiB/49.4 MiB (4.5 MiB/s) with 12 file(s) remaining
+Completed 29.5 MiB/49.4 MiB (4.6 MiB/s) with 12 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0868.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0868.xml
+Completed 29.5 MiB/49.4 MiB (4.6 MiB/s) with 11 file(s) remaining
+Completed 29.7 MiB/49.4 MiB (4.6 MiB/s) with 11 file(s) remaining
+Completed 30.0 MiB/49.4 MiB (4.6 MiB/s) with 11 file(s) remaining
+Completed 30.2 MiB/49.4 MiB (4.6 MiB/s) with 11 file(s) remaining
+Completed 30.5 MiB/49.4 MiB (4.6 MiB/s) with 11 file(s) remaining
+Completed 30.7 MiB/49.4 MiB (4.6 MiB/s) with 11 file(s) remaining
+Completed 31.0 MiB/49.4 MiB (4.6 MiB/s) with 11 file(s) remaining
+Completed 31.2 MiB/49.4 MiB (4.6 MiB/s) with 11 file(s) remaining
+Completed 31.5 MiB/49.4 MiB (4.6 MiB/s) with 11 file(s) remaining
+Completed 31.7 MiB/49.4 MiB (4.6 MiB/s) with 11 file(s) remaining
+Completed 32.0 MiB/49.4 MiB (4.6 MiB/s) with 11 file(s) remaining
+Completed 32.2 MiB/49.4 MiB (4.7 MiB/s) with 11 file(s) remaining
+Completed 32.5 MiB/49.4 MiB (4.7 MiB/s) with 11 file(s) remaining
+Completed 32.6 MiB/49.4 MiB (4.7 MiB/s) with 11 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0869.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0869.xml
+Completed 32.6 MiB/49.4 MiB (4.7 MiB/s) with 10 file(s) remaining
+Completed 32.8 MiB/49.4 MiB (4.7 MiB/s) with 10 file(s) remaining
+Completed 33.1 MiB/49.4 MiB (4.7 MiB/s) with 10 file(s) remaining
+Completed 33.3 MiB/49.4 MiB (4.7 MiB/s) with 10 file(s) remaining
+Completed 33.6 MiB/49.4 MiB (4.7 MiB/s) with 10 file(s) remaining
+Completed 33.8 MiB/49.4 MiB (4.7 MiB/s) with 10 file(s) remaining
+Completed 34.1 MiB/49.4 MiB (4.7 MiB/s) with 10 file(s) remaining
+Completed 34.3 MiB/49.4 MiB (4.7 MiB/s) with 10 file(s) remaining
+Completed 34.4 MiB/49.4 MiB (4.7 MiB/s) with 10 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0870.xml to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0870.xml
+Completed 34.4 MiB/49.4 MiB (4.7 MiB/s) with 9 file(s) remaining
+Completed 34.7 MiB/49.4 MiB (4.7 MiB/s) with 9 file(s) remaining
+Completed 34.9 MiB/49.4 MiB (4.7 MiB/s) with 9 file(s) remaining
+Completed 35.2 MiB/49.4 MiB (4.7 MiB/s) with 9 file(s) remaining
+Completed 35.4 MiB/49.4 MiB (4.7 MiB/s) with 9 file(s) remaining
+Completed 35.7 MiB/49.4 MiB (4.7 MiB/s) with 9 file(s) remaining
+Completed 35.9 MiB/49.4 MiB (4.7 MiB/s) with 9 file(s) remaining
+Completed 36.2 MiB/49.4 MiB (4.7 MiB/s) with 9 file(s) remaining
+Completed 36.3 MiB/49.4 MiB (4.7 MiB/s) with 9 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0864.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0864.pdf
+Completed 36.3 MiB/49.4 MiB (4.7 MiB/s) with 8 file(s) remaining
+Completed 36.6 MiB/49.4 MiB (4.7 MiB/s) with 8 file(s) remaining
+Completed 36.8 MiB/49.4 MiB (4.8 MiB/s) with 8 file(s) remaining
+Completed 37.1 MiB/49.4 MiB (4.7 MiB/s) with 8 file(s) remaining
+Completed 37.3 MiB/49.4 MiB (4.7 MiB/s) with 8 file(s) remaining
+Completed 37.6 MiB/49.4 MiB (4.8 MiB/s) with 8 file(s) remaining
+Completed 37.8 MiB/49.4 MiB (4.8 MiB/s) with 8 file(s) remaining
+Completed 38.1 MiB/49.4 MiB (4.7 MiB/s) with 8 file(s) remaining
+Completed 38.3 MiB/49.4 MiB (4.8 MiB/s) with 8 file(s) remaining
+Completed 38.6 MiB/49.4 MiB (4.7 MiB/s) with 8 file(s) remaining
+Completed 38.8 MiB/49.4 MiB (4.7 MiB/s) with 8 file(s) remaining
+Completed 39.1 MiB/49.4 MiB (4.8 MiB/s) with 8 file(s) remaining
+Completed 39.3 MiB/49.4 MiB (4.8 MiB/s) with 8 file(s) remaining
+Completed 39.6 MiB/49.4 MiB (4.7 MiB/s) with 8 file(s) remaining
+Completed 39.7 MiB/49.4 MiB (4.7 MiB/s) with 8 file(s) remaining
+Completed 39.9 MiB/49.4 MiB (4.8 MiB/s) with 8 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0865.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0865.pdf
+Completed 39.9 MiB/49.4 MiB (4.8 MiB/s) with 7 file(s) remaining
+Completed 40.2 MiB/49.4 MiB (4.7 MiB/s) with 7 file(s) remaining
+Completed 40.4 MiB/49.4 MiB (4.7 MiB/s) with 7 file(s) remaining
+Completed 40.6 MiB/49.4 MiB (4.8 MiB/s) with 7 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0866.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0866.pdf
+Completed 40.6 MiB/49.4 MiB (4.8 MiB/s) with 6 file(s) remaining
+Completed 40.8 MiB/49.4 MiB (4.8 MiB/s) with 6 file(s) remaining
+Completed 41.1 MiB/49.4 MiB (4.7 MiB/s) with 6 file(s) remaining
+Completed 41.3 MiB/49.4 MiB (4.7 MiB/s) with 6 file(s) remaining
+Completed 41.6 MiB/49.4 MiB (4.7 MiB/s) with 6 file(s) remaining
+Completed 41.8 MiB/49.4 MiB (4.7 MiB/s) with 6 file(s) remaining
+Completed 42.1 MiB/49.4 MiB (4.7 MiB/s) with 6 file(s) remaining
+Completed 42.3 MiB/49.4 MiB (4.6 MiB/s) with 6 file(s) remaining
+Completed 42.6 MiB/49.4 MiB (4.6 MiB/s) with 6 file(s) remaining
+Completed 42.8 MiB/49.4 MiB (4.6 MiB/s) with 6 file(s) remaining
+Completed 43.1 MiB/49.4 MiB (4.6 MiB/s) with 6 file(s) remaining
+Completed 43.3 MiB/49.4 MiB (4.6 MiB/s) with 6 file(s) remaining
+Completed 43.6 MiB/49.4 MiB (4.6 MiB/s) with 6 file(s) remaining
+Completed 43.8 MiB/49.4 MiB (4.6 MiB/s) with 6 file(s) remaining
+Completed 43.9 MiB/49.4 MiB (4.6 MiB/s) with 6 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0867.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0867.pdf
+Completed 43.9 MiB/49.4 MiB (4.6 MiB/s) with 5 file(s) remaining
+Completed 44.1 MiB/49.4 MiB (4.6 MiB/s) with 5 file(s) remaining
+Completed 44.4 MiB/49.4 MiB (4.5 MiB/s) with 5 file(s) remaining
+Completed 44.6 MiB/49.4 MiB (4.5 MiB/s) with 5 file(s) remaining
+Completed 44.9 MiB/49.4 MiB (4.5 MiB/s) with 5 file(s) remaining
+Completed 45.1 MiB/49.4 MiB (4.4 MiB/s) with 5 file(s) remaining
+Completed 45.4 MiB/49.4 MiB (4.4 MiB/s) with 5 file(s) remaining
+Completed 45.6 MiB/49.4 MiB (4.4 MiB/s) with 5 file(s) remaining
+Completed 45.9 MiB/49.4 MiB (4.4 MiB/s) with 5 file(s) remaining
+Completed 46.1 MiB/49.4 MiB (4.4 MiB/s) with 5 file(s) remaining
+Completed 46.4 MiB/49.4 MiB (4.4 MiB/s) with 5 file(s) remaining
+Completed 46.4 MiB/49.4 MiB (4.3 MiB/s) with 5 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0870.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0870.pdf
+Completed 46.4 MiB/49.4 MiB (4.3 MiB/s) with 4 file(s) remaining
+Completed 46.7 MiB/49.4 MiB (4.3 MiB/s) with 4 file(s) remaining
+Completed 46.9 MiB/49.4 MiB (4.3 MiB/s) with 4 file(s) remaining
+Completed 47.0 MiB/49.4 MiB (4.3 MiB/s) with 4 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0869.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0869.pdf
+Completed 47.0 MiB/49.4 MiB (4.3 MiB/s) with 3 file(s) remaining
+Completed 47.2 MiB/49.4 MiB (4.2 MiB/s) with 3 file(s) remaining
+Completed 47.4 MiB/49.4 MiB (4.2 MiB/s) with 3 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0868.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/1902103101/0868.pdf
+Completed 47.4 MiB/49.4 MiB (4.2 MiB/s) with 2 file(s) remaining
+Completed 47.7 MiB/49.4 MiB (2.2 MiB/s) with 2 file(s) remaining
+Completed 47.9 MiB/49.4 MiB (2.2 MiB/s) with 2 file(s) remaining
+Completed 48.2 MiB/49.4 MiB (2.2 MiB/s) with 2 file(s) remaining
+Completed 48.4 MiB/49.4 MiB (2.2 MiB/s) with 2 file(s) remaining
+Completed 48.7 MiB/49.4 MiB (2.2 MiB/s) with 2 file(s) remaining
+Completed 48.9 MiB/49.4 MiB (2.1 MiB/s) with 2 file(s) remaining
+Completed 49.1 MiB/49.4 MiB (2.1 MiB/s) with 2 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0000.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0000.pdf
+Completed 49.1 MiB/49.4 MiB (2.1 MiB/s) with 1 file(s) remaining
+Completed 49.4 MiB/49.4 MiB (1.9 MiB/s) with 1 file(s) remaining
+download: s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e/batch_dlc_sampleissue/data/2010270501/00237285074/0582.pdf to ../../../../../../../tmp/s3_contents/batch_dlc_sampleissue/data/2010270501/00237285074/0582.pdf
+
+2023-11-27 15:33:28,754 - logger - INFO - S3 contents from s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e cloned to /tmp/s3_contents directory.
+2023-11-27 15:33:30,382 - logger - INFO - Local batch contents (/Volumes/ExtremeSSD/notvalidated_orig) copied to new batch directory. (/Volumes/ExtremeSSD/notvbal2)
+2023-11-27 15:33:30,490 - logger - INFO - Merged /tmp and local batch contents into new batch directory.
+2023-11-27 15:33:30,493 - logger - INFO - Temporary directory /tmp/s3_contents successfully deleted.
+2023-11-27 15:49:06,833 - logger - INFO - Job_ID notvalidated__1f22deeb-4f53-4340-a9b7-a07ac2f682a4 kicked off for notvalidated prefix in ndnp-open-ocr-output-bucket-test bucket
+2023-11-27 15:56:05,525 - logger - INFO - Job_ID notvalidated__16ad1e5c-66bf-4fd2-8720-b88da266fabf kicked off for notvalidated prefix in ndnp-open-ocr-output-bucket-test bucket
+2023-11-28 17:29:44,798 - logger - INFO - Syncing outputs from notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e to local, and merging with local batch data.
+2023-11-28 17:29:45,920 - logger - ERROR - S3 sync command failed: fatal error: An error occurred (ExpiredToken) when calling the ListObjectsV2 operation: The provided token has expired.
+
+2023-11-28 17:29:45,921 - logger - INFO - S3 contents from s3://ndnp-open-ocr-output-bucket-test/notvalidated__b6c41ac0-5efa-4c9a-b669-1798588ef61e cloned to /tmp/s3_contents directory.
+2023-11-28 17:29:48,567 - logger - INFO - Local batch contents (/Volumes/ExtremeSSD/notvalidated_orig) copied to new batch directory. (/Volumes/ExtremeSSD/notvbal2)
+2023-11-28 17:29:48,567 - logger - INFO - Merged /tmp and local batch contents into new batch directory.
+2023-11-28 17:29:48,567 - logger - INFO - Temporary directory /tmp/s3_contents successfully deleted.
