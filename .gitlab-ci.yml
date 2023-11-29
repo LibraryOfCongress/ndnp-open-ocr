@@ -2,10 +2,11 @@ image: python:latest
 
 run:
   script:
-    - pip install build twine
+    - pip install poetry
     - cd packages/cli/
-    - python -m build
-    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+    - poetry build
+    - poetry config http-basic.gitlab-ci-token ${CI_JOB_TOKEN} gitlab-ci-token
+    - poetry publish --repository gitlab --username gitlab-ci-token --password ${CI_JOB_TOKEN} --build
 
   only:
     - CHRONAM-2312-cli-improvements
