@@ -6,7 +6,7 @@ run:
     - cd packages/cli/
     - poetry build
     - poetry config http-basic.gitlab-ci-token ${CI_JOB_TOKEN} gitlab-ci-token
-    - poetry publish --repository gitlab --username gitlab-ci-token --password ${CI_JOB_TOKEN} --build
+    - poetry publish -r ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi --username gitlab-ci-token --password ${CI_JOB_TOKEN} --build
 
   only:
     - CHRONAM-2312-cli-improvements
