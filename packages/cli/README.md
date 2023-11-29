@@ -9,6 +9,11 @@ To kickoff batch processing job
 python cli.py reprocess --batch_name=notvalidated --bucket=ndnp-open-ocr-output-bucket-test
 ```
 
+To pull data down from reprocessing job:
+```sh
+python cli.py sync --job=batch_dlc_kite_ver01__ace007e8-9643-45f2-abe1-d849d11ac8ea --output-dir=/Volumes/ExtremeSSD/batch_dlc_kite_ver04 --local-batch=/Volumes/ExtremeSSD/batch_dlc_kite_ver01
+```
+
 To check status of reprocessing job:
 
 ```sh

@@ -137,7 +137,6 @@ def process_message(message_body):
             ReturnValues="UPDATED_NEW",
         )
 
-
 def poll_sqs_and_process():
     logging.info("Listening for messages on %s", sqs_queue_url)
     while True:

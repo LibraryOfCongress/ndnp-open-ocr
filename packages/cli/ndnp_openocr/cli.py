@@ -7,27 +7,7 @@ import time
 import logging
 import os
 
-logger = logging.getLogger(__name__)
-
-def setup_logging(log_filename='ndnp_open_ocr.log'):
-    current_directory = os.getcwd()
-    log_file_path = os.path.join(current_directory, log_filename)
-
-    logger = logging.getLogger(__name__)
-
-    logger.setLevel(logging.INFO)
-
-    file_handler = logging.FileHandler(log_file_path)
-
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
-
-    logger.addHandler(file_handler)
-
-    return logger
-
-# Set up logging
-logger = setup_logging()
+from logger import logger
 
 
 @click.group()
@@ -96,11 +76,16 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
         )
 
         response_payload = json.loads(response["Payload"].read())
-        job_id = json.loads(response_payload['body'])['job']
-        os.environ['JOB_ID'] = job_id
+        job_id = json.loads(response_payload["body"])["job"]
+        os.environ["JOB_ID"] = job_id
 
-        logger.info("Job_ID {} kicked off for {} prefix in {} bucket".format(job_id, prefix, bucket))
+        logger.info(
+            "Job_ID {} kicked off for {} prefix in {} bucket".format(
+                job_id, prefix, bucket
+            )
+        )
 
+        print("Job ID:{}".format(job_id))
 
     except Exception as e:
         print(f"Failed to trigger Lambda function: {e}")
@@ -115,7 +100,9 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
     help="The batch_name in loc-preservation bucket to reprocess.",
 )
 @click.option(
-    "--bucket", default="loc-preservation", help="The s3 bucket that the batch is located in."
+    "--bucket",
+    default="loc-preservation",
+    help="The s3 bucket that the batch is located in.",
 )
 @click.pass_context
 def reprocess(ctx, batch_name: str, bucket: str):

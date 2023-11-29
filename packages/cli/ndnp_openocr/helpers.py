@@ -8,7 +8,7 @@ import logging
 import subprocess
 
 # Creates a new batch using a combination of the old batch and new PDF and ALTO files stored in S3 with mirrored directory structure (NDNP batch)
-logger = logging.getLogger(__name__)
+from logger import logger
 
 def sync_s3_batch(bucket, job, local_batch, new_batch_dir):
     """Syncs an S3 bucket with local files and merges it with a local batch."""
@@ -21,10 +21,14 @@ def sync_s3_batch(bucket, job, local_batch, new_batch_dir):
 
     # Run AWS sync command for fast syncing with remote directory
     sync_command = f"aws s3 sync {s3_uri} {tmp_dir}"
-    subprocess.run(sync_command, shell=True, check=True)
+    try:
+        result = subprocess.run(sync_command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        logger.info(result.stdout)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"S3 sync command failed: {e.output}")
     logger.info("S3 contents from {} cloned to {} directory.".format(s3_uri, tmp_dir))
 
-    # Step 2: Copy local_batch contents into new_batch_dir
+        # Step 2: Copy local_batch contents into new_batch_dir
     if os.path.exists(local_batch):
         shutil.copytree(local_batch, new_batch_dir, dirs_exist_ok=True)
         logger.info("Local batch contents ({}) copied to new batch directory. ({})".format(local_batch, new_batch_dir))
@@ -41,6 +45,14 @@ def sync_s3_batch(bucket, job, local_batch, new_batch_dir):
             shutil.copy2(source_path, destination_path)
 
     logger.info("Merged /tmp and local batch contents into new batch directory.")
+
+    # Step 4: Clean up the temporary directory
+    try:
+        shutil.rmtree(tmp_dir)
+        logger.info(f"Temporary directory {tmp_dir} successfully deleted.")
+    except OSError as e:
+        logger.error(f"Error deleting temporary directory {tmp_dir}: {e}")
+
 
 
 def find_missing_pdfs(input_bucket, input_prefix, output_bucket, output_prefix):
