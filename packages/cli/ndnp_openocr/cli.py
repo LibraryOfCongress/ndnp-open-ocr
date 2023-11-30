@@ -16,18 +16,11 @@ def cli(ctx):
     """Initialize command line interface with context settings for bucket, queue, and scheduler ARN."""
     # Initialize the context dict (these probably should somehow be populated by Terraform in the future...)
     ctx.ensure_object(dict)
-    # Store bucket in the context (change to ndnp-open-ocr-output-bucket-test for testing purposes)
     ctx.obj["INPUT_BUCKET_NAME"] = "loc-preservation"
     ctx.obj["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
-    # ctx.obj[
-    #     "QUEUE_URL"
-    # ] = "https://sqs.us-east-1.amazonaws.com/342134162356/ndnp-open-ocr-queue"
     ctx.obj[
         "SCHEDULER_ARN"
     ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-scheduler-lambda-function-dev"
-    # ctx.obj[
-    #     "SCHEDULER_ARN"
-    # ] = "arn:aws:lambda:us-east-2:420280634985:function:ndnp-open-ocr-scheduler-lambda-function-dev"
     ctx.obj[
         "GET_JOB_ARN"
     ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-get-job-lambda-function-dev"
@@ -110,70 +103,8 @@ def reprocess(ctx, batch_name: str, bucket: str):
     ctx = reprocess_batch(ctx, batch_name, bucket)
 
 
-@click.command()
-@click.option("--job", default="", help="The prefix in the output bucket")
-@click.pass_context
-def get_missing(ctx, job: str):
-    """List files missing from S3 output bucket. The output prefix can be used
-    to surmise the original input prefix. This isn't used with test bucket at the moment
-
-    The design of job (id) is essentially PREVIOUS_BATCH_NAME__UUID, that's how we know. In addition,
-    LOC Preservation bucket will be prefixed with predetermined string.
-
-    """
-
-    input_prefix = job.split("__")[0]
-
-    missing_pdfs = find_missing_pdfs(
-        ctx.obj["INPUT_BUCKET_NAME"],
-        input_prefix,
-        ctx.obj["OUTPUT_BUCKET_NAME"],
-        job,
-    )
-    print(missing_pdfs)
-
-
-@click.command()
-@click.option(
-    "--job", default="", help="The job_id of the NDNP Open OCR Reprocessing Job."
-)
-@click.pass_context
-def check_status(ctx, job: str):
-    """Check status of batch processing job"""
-    # Initialize DynamoDB resource
-    lambda_client = boto3.client("lambda")
-    # This is the prefix from the loc-preservation bucket...should stick to this if we can.
-    payload = {
-        "pathParameters": {
-            "JobId": job,
-        }
-    }
-    try:
-        # Async invoke the scheduler Lambda function passing the prefix and bucket name
-        # as path parameters (modeled from API Gateway request, should be changed later).
-        response = lambda_client.invoke(
-            FunctionName=ctx.obj["GET_JOB_ARN"],
-            InvocationType="RequestResponse",
-            Payload=json.dumps(payload).encode("utf-8"),
-        )
-        response_payload = json.loads(response["Payload"].read())
-
-        num_pdfs_remaining = response_payload["RemainingPDFMessages"]
-        num_altos_remaining = response_payload["RemainingALTOMessages"]
-
-        print(num_altos_remaining, " ALTO files remaining to be processed")
-        print(num_pdfs_remaining, " PDFs remaining to be processed.")
-
-    except Exception as e:
-        print(f"Failed to trigger Lambda function: {e}")
-
-    return ctx
-
-
 cli.add_command(sync)
 cli.add_command(reprocess)
-cli.add_command(get_missing)
-cli.add_command(check_status)
 
 if __name__ == "__main__":
     cli()
