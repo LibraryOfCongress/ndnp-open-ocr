@@ -44,6 +44,36 @@ def sync(ctx, job: str, output_dir: str, overwrite: bool, local_batch: str):
     sync_s3_batch(bucket, job, local_batch, output_dir)
 
 
+@click.command()
+@click.option("--job")
+@click.pass_context
+def get(ctx, job: str):
+    lambda_client = boto3.client("lambda", region_name="us-east-2")
+    payload = {"pathParameters": {"jobId": job}}
+    try:
+        # Async invoke the scheduler Lambda function passing the prefix and bucket name
+        # as path parameters (modeled from API Gateway request, should be changed later).
+        response = lambda_client.invoke(
+            FunctionName=ctx.obj["GET_JOB_ARN"],
+            InvocationType="RequestResponse",
+            Payload=json.dumps(payload).encode("utf-8"),
+        )
+
+        response_payload = json.loads(response["Payload"].read())
+        # print(response_payload)
+        body = response_payload[0]
+
+        if int(body['RemainingMessages']) == 0:
+            print("Processing complete. You can pull down batch with: ndnp_openocr sync --job={job} --output-dir=OUTPUT_DIR --local-batch=PATH/TO/LOCAL/BATCH/batch.xml"
+        else:
+            print(str(body['RemainingMessages']) + " newspapers remaining for processing")
+
+    except Exception as e:
+        print(f"Failed to trigger Lambda function: {e}")
+
+    return ctx
+
+
 def reprocess_batch(ctx, batch_name: str, bucket: str):
     """Kicks off reprocessing job for a certain S3 NDNP batch."""
     lambda_client = boto3.client("lambda", region_name="us-east-2")
@@ -58,7 +88,6 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
             "bucketName": bucket,
         }
     }
-    print(payload)
     try:
         # Async invoke the scheduler Lambda function passing the prefix and bucket name
         # as path parameters (modeled from API Gateway request, should be changed later).
@@ -79,6 +108,7 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
         )
 
         print("Job ID:{}".format(job_id))
+        print("\nTo check status of the job, run: \n ndnp_openocr get --job {}".format(job_id))
 
     except Exception as e:
         print(f"Failed to trigger Lambda function: {e}")
@@ -105,6 +135,7 @@ def reprocess(ctx, batch_name: str, bucket: str):
 
 cli.add_command(sync)
 cli.add_command(reprocess)
+cli.add_command(get)
 
 if __name__ == "__main__":
     cli()
