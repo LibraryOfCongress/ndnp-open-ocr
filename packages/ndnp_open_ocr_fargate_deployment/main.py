@@ -142,23 +142,23 @@ def process_message(message_body):
                     },
                     ReturnValues="UPDATED_NEW",
                 )
-
+            else:
+                # Upload files to S3 and update DynamoDB for job completion
+                upload_files_to_s3(
+                    output_path,
+                    os.environ.get("OUTPUT_BUCKET_NAME"),
+                    message["OutputPrefix"],
+                    os.path.relpath(os.path.dirname(message["Key"]), message["InputPrefix"]),
+                )
+                table.update_item(
+                    Key={"pk": "JOB", "sk": job_id},
+                    UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
+                    ExpressionAttributeValues={":dec": 1},
+                    ReturnValues="UPDATED_NEW",
+                )
         else:
             logging.info(f"Failed to process {input_file_path}.")
 
-        # Upload files to S3 and update DynamoDB for job completion
-        upload_files_to_s3(
-            output_path,
-            os.environ.get("OUTPUT_BUCKET_NAME"),
-            message["OutputPrefix"],
-            os.path.relpath(os.path.dirname(message["Key"]), message["InputPrefix"]),
-        )
-        table.update_item(
-            Key={"pk": "JOB", "sk": job_id},
-            UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
-            ExpressionAttributeValues={":dec": 1},
-            ReturnValues="UPDATED_NEW",
-        )
 
 
 def poll_sqs_and_process():
