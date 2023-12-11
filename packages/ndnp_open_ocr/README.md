@@ -8,12 +8,12 @@ This is a library created by the Library of Congress to perform OCR reprocessing
 1.
     Build the docker image housing the NDNP Open OCR library
 ```bash
-docker build -t ndnp_open_ocr:latest .
+docker build -t ndnp_open_ocr_container_repo:latest .
 ```
 
 2. Run the docker image and mount the current directory in there to run code.
 ```bash
-docker run -it -v $(PWD):/app -w app ndnp_open_ocr:latest bash
+docker run -it -v $(PWD):/app -w /app ndnp_open_ocr_container_repo:latest bash
 ```
 
 ## Installing Dependencies on macOS
