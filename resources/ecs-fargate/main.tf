@@ -211,7 +211,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_alarm" {
 }
 
 resource "aws_appautoscaling_target" "ecs_target" {
-  max_capacity       = 50 # Adjust based on your max tasks
+  max_capacity       = 100 # Adjust based on your max tasks
   min_capacity       = 0  # Adjust based on your min tasks
   resource_id        = "service/${aws_ecs_cluster.cluster.name}/${aws_ecs_service.service.name}"
   scalable_dimension = "ecs:service:DesiredCount"

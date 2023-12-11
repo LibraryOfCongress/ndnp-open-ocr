@@ -55,18 +55,20 @@ def get(ctx, job: str):
             InvocationType="RequestResponse",
             Payload=json.dumps(payload).encode("utf-8"),
         )
-
-        response_payload = json.loads(response["Payload"].read())
-        # print(response_payload)
-        body = response_payload[0]
-
-        if int(body['RemainingMessages']) == 0:
-            print("Processing complete. \n\nYou can pull down batch with: ndnp_openocr sync --job={} --output-dir=OUTPUT_DIR --local-batch=PATH/TO/LOCAL/BATCH/batch.xml".format(job))
-        else:
-            print(str(body['RemainingMessages']) + " newspapers remaining for processing")
-
     except Exception as e:
         print(f"Failed to trigger Lambda function: {e}")
+
+    response_payload = json.loads(response["Payload"].read())
+    # print(response_payload)
+    body = response_payload[0]
+
+    if int(body['RemainingMessages']) == 0:
+        print("Processing complete. \n\nYou can pull down batch with: ndnp_openocr sync --job={} --output-dir=OUTPUT_DIR --local-batch=PATH/TO/LOCAL/BATCH/batch.xml".format(job))
+        print("These have failed: " + str(body['FailedFiles']))
+    else:
+        print(str(body['RemainingMessages']) + " newspapers remaining for processing")
+        print("These newspapers have failed: " + str(body['FailedFiles']))
+
 
     return ctx
 
