@@ -308,7 +308,7 @@ class OCRProcessor:
         Tesseract, which is used to create a PDF with the original TIFF image."""
         return os.path.join(self.output_path, f"{self._get_file_name()}_new.hocr")
 
-    def _get_postprocessed_pdf_path(self):
+    def get_postprocessed_pdf_path(self):
         """Path to final NDNP Open OCR output PDF"""
         return os.path.join(self.output_path, f"{self._get_file_name()}.pdf")
 
@@ -356,7 +356,7 @@ class OCRProcessor:
             if self.preprocessing_method == PreprocessingMethod.ORIGINAL:
                 # # Generate PDF from grayscale image
                 pdf = pytesseract.image_to_pdf_or_hocr(
-                    temp_gray_path, extension="pdf", config="-l eng"
+                    self.input_file_path, extension="pdf"
                 )
                 with open(self._get_new_pdf_path(), "w+b") as f:
                     f.write(pdf)
@@ -399,7 +399,7 @@ class OCRProcessor:
             processor = PDFProcessor(
                 self._get_old_pdf_path(),  # original PDF
                 self._get_new_pdf_path(),  # new PDF
-                self._get_postprocessed_pdf_path(),  # where to save final PDF, after all post-processing steps are complete.
+                self.get_postprocessed_pdf_path(),  # where to save final PDF, after all post-processing steps are complete.
             )
             processor.postprocess_pdf()
             processor.transfer_xmp()
@@ -408,7 +408,7 @@ class OCRProcessor:
             os.remove(self._get_new_pdf_path())
             # Remove pikePdf .pdf_original file output
             os.remove(
-                self._get_postprocessed_pdf_path().replace(".pdf", ".pdf_original")
+                self.get_postprocessed_pdf_path().replace(".pdf", ".pdf_original")
             )
             logging.info(f"PDF Generation successful: {self._get_file_name()}")
         except Exception as e:
@@ -422,9 +422,7 @@ class OCRProcessor:
         try:
             # Preprocess with CV2.
             logging.info("Generating ALTO file")
-            temp_gray_path = self._preprocess_image()
-
-            xml = pytesseract.image_to_alto_xml(temp_gray_path)
+            xml = pytesseract.image_to_alto_xml(self.input_file_path)
             with open(self._get_alto_file_path(), "w+b") as f:
                 f.write(xml)
 

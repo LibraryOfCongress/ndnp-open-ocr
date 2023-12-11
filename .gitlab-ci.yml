@@ -11,3 +11,4 @@ run:
 
   only:
     - CHRONAM-2312-cli-improvements
+    - CHRONAM-2318-fix-validation
