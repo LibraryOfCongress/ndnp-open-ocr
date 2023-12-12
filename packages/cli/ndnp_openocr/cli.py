@@ -67,7 +67,7 @@ def get(ctx, job: str):
         print("These have failed: " + str(body['FailedFiles']))
     else:
         print(str(body['RemainingMessages']) + " newspapers remaining for processing")
-        print("These newspapers have failed: " + str(body['FailedFiles']))
+        print("These newspapers have failed to OCR and will be EXCLUDED from outputs in S3: " + str(body['FailedFiles']))
 
 
     return ctx
