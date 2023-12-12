@@ -150,12 +150,12 @@ def process_message(message_body):
                     message["OutputPrefix"],
                     os.path.relpath(os.path.dirname(message["Key"]), message["InputPrefix"]),
                 )
-                table.update_item(
-                    Key={"pk": "JOB", "sk": job_id},
-                    UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
-                    ExpressionAttributeValues={":dec": 1},
-                    ReturnValues="UPDATED_NEW",
-                )
+            table.update_item(
+                Key={"pk": "JOB", "sk": job_id},
+                UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
+                ExpressionAttributeValues={":dec": 1},
+                ReturnValues="UPDATED_NEW",
+            )
         else:
             logging.info(f"Failed to process {input_file_path}.")
 
