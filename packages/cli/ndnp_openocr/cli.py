@@ -1,13 +1,12 @@
 import boto3
 import click
 import requests
-from helpers import sync_s3_batch, find_missing_pdfs
+from .helpers import sync_s3_batch, find_missing_pdfs
+from .logger import logger
 import json
 import time
 import logging
 import os
-
-from logger import logger
 
 
 @click.group()

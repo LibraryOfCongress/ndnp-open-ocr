@@ -8,7 +8,7 @@ import logging
 import subprocess
 
 # Creates a new batch using a combination of the old batch and new PDF and ALTO files stored in S3 with mirrored directory structure (NDNP batch)
-from logger import logger
+from .logger import logger
 
 
 def sync_s3_batch(bucket, job, local_batch, new_batch_dir):

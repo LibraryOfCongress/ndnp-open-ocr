@@ -210,7 +210,6 @@ resource "aws_cloudwatch_metric_alarm" "sqs_alarm" {
   }
 }
 
-
 resource "aws_appautoscaling_target" "ecs_target" {
   max_capacity       = 100 # Adjust based on your max tasks
   min_capacity       = 0  # Adjust based on your min tasks
@@ -262,7 +261,7 @@ resource "aws_appautoscaling_policy" "scale_in" {
 
     step_adjustment {
       metric_interval_upper_bound = 0
-      scaling_adjustment          = -50
+      scaling_adjustment          = -10
     }
   }
 }
