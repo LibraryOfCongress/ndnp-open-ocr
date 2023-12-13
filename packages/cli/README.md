@@ -4,6 +4,12 @@ This command line interface (CLI) enables you to trigger batch processing jobs o
 
 ## Test Commands to Run Presently:
 
+Authenticate with AWS through Idaptive:
+
+```sh
+idaptive-aws-cli-login -u dpeterson -t loc.my.idaptive.app -r us-east-2\
+```
+
 To kickoff batch processing job
 ```sh
 python cli.py reprocess --batch_name=notvalidated --bucket=ndnp-open-ocr-output-bucket-test
