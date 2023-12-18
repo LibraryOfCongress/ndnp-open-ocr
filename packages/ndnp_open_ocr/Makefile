@@ -1,5 +1,5 @@
 build:
-	docker build -t chronam:latest .
+	docker build -t ndnp_open_ocr:latest .
 
 run:
-	docker run -it --rm -v $(PWD):/data -v /Volumes/ExtremeSSD/:/Volumes/ExtremeSSD -w /data chronam:latest bash
+	docker run -it -v $(PWD):/app -w /app ndnp_open_ocr:latest bash

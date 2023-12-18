@@ -53,6 +53,7 @@ def handler(event, context):
                 "pk": "JOB",
                 "sk": output_prefix,
                 "RemainingMessages": len(keys),
+                "FailedFiles": [],
                 "Timestamp": timestamp,
             }
         )
@@ -90,3 +91,7 @@ def handler(event, context):
         }
     except Exception as e:
         logger.error("Error occurred: %s", e)
+        return {
+            'statusCode': 400,
+            "body": "An Error has occurred. Please check batch and bucket names and make sure they are correct."
+        }
