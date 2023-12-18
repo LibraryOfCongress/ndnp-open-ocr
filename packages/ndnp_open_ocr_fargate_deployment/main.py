@@ -9,20 +9,12 @@ from ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
 import datetime
 import shutil
 import logging
-from flask import Flask, jsonify
 import threading
-
-app = Flask(__name__)
-
-
-@app.route("/health", methods=["GET"])
-def health_check():
-    return jsonify(status="healthy"), 200
+import pdfplumber
+from PyPDF2 import PdfReader
 
 
-# Set Logging Level to DEBUG
 logging.basicConfig(
-    # filename="logs.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
@@ -94,9 +86,10 @@ def clear_tmp_directory():
 
 
 def process_message(message_body):
-    """Generates output PDF using NDNP Open OCR pipeline"""
+    """Generates output PDF using NDNP Open OCR pipeline, checks for text content, and appends to DynamoDB FailedFiles list if no text found."""
     message = json.loads(message_body)
     job_id = message["JobId"]
+
     with tempfile.TemporaryDirectory() as temp_dir:
         # Download files from S3
         input_file_path = download_files_from_s3(
@@ -113,7 +106,7 @@ def process_message(message_body):
 
             logging.info("Starting NDNP Open OCR Reprocessing...")
 
-            # Run NDNP Open OCR Reprocessing on this input
+            # Run NDNP Open OCR Reprocessing
             processor = OCRProcessor(
                 input_file_path,
                 output_path,
@@ -121,21 +114,51 @@ def process_message(message_body):
             )
             processor.generate_pdf()
             processor.generate_alto()
-        else:
-            logging.info("Failed to download {input_file_path}.")
 
-        upload_files_to_s3(
-            output_path,
-            os.environ.get("OUTPUT_BUCKET_NAME"),
-            message["OutputPrefix"],
-            os.path.relpath(os.path.dirname(message["Key"]), message["InputPrefix"]),
-        )
-        resp = table.update_item(
-            Key={"pk": "JOB", "sk": job_id},
-            UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
-            ExpressionAttributeValues={":dec": 1},
-            ReturnValues="UPDATED_NEW",
-        )
+            # Check if the generated PDF contains text
+            generated_pdf_path = processor.get_postprocessed_pdf_path()
+            logging.info("GENERATED PDF PATH: {}".format(generated_pdf_path))
+            text_found = False
+            with open(generated_pdf_path, "rb") as f:
+                reader = PdfReader(f)
+                for page in range(0, len(reader.pages)):
+                    text = reader.pages[page].extract_text()
+                    logging.info(
+                        "Text in PDF {}: {}".format(generated_pdf_path, text_found)
+                    )
+                    if text:
+                        text_found = True
+            # Update DynamoDB based on text presence
+            if not text_found:
+                logging.info(
+                    "No text found in the generated PDF for {}.".format(message["Key"])
+                )
+                # Append current file to the FailedFiles list in DynamoDB
+                table.update_item(
+                    Key={"pk": "JOB", "sk": job_id},
+                    UpdateExpression="SET FailedFiles = list_append(FailedFiles, :file)",
+                    ExpressionAttributeValues={
+                        ":file": [message["Key"]],
+                    },
+                    ReturnValues="UPDATED_NEW",
+                )
+            else:
+                # Upload files to S3 and update DynamoDB for job completion
+                upload_files_to_s3(
+                    output_path,
+                    os.environ.get("OUTPUT_BUCKET_NAME"),
+                    message["OutputPrefix"],
+                    os.path.relpath(os.path.dirname(message["Key"]), message["InputPrefix"]),
+                )
+            table.update_item(
+                Key={"pk": "JOB", "sk": job_id},
+                UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
+                ExpressionAttributeValues={":dec": 1},
+                ReturnValues="UPDATED_NEW",
+            )
+        else:
+            logging.info(f"Failed to process {input_file_path}.")
+
 
 
 def poll_sqs_and_process():
@@ -148,8 +171,6 @@ def poll_sqs_and_process():
             WaitTimeSeconds=5,
         )
 
-        logging.info("RESPONSE MESSAGES %s", response['Messages'])
-
         if "Messages" in response:
             for message in response["Messages"]:
                 try:
@@ -161,10 +182,6 @@ def poll_sqs_and_process():
                     )
                 except Exception as e:
                     logging.error(f"Failed to process message: {e}")
-
-
-# def run_flask_app():
-#     app.run(host="0.0.0.0", port=8080)
 
 
 if __name__ == "__main__":

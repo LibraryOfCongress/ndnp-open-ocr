@@ -11,3 +11,4 @@ terraform.tfstate.d/sd*
 **jupyter**
 *.tar*
 *.whl
+*.log
