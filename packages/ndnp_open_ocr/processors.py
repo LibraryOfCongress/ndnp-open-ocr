@@ -60,7 +60,7 @@ class AltoProcessor:
         description.append(post_processing_step)
 
         processing_date_time = self.soup.new_tag("processingDateTime")
-        processing_date_time.string = "2023-02-02T15:14:38"
+        processing_date_time.string = datetime.now().isoformat()
         post_processing_step.append(processing_date_time)
 
         processing_agency = self.soup.new_tag("processingAgency")
