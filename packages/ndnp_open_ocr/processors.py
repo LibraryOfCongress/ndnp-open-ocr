@@ -29,7 +29,7 @@ class AltoProcessor:
         description = self.soup.find("Description")
 
         software_name = "Tesseract Open Source OCR Engine"
-        software_version = "5.2.0-51-ga8735"
+        software_version = str(pytesseract.get_tesseract_version())
 
         ocr_processing = self.soup.find("OCRProcessing")
 
