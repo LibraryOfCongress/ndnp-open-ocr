@@ -10,6 +10,7 @@ from enum import Enum
 import hocker as hkr
 from xml.etree import ElementTree as ET
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
