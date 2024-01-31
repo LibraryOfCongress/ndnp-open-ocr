@@ -10,6 +10,7 @@ from enum import Enum
 import hocker as hkr
 from xml.etree import ElementTree as ET
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class AltoProcessor:
         description = self.soup.find("Description")
 
         software_name = "Tesseract Open Source OCR Engine"
-        software_version = "5.2.0-51-ga8735"
+        software_version = str(pytesseract.get_tesseract_version())
 
         ocr_processing = self.soup.find("OCRProcessing")
 
@@ -59,7 +60,7 @@ class AltoProcessor:
         description.append(post_processing_step)
 
         processing_date_time = self.soup.new_tag("processingDateTime")
-        processing_date_time.string = "2023-02-02T15:14:38"
+        processing_date_time.string = datetime.now().isoformat()
         post_processing_step.append(processing_date_time)
 
         processing_agency = self.soup.new_tag("processingAgency")
