@@ -1,0 +1,14 @@
+**__pycache__
+**/.DS_Store
+.DS_Store
+**/reprocessing_output**
+*.zip
+**.vscode
+**layer**
+*.local.ipynb
+terraform.tfstate.d/sd*
+**batch**
+**jupyter**
+*.tar*
+*.whl
+*.log
