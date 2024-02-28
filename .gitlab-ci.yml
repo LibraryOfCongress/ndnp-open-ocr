@@ -10,5 +10,4 @@ run:
     - poetry publish --repository gitlab --username gitlab-ci-token --password ${CI_JOB_TOKEN}
 
   only:
-    - CHRONAM-2312-cli-improvements
-    - CHRONAM-2318-fix-validation
+    - CHRONAM-2382-update-cli
