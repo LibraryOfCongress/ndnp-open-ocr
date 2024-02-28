@@ -4,6 +4,14 @@ run:
   script:
     - pip install poetry
     - cd packages/cli/
+
+    # Generate a dynamic version suffix based on the CI_COMMIT_REF_SLUG and current timestamp
+    - VERSION_SUFFIX=$(echo ${CI_COMMIT_REF_SLUG}.$(date +%Y%m%d%H%M%S))
+
+    # Use sed to append this suffix to the version in pyproject.toml
+    - sed -i "s/version = \".*\"/version = \"&-$VERSION_SUFFIX\"/" pyproject.toml
+
+    # Continue with the build and publish process
     - poetry build
     - poetry config http-basic.gitlab-ci-token ${CI_JOB_TOKEN} gitlab-ci-token
     - poetry config repositories.gitlab ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
