@@ -13,5 +13,8 @@ run:
     - poetry config repositories.gitlab ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
     - poetry publish --repository gitlab --username gitlab-ci-token --password ${CI_JOB_TOKEN}
 
-  only:
-    - CHRONAM-2382-update-cli
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "development"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
