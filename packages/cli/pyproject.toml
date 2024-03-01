@@ -10,6 +10,7 @@ boto3 = "1.23.10"
 click = "8.0.1"
 requests = "2.26.0"
 tqdm = "4.64.1"
+rich = "^13.7.1"
 
 [tool.poetry.dev-dependencies]
 

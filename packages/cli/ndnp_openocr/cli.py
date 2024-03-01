@@ -2,7 +2,7 @@ import boto3
 import click
 import requests
 from helpers import sync_s3_batch, find_missing_pdfs
-from logger import logger
+from rich import print
 import json
 import time
 import logging
@@ -110,18 +110,20 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
         )
 
         response_payload = json.loads(response["Payload"].read())
-        job_id = json.loads(response_payload["body"])["job"]
+        print(response_payload)
+
+        body = json.loads(response_payload["body"])
+        job_id = body["job"]
         os.environ["JOB_ID"] = job_id
 
-        logger.info(
-            "Job_ID {} kicked off for {} prefix in {} bucket".format(
-                job_id, prefix, bucket
+        print(
+            "\n🚀 [green]Job successfully kicked off for \"{}\" prefix in \"{}\" bucket".format(
+                prefix, bucket
             )
         )
 
-        print("Job ID:{}".format(job_id))
         print(
-            "\nTo check status of the job, run: \n ndnp_openocr get --job {}".format(
+            "\n [bold purple] To check status of the job, run: \n ndnp_openocr get --job {}".format(
                 job_id
             )
         )
