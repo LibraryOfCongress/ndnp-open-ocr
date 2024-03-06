@@ -2,11 +2,12 @@ import boto3
 import click
 import requests
 from .helpers import sync_s3_batch, find_missing_pdfs
-from .logger import logger
+from rich import print
 import json
 import time
 import logging
 import os
+from botocore.config import Config
 
 
 @click.group()
@@ -17,12 +18,12 @@ def cli(ctx):
     ctx.ensure_object(dict)
     ctx.obj["INPUT_BUCKET_NAME"] = "loc-preservation"
     ctx.obj["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
-    ctx.obj[
-        "SCHEDULER_ARN"
-    ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-scheduler-lambda-function-dev"
-    ctx.obj[
-        "GET_JOB_ARN"
-    ] = "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-get-job-lambda-function-dev"
+    ctx.obj["SCHEDULER_ARN"] = (
+        "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-scheduler-lambda-function-dev"
+    )
+    ctx.obj["GET_JOB_ARN"] = (
+        "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-get-job-lambda-function-dev"
+    )
 
 
 @click.command()
@@ -61,20 +62,33 @@ def get(ctx, job: str):
     # print(response_payload)
     body = response_payload[0]
 
-    if int(body['RemainingMessages']) == 0:
-        print("Processing complete. \n\nYou can pull down batch with: ndnp_openocr sync --job={} --output-dir=OUTPUT_DIR --local-batch=PATH/TO/LOCAL/BATCH/batch.xml".format(job))
-        print("These have failed: " + str(body['FailedFiles']))
+    if int(body["RemainingMessages"]) == 0:
+        print(
+            "Processing complete. \n\nYou can pull down batch with: ndnp_openocr sync --job={} --output-dir=OUTPUT_DIR --local-batch=PATH/TO/LOCAL/BATCH/batch.xml".format(
+                job
+            )
+        )
+        print("These have failed: " + str(body["FailedFiles"]))
     else:
-        print(str(body['RemainingMessages']) + " newspapers remaining for processing")
-        print("These newspapers have failed to OCR and will be EXCLUDED from outputs in S3: " + str(body['FailedFiles']))
-
+        print(str(body["RemainingMessages"]) + " newspapers remaining for processing")
+        print(
+            "These newspapers have failed to OCR and will be EXCLUDED from outputs in S3: "
+            + str(body["FailedFiles"])
+        )
 
     return ctx
 
 
 def reprocess_batch(ctx, batch_name: str, bucket: str):
     """Kicks off reprocessing job for a certain S3 NDNP batch."""
-    lambda_client = boto3.client("lambda", region_name="us-east-2")
+    lambda_client = boto3.client(
+        "lambda",
+        region_name="us-east-2",
+        config=Config(
+            read_timeout=900,  # Time in seconds
+            connect_timeout=10,  # Time in seconds
+        ),
+    )
     # This is the prefix from the loc-preservation bucket...should stick to this if we can.
     if bucket == "loc-preservation":
         prefix = os.path.join("loc-preservation/lcbp/ndnp/dlc/", batch_name)
@@ -96,17 +110,23 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
         )
 
         response_payload = json.loads(response["Payload"].read())
-        job_id = json.loads(response_payload["body"])["job"]
+        print(response_payload)
+
+        body = json.loads(response_payload["body"])
+        job_id = body["job"]
         os.environ["JOB_ID"] = job_id
 
-        logger.info(
-            "Job_ID {} kicked off for {} prefix in {} bucket".format(
-                job_id, prefix, bucket
+        print(
+            "\n🚀 [green]Job successfully kicked off for \"{}\" prefix in \"{}\" bucket".format(
+                prefix, bucket
             )
         )
 
-        print("Job ID:{}".format(job_id))
-        print("\nTo check status of the job, run: \n ndnp_openocr get --job {}".format(job_id))
+        print(
+            "\n [bold purple] To check status of the job, run: \n ndnp_openocr get --job {}".format(
+                job_id
+            )
+        )
 
     except Exception as e:
         print(f"Failed to trigger Lambda function: {e}")

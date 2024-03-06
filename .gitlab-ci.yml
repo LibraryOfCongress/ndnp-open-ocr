@@ -4,11 +4,17 @@ run:
   script:
     - pip install poetry
     - cd packages/cli/
+    - VERSION_SUFFIX=$(echo ${CI_COMMIT_REF_SLUG}.$(date +%Y%m%d%H%M%S))
+    - sed -i "s/version = \"0.1.0-alpha1\"/version = \"0.1.0-alpha1+$VERSION_SUFFIX\"/" pyproject.toml
+
+    # Continue with the build and publish process
     - poetry build
     - poetry config http-basic.gitlab-ci-token ${CI_JOB_TOKEN} gitlab-ci-token
     - poetry config repositories.gitlab ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
     - poetry publish --repository gitlab --username gitlab-ci-token --password ${CI_JOB_TOKEN}
 
-  only:
-    - CHRONAM-2312-cli-improvements
-    - CHRONAM-2318-fix-validation
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "development"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
