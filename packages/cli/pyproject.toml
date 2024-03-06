@@ -13,6 +13,7 @@ requests = "2.26.0"
 tqdm = "4.64.1"
 rich = "^13.7.1"
 s3transfer = "^0.10.0"
+awscli = "^1.32.57"
 
 [tool.poetry.dev-dependencies]
 
