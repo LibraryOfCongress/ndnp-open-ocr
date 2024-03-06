@@ -4,8 +4,8 @@ run:
   script:
     - pip install poetry
     - cd packages/cli/
-    - VERSION_SUFFIX=$(echo ${CI_COMMIT_REF_SLUG}.$(date +%Y%m%d%H%M%S))
-    - sed -i "s/version = \"0.1.0-alpha1\"/version = \"0.1.0-alpha1+$VERSION_SUFFIX\"/" pyproject.toml
+    # - VERSION_SUFFIX=$(echo ${CI_COMMIT_REF_SLUG}.$(date +%Y%m%d%H%M%S))
+    # - sed -i "s/version = \"0.1.0-alpha1\"/version = \"0.1.0-alpha1+$VERSION_SUFFIX\"/" pyproject.toml
 
     # Continue with the build and publish process
     - poetry build
