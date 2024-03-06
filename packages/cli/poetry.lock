@@ -1,38 +1,41 @@
 [[package]]
 name = "boto3"
-version = "1.23.10"
+version = "1.34.56"
 description = "The AWS SDK for Python"
 category = "main"
 optional = false
-python-versions = ">= 3.6"
+python-versions = ">= 3.8"
 
 [package.dependencies]
-botocore = ">=1.26.10,<1.27.0"
+botocore = ">=1.34.56,<1.35.0"
 jmespath = ">=0.7.1,<2.0.0"
-s3transfer = ">=0.5.0,<0.6.0"
+s3transfer = ">=0.10.0,<0.11.0"
 
 [package.extras]
 crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.26.10"
+version = "1.34.56"
 description = "Low-level, data-driven core of boto 3."
 category = "main"
 optional = false
-python-versions = ">= 3.6"
+python-versions = ">= 3.8"
 
 [package.dependencies]
 jmespath = ">=0.7.1,<2.0.0"
 python-dateutil = ">=2.1,<3.0.0"
-urllib3 = ">=1.25.4,<1.27"
+urllib3 = [
+    {version = ">=1.25.4,<1.27", markers = "python_version < \"3.10\""},
+    {version = ">=1.25.4,<2.1", markers = "python_version >= \"3.10\""},
+]
 
 [package.extras]
-crt = ["awscrt (==0.13.8)"]
+crt = ["awscrt (==0.19.19)"]
 
 [[package]]
 name = "certifi"
-version = "2023.7.22"
+version = "2024.2.2"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
@@ -70,7 +73,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7
 
 [[package]]
 name = "idna"
-version = "3.4"
+version = "3.6"
 description = "Internationalized Domain Names in Applications (IDNA)"
 category = "main"
 optional = false
@@ -127,7 +130,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "python-dateutil"
-version = "2.8.2"
+version = "2.9.0.post0"
 description = "Extensions to the standard Python datetime module"
 category = "main"
 optional = false
@@ -171,17 +174,17 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "s3transfer"
-version = "0.5.2"
+version = "0.10.0"
 description = "An Amazon S3 Transfer Manager"
 category = "main"
 optional = false
-python-versions = ">= 3.6"
+python-versions = ">= 3.8"
 
 [package.dependencies]
-botocore = ">=1.12.36,<2.0a.0"
+botocore = ">=1.33.2,<2.0a.0"
 
 [package.extras]
-crt = ["botocore[crt] (>=1.20.29,<2.0a.0)"]
+crt = ["botocore[crt] (>=1.33.2,<2.0a.0)"]
 
 [[package]]
 name = "six"
@@ -210,21 +213,21 @@ telegram = ["requests"]
 
 [[package]]
 name = "urllib3"
-version = "1.26.16"
+version = "1.26.18"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
 
 [package.extras]
-brotli = ["brotlicffi (>=0.8.0)", "brotli (>=1.0.9)", "brotlipy (>=0.6.0)"]
+brotli = ["brotlicffi (>=0.8.0)", "brotli (==1.0.9)", "brotlipy (>=0.6.0)", "brotli (>=1.0.9)"]
 secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "certifi", "urllib3-secure-extra", "ipaddress"]
 socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "ad1db4093477089bbbc8e1a83932d44e8f50e8cdf5cbeb703179046cf70eb187"
+content-hash = "4ad1bbb600d71d69b52b115632a4a6b5b9a827d8a525c28e0927d0f325b9f717"
 
 [metadata.files]
 boto3 = []
