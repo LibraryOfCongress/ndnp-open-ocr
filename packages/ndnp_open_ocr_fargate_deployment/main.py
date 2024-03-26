@@ -106,6 +106,21 @@ def process_message(message_body):
 
             logging.info("Starting NDNP Open OCR Reprocessing...")
 
+            # If receive count has approached maximum, save to DLQ list attribute in DynamoDB
+            # for this job and let the job commence. We can solve later.
+            if message_body["Attributes"]["ApproximateReceiveCount"] >= 5:
+                # Append current file to the DLQ_List attribute in DynamoDB for the same job item
+                table.update_item(
+                    Key={"pk": "JOB", "sk": job_id},
+                    UpdateExpression="SET dlq_list = list_append(if_not_exists(dlq_list, :empty_list), :message)",
+                    ExpressionAttributeValues={
+                        ":message": [json.dumps(message)],
+                        ":empty_list": [],
+                    },
+                    ReturnValues="UPDATED_NEW",
+                )
+
+                return
             # Run NDNP Open OCR Reprocessing
             processor = OCRProcessor(
                 input_file_path,
@@ -148,7 +163,9 @@ def process_message(message_body):
                     output_path,
                     os.environ.get("OUTPUT_BUCKET_NAME"),
                     message["OutputPrefix"],
-                    os.path.relpath(os.path.dirname(message["Key"]), message["InputPrefix"]),
+                    os.path.relpath(
+                        os.path.dirname(message["Key"]), message["InputPrefix"]
+                    ),
                 )
             table.update_item(
                 Key={"pk": "JOB", "sk": job_id},
@@ -158,7 +175,6 @@ def process_message(message_body):
             )
         else:
             logging.info(f"Failed to process {input_file_path}.")
-
 
 
 def poll_sqs_and_process():
