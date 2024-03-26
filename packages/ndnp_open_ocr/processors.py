@@ -11,6 +11,7 @@ import hocker as hkr
 from xml.etree import ElementTree as ET
 import logging
 from datetime import datetime
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -201,6 +202,40 @@ class PDFProcessor:
 
                 logging.info(f"New Tags from PDF: {new_tags}")
 
+                # Conditionally add XMP:Identifier if it exists in old_tags. Some newspapers don't have the
+                # XMP:Identifier tag, so we only add it if it exists in the old PDF.
+
+                if "XMP:Identifier" not in old_tags:
+                    logging.info(
+                        "No XMP Identifier in original PDF. Try to extract from dc li components."
+                    )
+                    # Simulated example of extracting a text block from the PDF
+                    extracted_text = """
+                    <dc:identifier>
+                    <rdf:Alt>
+                    <rdf:li xml:lang="en">Reel number 00206530753. Sequence number 833.</rdf:li>
+                    </rdf:Alt>
+                    </dc:identifier>
+                    """
+
+                    # Regular expression to find the dc:identifier value
+                    dc_identifier_match = re.search(
+                        r'<rdf:li xml:lang="en">(.*?)</rdf:li>', extracted_text
+                    )
+
+                    # Extract the dc:identifier if found
+                    dc_identifier = (
+                        dc_identifier_match.group(1) if dc_identifier_match else None
+                    )
+                    logging.info(
+                        "dc_identifier extracted has the value: {}".format(
+                            dc_identifier
+                        )
+                    )
+
+                # Use the XMP:Identifier from old_tags if available, else use the extracted dc:identifier
+                identifier_to_use = old_tags.get("XMP:Identifier", dc_identifier)
+
                 updated_tags = {
                     "XMP:CreateDate": new_tags["File:FileModifyDate"][0:14],
                     "XMP:ModifyDate": new_tags["File:FileModifyDate"][0:14],
@@ -212,12 +247,8 @@ class PDFProcessor:
                     "PDF:Creator": "ndnp-open-ocr",
                     "XMP:Author": "",
                     "PDF:Subject": "",
+                    "XMP:Identifier": identifier_to_use,
                 }
-
-                # Conditionally add XMP:Identifier if it exists in old_tags. Some newspapers don't have the
-                # XMP:Identifier tag, so we only add it if it exists in the old PDF.
-                if "XMP:Identifier" in old_tags:
-                    updated_tags["XMP:Identifier"] = old_tags["XMP:Identifier"]
 
                 et.set_tags(
                     self.postprocessed_pdf,
