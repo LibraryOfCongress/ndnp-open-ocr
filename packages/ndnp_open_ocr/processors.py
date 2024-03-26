@@ -202,9 +202,9 @@ class PDFProcessor:
 
                 logging.info(f"New Tags from PDF: {new_tags}")
 
-                # Conditionally add XMP:Identifier if it exists in old_tags. Some newspapers don't have the
-                # XMP:Identifier tag, so we only add it if it exists in the old PDF.
 
+                # If XMP:Identifier is not in the old PDF tags (like with most), try to parse dc li element, which has
+                # been found to be the other contingency.
                 if "XMP:Identifier" not in old_tags:
                     logging.info(
                         "No XMP Identifier in original PDF. Try to extract from dc li components."
