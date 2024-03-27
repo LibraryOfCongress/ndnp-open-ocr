@@ -202,6 +202,7 @@ class PDFProcessor:
 
                 logging.info(f"New Tags from PDF: {new_tags}")
 
+                identifier_to_use = ""
 
                 # If XMP:Identifier is not in the old PDF tags (like with most), try to parse dc li element, which has
                 # been found to be the other contingency.
@@ -233,8 +234,10 @@ class PDFProcessor:
                         )
                     )
 
+                    identifier_to_use = dc_identifier
+
                 # Use the XMP:Identifier from old_tags if available, else use the extracted dc:identifier
-                identifier_to_use = old_tags.get("XMP:Identifier", dc_identifier)
+                identifier_to_use = old_tags.get("XMP:Identifier")
 
                 updated_tags = {
                     "XMP:CreateDate": new_tags["File:FileModifyDate"][0:14],
