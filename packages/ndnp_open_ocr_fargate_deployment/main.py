@@ -120,7 +120,7 @@ def process_message(message_body):
                     ReturnValues="UPDATED_NEW",
                 )
 
-                return
+                return True
             # Run NDNP Open OCR Reprocessing
             processor = OCRProcessor(
                 input_file_path,
@@ -157,6 +157,8 @@ def process_message(message_body):
                     },
                     ReturnValues="UPDATED_NEW",
                 )
+
+                return True
             else:
                 # Upload files to S3 and update DynamoDB for job completion
                 upload_files_to_s3(
@@ -173,8 +175,10 @@ def process_message(message_body):
                 ExpressionAttributeValues={":dec": 1},
                 ReturnValues="UPDATED_NEW",
             )
+            return True
         else:
             logging.info(f"Failed to process {input_file_path}.")
+            return False
 
 
 def poll_sqs_and_process():
@@ -191,11 +195,13 @@ def poll_sqs_and_process():
             for message in response["Messages"]:
                 try:
                     logging.info("Incoming Message: %s", message)
-                    process_message(message["Body"])
+                    processed_successfully = process_message(message["Body"])
                     # Delete the processed SQS message
-                    sqs.delete_message(
-                        QueueUrl=sqs_queue_url, ReceiptHandle=message["ReceiptHandle"]
-                    )
+                    if processed_successfully:
+                        sqs.delete_message(
+                            QueueUrl=sqs_queue_url,
+                            ReceiptHandle=message["ReceiptHandle"],
+                        )
                 except Exception as e:
                     logging.error(f"Failed to process message: {e}")
 
