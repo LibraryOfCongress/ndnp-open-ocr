@@ -182,6 +182,8 @@ class PDFProcessor:
                 et.copy_tags(self.old_pdf, self.postprocessed_pdf)
 
                 old_tags = et.get_tags(self.old_pdf, tags=None)[0]
+                metadata = et.get_metadata(self.old_pdf)
+                logging.info("{} metadata: {}".format(self.old_pdf, metadata))
 
                 title_tag = None
                 title_key_list = list(
@@ -202,61 +204,26 @@ class PDFProcessor:
 
                 logging.info(f"New Tags from PDF: {new_tags}")
 
-                identifier_to_use = ""
+            # Use the XMP:Identifier from old_tags if available
+            identifier_to_use = old_tags.get("XMP:Identifier", "XMP-dc:Idenfitifer")
+            updated_tags = {
+                "XMP:CreateDate": new_tags["File:FileModifyDate"][0:14],
+                "XMP:ModifyDate": new_tags["File:FileModifyDate"][0:14],
+                "PDF:CreateDate": new_tags["File:FileModifyDate"][0:14],
+                "PDF:ModifyDate": new_tags["File:FileModifyDate"][0:14],
+                "XMP:Creator": "",
+                "PDF:Producer": new_tags["PDF:Producer"],
+                "XMP:Description": description_value,
+                "PDF:Creator": "ndnp-open-ocr",
+                "XMP:Author": "",
+                "PDF:Subject": "",
+                "XMP:Identifier": identifier_to_use,
+            }
 
-                # If XMP:Identifier is not in the old PDF tags (like with most), try to parse dc li element, which has
-                # been found to be the other contingency.
-                if "XMP:Identifier" not in old_tags:
-                    logging.info(
-                        "No XMP Identifier in original PDF. Try to extract from dc li components."
-                    )
-                    # Simulated example of extracting a text block from the PDF
-                    extracted_text = """
-                    <dc:identifier>
-                    <rdf:Alt>
-                    <rdf:li xml:lang="en">Reel number 00206530753. Sequence number 833.</rdf:li>
-                    </rdf:Alt>
-                    </dc:identifier>
-                    """
-
-                    # Regular expression to find the dc:identifier value
-                    dc_identifier_match = re.search(
-                        r'<rdf:li xml:lang="en">(.*?)</rdf:li>', extracted_text
-                    )
-
-                    # Extract the dc:identifier if found
-                    dc_identifier = (
-                        dc_identifier_match.group(1) if dc_identifier_match else None
-                    )
-                    logging.info(
-                        "dc_identifier extracted has the value: {}".format(
-                            dc_identifier
-                        )
-                    )
-
-                    identifier_to_use = dc_identifier
-
-                # Use the XMP:Identifier from old_tags if available, else use the extracted dc:identifier
-                identifier_to_use = old_tags.get("XMP:Identifier")
-
-                updated_tags = {
-                    "XMP:CreateDate": new_tags["File:FileModifyDate"][0:14],
-                    "XMP:ModifyDate": new_tags["File:FileModifyDate"][0:14],
-                    "PDF:CreateDate": new_tags["File:FileModifyDate"][0:14],
-                    "PDF:ModifyDate": new_tags["File:FileModifyDate"][0:14],
-                    "XMP:Creator": "",
-                    "PDF:Producer": new_tags["PDF:Producer"],
-                    "XMP:Description": description_value,
-                    "PDF:Creator": "ndnp-open-ocr",
-                    "XMP:Author": "",
-                    "PDF:Subject": "",
-                    "XMP:Identifier": identifier_to_use,
-                }
-
-                et.set_tags(
-                    self.postprocessed_pdf,
-                    updated_tags,
-                )
+            et.set_tags(
+                self.postprocessed_pdf,
+                updated_tags,
+            )
         except Exception as e:
             logging.error(
                 "Failure transferring XMP data from {} to {}: {}".format(

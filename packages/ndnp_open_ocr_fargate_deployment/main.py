@@ -108,7 +108,8 @@ def process_message(message_body):
 
             # If receive count has approached maximum, save to DLQ list attribute in DynamoDB
             # for this job and let the job commence. We can solve later.
-            if message_body["Attributes"]["ApproximateReceiveCount"] >= 5:
+            # logging.info("Check to see if there are greater than 5 receives")
+            if int(message_body["Attributes"]["ApproximateReceiveCount"]) >= 5:
                 # Append current file to the DLQ_List attribute in DynamoDB for the same job item
                 table.update_item(
                     Key={"pk": "JOB", "sk": job_id},
