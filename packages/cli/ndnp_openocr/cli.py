@@ -9,6 +9,7 @@ import logging
 import os
 from botocore.config import Config
 import keyring
+import shutil
 
 CONFIG_KEYS = ["job_id", "output_dir"]
 
@@ -181,6 +182,57 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
         print(f"Failed to trigger Lambda function: {e}")
 
     return ctx
+
+
+@click.command(name="delete")
+@click.option(
+    "--job-id",
+    help="The job ID to delete from S3. Uses the stored job ID if not provided.",
+)
+@click.option(
+    "--output-dir",
+    help="The local directory to delete. Uses the stored output directory if not provided.",
+)
+@click.pass_context
+def delete(ctx, job_id, output_dir):
+    """Deletes the S3 directory for the given job_id and the local output_dir."""
+    # Fetch stored values if not provided
+    stored_config = ctx.obj["config"]
+    job_id = job_id or stored_config.get("job_id")
+    output_dir = output_dir or stored_config.get("output_dir")
+
+    if not job_id:
+        print("[red]No job ID provided or found. Exiting.")
+        return
+
+    if not output_dir:
+        print("[red]No output directory provided or found. Exiting.")
+        return
+
+    bucket_name = ctx.obj["OUTPUT_BUCKET_NAME"]
+
+    # Delete S3 directory
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(bucket_name)
+    prefix = f"{job_id}/"  # Assuming the job_id is the prefix for the files in S3
+    try:
+        bucket.objects.filter(Prefix=prefix).delete()
+        print(f"[green]Successfully deleted S3 directory for job_id: {job_id}")
+    except boto3.ClientError as e:
+        print(f"[red]Failed to delete S3 directory for job_id: {job_id}. Error: {e}")
+
+    # Delete local directory
+    try:
+        shutil.rmtree(output_dir)
+        print(f"[green]Successfully deleted local directory: {output_dir}")
+    except OSError as e:
+        print(f"[red]Failed to delete local directory: {output_dir}. Error: {e}")
+
+    # Optionally, clear stored values if they were used
+    if not ctx.params["job_id"]:
+        keyring.delete_password("ndnp_openocr", "job_id")
+    if not ctx.params["output_dir"]:
+        keyring.delete_password("ndnp_openocr", "output_dir")
 
 
 @click.command(name="job_info")
