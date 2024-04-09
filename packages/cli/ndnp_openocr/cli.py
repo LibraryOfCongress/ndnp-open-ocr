@@ -1,13 +1,14 @@
 import boto3
 import click
 import requests
-from .helpers import sync_s3_batch, find_missing_pdfs
+from helpers import sync_s3_batch, find_missing_pdfs
 from rich import print
 import json
 import time
 import logging
 import os
 from botocore.config import Config
+import keyring
 
 
 @click.group()
@@ -42,9 +43,25 @@ def sync(ctx, job: str, output_dir: str, local_batch: str):
 
 
 @click.command()
-@click.option("--job")
+@click.option(
+    "--job",
+    default=None,
+    help="The job ID. If not provided, the last used job ID is fetched from the keyring.",
+)
 @click.pass_context
 def get(ctx, job: str):
+    if job is None:
+        # Try to get the last job ID from keyring
+        job = keyring.get_password("ndnp_openocr", "job_id")
+        if job is None:
+            print("No job ID provided and none found in keyring. Exiting.")
+            return
+        else:
+            print(f"Using job ID from keyring: {job}")
+    else:
+        # Update the keyring with the new job ID for future use
+        keyring.set_password("ndnp_openocr", "job_id", job)
+
     lambda_client = boto3.client("lambda", region_name="us-east-2")
     payload = {"pathParameters": {"jobId": job}}
     try:
@@ -64,15 +81,15 @@ def get(ctx, job: str):
 
     if int(body["RemainingMessages"]) == 0:
         print(
-            "Processing complete. \n\nYou can pull down batch with: ndnp_openocr sync --job={} --output-dir=OUTPUT_DIR --local-batch=PATH/TO/LOCAL/BATCH/batch.xml".format(
+            "[green]Processing complete. \n\nYou can pull down batch with: ndnp_openocr sync --job={} --output-dir=OUTPUT_DIR --local-batch=PATH/TO/LOCAL/BATCH/batch.xml".format(
                 job
             )
         )
-        print("These have failed: " + str(body["FailedFiles"]))
+        print("[yellow]These have failed: " + str(body["FailedFiles"]))
     else:
         print(str(body["RemainingMessages"]) + " newspapers remaining for processing")
         print(
-            "These newspapers have failed to OCR and will be EXCLUDED from outputs in S3: "
+            "[yellow]These newspapers have failed to OCR and will be EXCLUDED from outputs in S3: "
             + str(body["FailedFiles"])
         )
 
@@ -114,16 +131,17 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
 
         body = json.loads(response_payload["body"])
         job_id = body["job"]
-        os.environ["JOB_ID"] = job_id
+
+        keyring.set_password("ndnp_openocr", "job_id", job_id)
 
         print(
-            "\n🚀 [green]Job successfully kicked off for \"{}\" prefix in \"{}\" bucket".format(
+            '\n🚀 [green]Job successfully kicked off for "{}" prefix in "{}" bucket'.format(
                 prefix, bucket
             )
         )
 
         print(
-            "\n [bold purple] To check status of the job, run: \n ndnp_openocr get --job {}".format(
+            "\n [bold cyan] To check status of the job, run: \n ndnp_openocr get --job {}".format(
                 job_id
             )
         )
