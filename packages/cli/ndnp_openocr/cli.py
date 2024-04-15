@@ -209,30 +209,33 @@ def delete(ctx, job_id, output_dir):
         print("[red]No output directory provided or found. Exiting.")
         return
 
-    bucket_name = ctx.obj["OUTPUT_BUCKET_NAME"]
+    # Confirmation prompt before deleting
+    if click.confirm(
+        f"Are you sure you want to delete S3 directory for job_id: {job_id} and local directory: {output_dir}?"
+    ):
+        bucket_name = ctx.obj["OUTPUT_BUCKET_NAME"]
 
-    # Delete S3 directory
-    s3 = boto3.resource("s3")
-    bucket = s3.Bucket(bucket_name)
-    prefix = f"{job_id}/"  # Assuming the job_id is the prefix for the files in S3
-    try:
-        bucket.objects.filter(Prefix=prefix).delete()
-        print(f"[green]Successfully deleted S3 directory for job_id: {job_id}")
-    except boto3.ClientError as e:
-        print(f"[red]Failed to delete S3 directory for job_id: {job_id}. Error: {e}")
+        # Delete S3 directory
+        s3 = boto3.resource("s3")
+        bucket = s3.Bucket(bucket_name)
+        prefix = f"{job_id}/"  # Assuming the job_id is the prefix for the files in S3
+        try:
+            bucket.objects.filter(Prefix=prefix).delete()
+            print(f"[green]Successfully deleted S3 directory for job_id: {job_id}")
+        except boto3.ClientError as e:
+            print(
+                f"[red]Failed to delete S3 directory for job_id: {job_id}. Error: {e}"
+            )
 
-    # Delete local directory
-    try:
-        shutil.rmtree(output_dir)
-        print(f"[green]Successfully deleted local directory: {output_dir}")
-    except OSError as e:
-        print(f"[red]Failed to delete local directory: {output_dir}. Error: {e}")
+        # Delete local directory
+        try:
+            shutil.rmtree(output_dir)
+            print(f"[green]Successfully deleted local directory: {output_dir}")
+        except OSError as e:
+            print(f"[red]Failed to delete local directory: {output_dir}. Error: {e}")
 
-    # Optionally, clear stored values if they were used
-    if not ctx.params["job_id"]:
-        keyring.delete_password("ndnp_openocr", "job_id")
-    if not ctx.params["output_dir"]:
-        keyring.delete_password("ndnp_openocr", "output_dir")
+    else:
+        print("[yellow]Deletion canceled.")
 
 
 @click.command(name="job_info")
@@ -275,6 +278,7 @@ cli.add_command(sync)
 cli.add_command(reprocess)
 cli.add_command(get)
 cli.add_command(job_info)
+cli.add_command(delete)
 
 if __name__ == "__main__":
     cli()
