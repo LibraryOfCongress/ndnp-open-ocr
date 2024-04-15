@@ -20,7 +20,7 @@ def sync_s3_batch(bucket, job, local_batch, new_batch_dir):
     )
     # Step 1: Clone S3 contents into /tmp directory
     s3_uri = f"s3://{bucket}/{job}"
-    tmp_dir = "/tmp/s3_contents"
+    tmp_dir = "/processing/sgp/tmp"
     if not os.path.exists(tmp_dir):
         os.makedirs(tmp_dir)
 
