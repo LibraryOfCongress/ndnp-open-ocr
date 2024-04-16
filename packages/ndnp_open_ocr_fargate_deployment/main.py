@@ -85,15 +85,15 @@ def clear_tmp_directory():
             logging.info(f"Failed to delete {file_path}. Reason: {e}")
 
 
-def process_message(message_body):
+def process_message(message):
     """Generates output PDF using NDNP Open OCR pipeline, checks for text content, and appends to DynamoDB FailedFiles list if no text found."""
-    message = json.loads(message_body)
-    job_id = message["JobId"]
+    message_body = json.loads(message["Body"])
+    job_id = message_body["JobId"]
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Download files from S3
         input_file_path = download_files_from_s3(
-            message["Bucket"], message["Key"], temp_dir
+            message_body["Bucket"], message_body["Key"], temp_dir
         )
 
         if os.path.exists(input_file_path):
@@ -106,6 +106,23 @@ def process_message(message_body):
 
             logging.info("Starting NDNP Open OCR Reprocessing...")
 
+            # If receive count has approached maximum, save to DLQ list attribute in DynamoDB
+            # for this job and let the job commence. We can solve later.
+            # logging.info("Check to see if there are greater than 5 receives")
+            print(message)
+            if message["Attributes"]["ApproximateReceiveCount"] == "5":
+                # Append current file to the DLQ_List attribute in DynamoDB for the same job item
+                table.update_item(
+                    Key={"pk": "JOB", "sk": job_id},
+                    UpdateExpression="SET dlq_list = list_append(if_not_exists(dlq_list, :empty_list), :message)",
+                    ExpressionAttributeValues={
+                        ":message": [json.dumps(message_body)['Key']],
+                        ":empty_list": [],
+                    },
+                    ReturnValues="UPDATED_NEW",
+                )
+
+            #     return True
             # Run NDNP Open OCR Reprocessing
             processor = OCRProcessor(
                 input_file_path,
@@ -131,34 +148,47 @@ def process_message(message_body):
             # Update DynamoDB based on text presence
             if not text_found:
                 logging.info(
-                    "No text found in the generated PDF for {}.".format(message["Key"])
+                    "No text found in the generated PDF for {}.".format(message_body["Key"])
                 )
                 # Append current file to the FailedFiles list in DynamoDB
                 table.update_item(
                     Key={"pk": "JOB", "sk": job_id},
                     UpdateExpression="SET FailedFiles = list_append(FailedFiles, :file)",
                     ExpressionAttributeValues={
-                        ":file": [message["Key"]],
+                        ":file": [message_body["Key"]],
                     },
                     ReturnValues="UPDATED_NEW",
                 )
+
+                table.update_item(
+                    Key={"pk": "JOB", "sk": job_id},
+                    UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
+                    ExpressionAttributeValues={":dec": 1},
+                    ReturnValues="UPDATED_NEW",
+                )
+
+                return True
             else:
                 # Upload files to S3 and update DynamoDB for job completion
                 upload_files_to_s3(
                     output_path,
                     os.environ.get("OUTPUT_BUCKET_NAME"),
-                    message["OutputPrefix"],
-                    os.path.relpath(os.path.dirname(message["Key"]), message["InputPrefix"]),
+                    message_body["OutputPrefix"],
+                    os.path.relpath(
+                        os.path.dirname(message_body["Key"]),
+                        message_body["InputPrefix"],
+                    ),
                 )
-            table.update_item(
-                Key={"pk": "JOB", "sk": job_id},
-                UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
-                ExpressionAttributeValues={":dec": 1},
-                ReturnValues="UPDATED_NEW",
-            )
+                table.update_item(
+                    Key={"pk": "JOB", "sk": job_id},
+                    UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
+                    ExpressionAttributeValues={":dec": 1},
+                    ReturnValues="UPDATED_NEW",
+                )
+            return True
         else:
             logging.info(f"Failed to process {input_file_path}.")
-
+            return False
 
 
 def poll_sqs_and_process():
@@ -175,11 +205,15 @@ def poll_sqs_and_process():
             for message in response["Messages"]:
                 try:
                     logging.info("Incoming Message: %s", message)
-                    process_message(message["Body"])
+                    print("Incoming message")
+                    # message["Body"]["ApproximateReceiveCount"] = message['Attributes']['ApproximateReceiveCount']
+                    processed_successfully = process_message(message)
                     # Delete the processed SQS message
-                    sqs.delete_message(
-                        QueueUrl=sqs_queue_url, ReceiptHandle=message["ReceiptHandle"]
-                    )
+                    if processed_successfully:
+                        sqs.delete_message(
+                            QueueUrl=sqs_queue_url,
+                            ReceiptHandle=message["ReceiptHandle"],
+                        )
                 except Exception as e:
                     logging.error(f"Failed to process message: {e}")
 
