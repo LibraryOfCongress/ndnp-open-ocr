@@ -16,7 +16,7 @@ run:
     - changes:
         - packages/cli/**/*
       when: always
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - changes:
-        - packages/cli/**/*
-      when: always
+    # - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    # - changes:
+    #     - packages/cli/**/*
+    #   when: always
