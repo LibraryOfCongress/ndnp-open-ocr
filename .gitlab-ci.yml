@@ -12,11 +12,11 @@ run:
     - poetry publish --repository gitlab --username gitlab-ci-token --password ${CI_JOB_TOKEN}
 
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "development"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
     - changes:
         - packages/cli/**/*
       when: always
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - changes:
-        - packages/ndnp_open_ocr/**/*
+        - packages/cli/**/*
       when: always
