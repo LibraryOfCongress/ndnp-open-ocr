@@ -27,7 +27,7 @@ RUN curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/ra
     curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/raw/${TESSERACT_DATA_VERSION}/eng.traineddata > /usr/local/share/tessdata/eng.traineddata
 
 #### ExifTool INSTALL #####
-RUN wget --no-check-certificate https://exiftool.org/Image-ExifTool-12.58.tar.gz && tar xvf Image-ExifTool-12.58.tar.gz && cd Image-ExifTool-12.58/ && perl Makefile.PL && make && make test && make install
+RUN wget --no-check-certificate https://exiftool.org/Image-ExifTool-12.80.tar.gz && tar xvf Image-ExifTool-12.80.tar.gz && cd Image-ExifTool-12.80/ && perl Makefile.PL && make && make test && make install
 
 
 # Copy files from same directory as Dockerfile to /app
