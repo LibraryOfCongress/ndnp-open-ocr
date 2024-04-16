@@ -14,9 +14,9 @@ run:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "development"'
       changes:
-        - packages/cli/**/*  # Assuming your CLI directory is packages/cli
+        - packages/cli/**/*
       when: always
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      when: always
       changes:
-        - packages/cli/**/*  # Assuming your CLI directory is packages/cli
+        - packages/ndnp_open_ocr/**/*
+      when: always
