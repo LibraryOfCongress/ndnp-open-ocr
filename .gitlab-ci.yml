@@ -13,9 +13,12 @@ run:
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
-    - changes:
+      changes:
         - packages/cli/**/*
       when: always
+    # - changes:
+    #     - packages/cli/**/*
+    #   when: always
     # - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     # - changes:
     #     - packages/cli/**/*
