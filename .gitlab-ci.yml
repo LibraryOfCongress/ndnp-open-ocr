@@ -4,8 +4,6 @@ run:
   script:
     - pip install poetry
     - cd packages/cli/
-    # - VERSION_SUFFIX=$(echo ${CI_COMMIT_REF_SLUG}.$(date +%Y%m%d%H%M%S))
-    # - sed -i "s/version = \"0.1.0-alpha1\"/version = \"0.1.0-alpha1+$VERSION_SUFFIX\"/" pyproject.toml
 
     # Continue with the build and publish process
     - poetry build
@@ -15,6 +13,10 @@ run:
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "development"'
+      changes:
+        - packages/cli/**/*  # Assuming your CLI directory is packages/cli
       when: always
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: always
+      changes:
+        - packages/cli/**/*  # Assuming your CLI directory is packages/cli
