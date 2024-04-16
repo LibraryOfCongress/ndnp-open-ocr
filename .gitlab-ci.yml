@@ -13,10 +13,10 @@ run:
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "development"'
-      changes:
+    - changes:
         - packages/cli/**/*
       when: always
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
+    - changes:
         - packages/ndnp_open_ocr/**/*
       when: always
