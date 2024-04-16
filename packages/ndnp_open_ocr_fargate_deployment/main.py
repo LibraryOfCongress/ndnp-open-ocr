@@ -160,6 +160,13 @@ def process_message(message):
                     ReturnValues="UPDATED_NEW",
                 )
 
+                table.update_item(
+                    Key={"pk": "JOB", "sk": job_id},
+                    UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
+                    ExpressionAttributeValues={":dec": 1},
+                    ReturnValues="UPDATED_NEW",
+                )
+
                 return True
             else:
                 # Upload files to S3 and update DynamoDB for job completion
@@ -172,12 +179,12 @@ def process_message(message):
                         message_body["InputPrefix"],
                     ),
                 )
-            table.update_item(
-                Key={"pk": "JOB", "sk": job_id},
-                UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
-                ExpressionAttributeValues={":dec": 1},
-                ReturnValues="UPDATED_NEW",
-            )
+                table.update_item(
+                    Key={"pk": "JOB", "sk": job_id},
+                    UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
+                    ExpressionAttributeValues={":dec": 1},
+                    ReturnValues="UPDATED_NEW",
+                )
             return True
         else:
             logging.info(f"Failed to process {input_file_path}.")
