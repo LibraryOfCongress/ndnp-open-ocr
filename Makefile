@@ -12,7 +12,7 @@ build_arm:
 
 build_fargate:
 	docker build --platform linux/arm64 -t ndnp_open_ocr:latest ./packages/ndnp_open_ocr
-	docker build --platform linux/arm64 -t ndnp_open_ocr_deploy:latest .
+	docker build --platform linux/arm64 -t ndnp_open_ocr_deploy:latest ./packages/ndnp_open_ocr_fargate_deployment
 
 run_fargate:
 	docker run -it -e AWS_PROFILE=NDNP_OPEN_OCR_DEVELOPER_DEV_profile -e PYTHONPATH=packages -e TABLE_NAME=ndnp-open-ocr-table -e OUTPUT_BUCKET_NAME=ndnp-open-ocr-output-bucket-test -v ~/.aws:/root/.aws -v $(PWD):/app -w /app ndnp-open-ocr-container-repo:latest bash
