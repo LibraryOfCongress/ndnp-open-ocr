@@ -11,7 +11,7 @@ resource "aws_lambda_function" "scheduler_function" {
   filename         = var.output_path
   handler          = "scheduler.handler"
   role             = var.lambda_role_arn
-  runtime          = "python3.12"
+  runtime          = "python3.11"
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   timeout          = 500
 
@@ -34,7 +34,7 @@ resource "aws_lambda_function" "get_job_function" {
   filename         = var.output_path
   handler          = "get_job.handler"
   role             = var.lambda_role_arn
-  runtime          = "python3.12"
+  runtime          = "python3.11"
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   timeout          = 500
 
