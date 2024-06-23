@@ -4,9 +4,9 @@ resource "aws_dynamodb_table" "dynamodb_table" {
   read_capacity  = 10
   write_capacity = 10
 
-  # Partition key for the table.
+  # Partition key for the table (i.e. "JOB").
   hash_key = "pk"
-  # Sort key for the table
+  # Sort key for the table (i.e. "JOB_ID" (uuid))
   range_key = "sk"
 
   attribute {
