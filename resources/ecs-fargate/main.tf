@@ -211,7 +211,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_alarm" {
 }
 
 resource "aws_appautoscaling_target" "ecs_target" {
-  max_capacity       = 100 # Adjust based on your max tasks
+  max_capacity       = 300 # Adjust based on your max tasks
   min_capacity       = 0  # Adjust based on your min tasks
   resource_id        = "service/${aws_ecs_cluster.cluster.name}/${aws_ecs_service.service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -229,7 +229,7 @@ resource "aws_appautoscaling_target" "ecs_target" {
 }
 
 resource "aws_appautoscaling_policy" "scale_out" {
-  name               = "ecs-service-scale-out"
+  name               = "ndnp-open-ocr-ecs-service-scale-out"
   service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
   scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
   resource_id        = aws_appautoscaling_target.ecs_target.resource_id
@@ -242,13 +242,13 @@ resource "aws_appautoscaling_policy" "scale_out" {
 
     step_adjustment {
       metric_interval_lower_bound = 0
-      scaling_adjustment          = 5
+      scaling_adjustment          = 30
     }
   }
 }
 
 resource "aws_appautoscaling_policy" "scale_in" {
-  name               = "ecs-service-scale-in"
+  name               = "ndn-open-ocr-ecs-service-scale-in"
   service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
   scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
   resource_id        = aws_appautoscaling_target.ecs_target.resource_id
@@ -261,7 +261,7 @@ resource "aws_appautoscaling_policy" "scale_in" {
 
     step_adjustment {
       metric_interval_upper_bound = 0
-      scaling_adjustment          = -10
+      scaling_adjustment          = -30
     }
   }
 }
