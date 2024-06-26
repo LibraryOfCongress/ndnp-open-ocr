@@ -217,7 +217,7 @@ resource "aws_appautoscaling_target" "ecs_target" {
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
 
-  lifecycle {
+    lifecycle {
     ignore_changes = [
       tags_all
     ]
@@ -248,7 +248,7 @@ resource "aws_appautoscaling_policy" "scale_out" {
 }
 
 resource "aws_appautoscaling_policy" "scale_in" {
-  name               = "ndn-open-ocr-ecs-service-scale-in"
+  name               = "ndnp-open-ocr-ecs-service-scale-in"
   service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
   scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
   resource_id        = aws_appautoscaling_target.ecs_target.resource_id
