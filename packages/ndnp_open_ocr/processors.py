@@ -336,6 +336,14 @@ class OCRProcessor:
     def _preprocess_image(self):
         """Preprocess the image before it's fed into Tesseract as an input."""
 
+        # Check for JP2 and preprocessing method
+        if (
+            self.preprocessing_method == PreprocessingMethod.ORIGINAL
+            and not self.input_file_path.endswith(".jp2")
+        ):
+            logging.info("No preprocessing required.")
+            return self.input_file_path
+
         image = cv2.imread(self.input_file_path, cv2.IMREAD_GRAYSCALE)
 
         # Preprocessing methods
@@ -356,7 +364,9 @@ class OCRProcessor:
             logging.info("USING ORIGINAL IMAGE")
             processed_img = image
 
-        return processed_img
+        # Write the processed image to a temporary file and return the path
+        temp_file_path = self._write_temp_image(processed_img)
+        return temp_file_path
 
     def _write_temp_image(self, image):
         """Write the preprocessed image to a temporary .tif file with lossless compression."""
@@ -373,39 +383,29 @@ class OCRProcessor:
         try:
             logging.info("Generating PDF file")
 
-            if (
-                self.preprocessing_method == PreprocessingMethod.ORIGINAL
-                and self.input_file_path.endswith(".tif")
-            ):
-                # Generate PDF from grayscale image
-                pdf = pytesseract.image_to_pdf_or_hocr(
-                    self.input_file_path, extension="pdf"
-                )
+            input_file_path = self._preprocess_image()
+
+            if input_file_path == self.input_file_path:
+                # Generate PDF from original image
+                pdf = pytesseract.image_to_pdf_or_hocr(input_file_path, extension="pdf")
                 with open(self._get_new_pdf_path(), "w+b") as f:
                     f.write(pdf)
                 del pdf
             else:
-                # For preprocessed images (including JP2s), we have to overlay the new HOCR onto the original image ourselves.
-                # instead of relying solely on Tesseract.
-                # JP2s will need this approach as well.
-                preprocessed_image = self._preprocess_image()
-                temp_gray_path = self._write_temp_image(preprocessed_image)
+                # Generate HOCR for preprocessed images (including JP2s)
                 hocr = pytesseract.image_to_pdf_or_hocr(
-                    temp_gray_path, extension="hocr", config="-l eng"
+                    input_file_path, extension="hocr", config="-l eng"
                 ).decode()
                 with open(self._get_new_hocr_path(), "w") as f:
                     f.write(hocr)
                 del hocr
 
                 # Specify the element in the hocr file to use as the text
-                hocr = hkr.HOCRCombiner(
-                    "ocrx_word"
-                )  # For tesseract outputs, it is 'ocrx_word'
-                # Specify the hocr and image path
+                hocr = hkr.HOCRCombiner("ocrx_word")
                 hocr.locate_image(self.input_file_path)
                 hocr.locate_hocr(self._get_new_hocr_path())
 
-                # Generate new PDF based on original TIFF and new HOCR image.
+                # Generate new PDF based on original image and new HOCR image
                 # This is the same as the original PDF, but with the new HOCR overlaid on top.
                 hocr.to_pdf(self._get_new_pdf_path())
 
@@ -415,18 +415,18 @@ class OCRProcessor:
                 # Search for 'ocrx_word' tags (Tesseract-specific tags for the words)
                 words = root.findall(".//span[@class='ocrx_word']")
 
-                # Confirm that text is picked up by Tesseract, if it isn't, then raise Exception.
-                if len(words) > 0:
+                # Confirm that text is picked up by Tesseract
+                if len(words) == 0:
                     raise Exception("PDF Creation Failed: No Text Detected in PDF File")
 
                 os.remove(self._get_new_hocr_path())
-                os.remove(temp_gray_path)
+                os.remove(input_file_path)
 
             # PDF Post-processing
             processor = PDFProcessor(
                 self._get_old_pdf_path(),  # original PDF
                 self._get_new_pdf_path(),  # new PDF
-                self.get_postprocessed_pdf_path(),  # where to save final PDF, after all post-processing steps are complete.
+                self.get_postprocessed_pdf_path(),  # where to save final PDF
             )
             processor.postprocess_pdf()
             processor.transfer_xmp()
@@ -447,11 +447,10 @@ class OCRProcessor:
         input, then will postprocess the ALTO to fix hyphenation, units, etc...
         """
         try:
-            # Preprocess with CV2.
             logging.info("Generating ALTO file")
-            preprocessed_image = self._preprocess_image()
-            temp_gray_path = self._write_temp_image(preprocessed_image)
-            xml = pytesseract.image_to_alto_xml(temp_gray_path)
+
+            input_file_path = self._preprocess_image()
+            xml = pytesseract.image_to_alto_xml(input_file_path)
             with open(self._get_alto_file_path(), "w+b") as f:
                 f.write(xml)
 
@@ -462,7 +461,7 @@ class OCRProcessor:
             alto_processor.convert_pixels_to_inches(dpi)
             alto_processor.save(self._get_alto_file_path())
             del xml
-            os.remove(temp_gray_path)
+            os.remove(input_file_path)
             logging.info(f"ALTO Generation successful: {self._get_file_name()}")
         except Exception as e:
             logging.error(f"ALTO generation failed: {self._get_file_name()} {e}")
