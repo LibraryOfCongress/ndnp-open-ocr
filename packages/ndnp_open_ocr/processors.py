@@ -413,11 +413,11 @@ class OCRProcessor:
                 root = tree.getroot()
 
                 # Search for 'ocrx_word' tags (Tesseract-specific tags for the words)
-                words = root.findall(".//span[@class='ocrx_word']")
+                # words = root.findall(".//span[@class='ocrx_word']")
 
-                # Confirm that text is picked up by Tesseract
-                if len(words) == 0:
-                    raise Exception("PDF Creation Failed: No Text Detected in PDF File")
+                # # Confirm that text is picked up by Tesseract
+                # if len(words) == 0:
+                #     raise Exception("PDF Creation Failed: No Text Detected in PDF File")
 
                 os.remove(self._get_new_hocr_path())
                 os.remove(input_file_path)
