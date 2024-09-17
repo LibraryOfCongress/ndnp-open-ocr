@@ -49,23 +49,3 @@ variable "security_groups" {
   description = "List of security groups for the service"
   type        = list(string)
 }
-
-variable "sqs_queue_url" {
-  description = "Source SQS Queue Url"
-  type        = string
-}
-
-variable "sqs_queue_name" {
-  description = "Source SQS Queue Name"
-  type        = string
-}
-
-variable "table_name" {
-  description = "DynamoDB Table Name"
-  type        = string
-}
-
-variable "aws_s3_output_bucket" {
-  description = "Name of the S3 bucket that Lambda will use for storing outputs"
-  type        = string
-}

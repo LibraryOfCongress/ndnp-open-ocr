@@ -1,5 +1,4 @@
-# VPC Networking Resources to Deploy Fargate Into:
-
+# VPC Networking Resources (Unchanged)
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
@@ -60,12 +59,11 @@ resource "aws_subnet" "subnet_2" {
 resource "aws_security_group" "main_sg" {
   vpc_id = aws_vpc.main.id
 
-
-  # Outbound connections
+  # Allow all outbound traffic
   egress {
     from_port   = 0
-    to_port     = 8080
-    protocol    = "tcp"
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -73,7 +71,6 @@ resource "aws_security_group" "main_sg" {
     Name = "ndnp-open-ocr-sg"
   }
 }
-
 
 resource "aws_ecr_repository" "repo" {
   name = "ndnp-open-ocr-container-repo"
@@ -101,37 +98,143 @@ resource "aws_ecr_lifecycle_policy" "example" {
   })
 }
 
-resource "aws_ecs_cluster" "cluster" {
-  name = "ndnp-open-ocr-fargate-cluster"
+# CloudWatch Log Group for AWS Batch
+resource "aws_cloudwatch_log_group" "log_group" {
+  name              = "/aws/batch/job"
+  retention_in_days = 30
+}
+
+# IAM Roles and Policies for AWS Batch
+# AWS Batch Service Role
+resource "aws_iam_role" "batch_service_role" {
+  name = "ndnp-open-ocr-batch-service-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = { Service = "batch.amazonaws.com" },
+      Action   = "sts:AssumeRole"
+    }]
+  })
 
   tags = {
-    Name = "ndnp-open-ocr"
+    Name = "ndnp-open-ocr-batch-service-role"
   }
 }
 
-resource "aws_cloudwatch_log_group" "log_group" {
-  name              = "/ecs/ndnp-open-ocr"
-  retention_in_days = 30 # adjust as necessary
+resource "aws_iam_role_policy_attachment" "batch_service_role_policy" {
+  role       = aws_iam_role.batch_service_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole"
 }
 
-resource "aws_ecs_task_definition" "task_def" {
-  family                   = var.task_family
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = 1024
-  memory                   = 2048
-  execution_role_arn       = var.execution_role_arn
-  task_role_arn            = var.task_role_arn
+# AWS Batch Execution Role
+resource "aws_iam_role" "batch_execution_role" {
+  name = "ndnp-open-ocr-batch-execution-role"
 
-
-  container_definitions = jsonencode([{
-    name  = var.container_name
-    image = "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo"
-    portMappings = [{
-      containerPort = var.container_port
-      hostPort      = var.container_port
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = { Service = "ecs-tasks.amazonaws.com" },
+      Action   = "sts:AssumeRole"
     }]
-    environment = [
+  })
+
+  tags = {
+    Name = "ndnp-open-ocr-batch-execution-role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "batch_execution_role_policy" {
+  role       = aws_iam_role.batch_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+# AWS Batch Job Role (for your container to access AWS resources)
+resource "aws_iam_role" "batch_job_role" {
+  name = "ndnp-open-ocr-batch-job-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = { Service = "ecs-tasks.amazonaws.com" },
+      Action   = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Name = "ndnp-open-ocr-batch-job-role"
+  }
+}
+
+# Attach necessary policies to the job role
+resource "aws_iam_role_policy_attachment" "batch_job_role_policy" {
+  role       = aws_iam_role.batch_job_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess" # Adjust based on your needs
+}
+
+# AWS Batch Compute Environment
+resource "aws_batch_compute_environment" "batch_compute_environment" {
+  compute_environment_name = "ndnp-open-ocr-batch-compute-environment"
+  type                     = "MANAGED"
+  service_role             = aws_iam_role.batch_service_role.arn
+
+  compute_resources {
+    type                = "FARGATE" # Use "FARGATE_SPOT" for cost savings
+    max_vcpus           = 1000      # Adjust based on your needs
+    subnets             = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
+    security_group_ids  = [aws_security_group.main_sg.id]
+  }
+
+  tags = {
+    Name = "ndnp-open-ocr-batch-compute-environment"
+  }
+}
+
+# AWS Batch Job Queue
+resource "aws_batch_job_queue" "batch_job_queue" {
+  name     = "ndnp-open-ocr-batch-job-queue"
+  state    = "ENABLED"
+  priority = 1
+
+  compute_environments = [
+    aws_batch_compute_environment.batch_compute_environment.arn
+  ]
+
+  tags = {
+    Name = "ndnp-open-ocr-batch-job-queue"
+  }
+}
+
+
+# AWS Batch Job Definition
+resource "aws_batch_job_definition" "batch_job_definition" {
+  name = "ndnp-open-ocr-batch-job-definition"
+  type = "container"
+
+  platform_capabilities = ["FARGATE"]  # Specify Fargate as the platform
+
+  container_properties = jsonencode({
+    image                = "${aws_ecr_repository.repo.repository_url}:latest"
+    executionRoleArn     = aws_iam_role.batch_execution_role.arn
+    jobRoleArn           = aws_iam_role.batch_job_role.arn
+    resourceRequirements = [
+      {
+        type  = "VCPU"
+        value = "1"  # Adjust based on your job's CPU needs
+      },
+      {
+        type  = "MEMORY"
+        value = "2048"  # Adjust based on your job's memory needs
+      }
+    ]
+    environment          = [
+      {
+        name  = "AWS_REGION",
+        value = "us-east-2"
+      },
       {
         name  = "SQS_QUEUE_URL",
         value = var.sqs_queue_url
@@ -141,127 +244,46 @@ resource "aws_ecs_task_definition" "task_def" {
         value = var.table_name
       },
       {
-        name  = "ECS_AVAILABLE_LOGGING_DRIVERS",
-        value = "awslogs"
-      },
-      {
         name  = "OUTPUT_BUCKET_NAME",
         value = var.aws_s3_output_bucket
       }
     ]
-
+    networkConfiguration = {
+      assignPublicIp = "ENABLED"
+    }
     logConfiguration = {
       logDriver = "awslogs"
       options = {
-        "awslogs-create-group"  = "true",
-        "awslogs-group"         = "/ecs/ndnp-open-ocr1",
-        "awslogs-region"        = "us-east-2", # Replace with your AWS region
-        "awslogs-stream-prefix" = "ecs"
+        "awslogs-group"         = "/aws/batch/job"
+        "awslogs-region"        = "us-east-2"
+        "awslogs-stream-prefix" = "batch"
       }
     }
+  })
 
-  }])
-
-  tags = {
-    Name = "ndnp-open-ocr"
-  }
-}
-
-resource "aws_ecs_service" "service" {
-  name            = var.service_name
-  cluster         = aws_ecs_cluster.cluster.id
-  task_definition = aws_ecs_task_definition.task_def.arn
-  launch_type     = "FARGATE"
-  desired_count   = var.desired_count
-
-  network_configuration {
-    subnets          = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
-    security_groups  = [aws_security_group.main_sg.id]
-    assign_public_ip = true
-  }
-
-  force_new_deployment = true
-
-  # triggers = {
-  #   redeployment = timestamp()
-  # }
-}
-
-# // AUTOSCALING FOR FARGATE TASKS
-resource "aws_cloudwatch_metric_alarm" "sqs_alarm" {
-  alarm_name          = "SQSMessagesVisibleAlarm"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "ApproximateNumberOfMessagesVisible"
-  namespace           = "AWS/SQS"
-  period              = "60"
-  statistic           = "Average"
-  threshold           = "1" # Adjust this threshold based on when you want scaling to occur
-  alarm_description   = "Alarm when SQS messages are too high"
-  alarm_actions       = [aws_appautoscaling_policy.scale_out.arn]
-  ok_actions          = [aws_appautoscaling_policy.scale_in.arn]
-
-  dimensions = {
-    QueueName = var.sqs_queue_name # Make sure you have the queue name variable
+  retry_strategy {
+    attempts = 3
   }
 
   tags = {
-    Name = "ndnp-open-ocr"
+    Name = "ndnp-open-ocr-batch-job-definition"
   }
 }
 
-resource "aws_appautoscaling_target" "ecs_target" {
-  max_capacity       = 300 # Adjust based on your max tasks
-  min_capacity       = 0  # Adjust based on your min tasks
-  resource_id        = "service/${aws_ecs_cluster.cluster.name}/${aws_ecs_service.service.name}"
-  scalable_dimension = "ecs:service:DesiredCount"
-  service_namespace  = "ecs"
 
-    lifecycle {
-    ignore_changes = [
-      tags_all
-    ]
-  }
 
-  tags = {
-    Name = "ndnp-open-ocr"
-  }
+# Variables (Define in variables.tf or adjust accordingly)
+variable "sqs_queue_url" {
+  description = "URL of the SQS queue"
+  type        = string
 }
 
-resource "aws_appautoscaling_policy" "scale_out" {
-  name               = "ndnp-open-ocr-ecs-service-scale-out"
-  service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
-  scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
-  resource_id        = aws_appautoscaling_target.ecs_target.resource_id
-  policy_type        = "StepScaling"
-
-  step_scaling_policy_configuration {
-    adjustment_type         = "ChangeInCapacity"
-    cooldown                = 300
-    metric_aggregation_type = "Average"
-
-    step_adjustment {
-      metric_interval_lower_bound = 0
-      scaling_adjustment          = 30
-    }
-  }
+variable "table_name" {
+  description = "Name of the DynamoDB table"
+  type        = string
 }
 
-resource "aws_appautoscaling_policy" "scale_in" {
-  name               = "ndnp-open-ocr-ecs-service-scale-in"
-  service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
-  scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
-  resource_id        = aws_appautoscaling_target.ecs_target.resource_id
-  policy_type        = "StepScaling"
-
-  step_scaling_policy_configuration {
-    adjustment_type         = "ChangeInCapacity"
-    cooldown                = 900
-    metric_aggregation_type = "Average"
-
-    step_adjustment {
-      metric_interval_upper_bound = 0
-      scaling_adjustment          = -30
-    }
-  }
+variable "aws_s3_output_bucket" {
+  description = "Name of the S3 output bucket"
+  type        = string
 }

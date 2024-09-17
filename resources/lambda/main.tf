@@ -17,12 +17,14 @@ resource "aws_lambda_function" "scheduler_function" {
 
   environment {
     variables = {
-      TESSDATA_PREFIX   = "/opt/share/tessdata"
-      LD_LIBRARY_PATH   = "/opt/lib"
-      PATH              = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
-      TMP               = "/tmp",
-      QUEUE_URL         = var.queue_url,
-      TABLE_NAME        = var.table_name,
+      TESSDATA_PREFIX      = "/opt/share/tessdata"
+      LD_LIBRARY_PATH      = "/opt/lib"
+      PATH                 = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
+      TMP                  = "/tmp",
+      QUEUE_URL            = var.queue_url,
+      TABLE_NAME           = var.table_name,
+      BATCH_QUEUE          = var.batch_job_queue,
+      BATCH_JOB_DEFINITION = var.batch_job_definition,
     }
   }
 
@@ -40,12 +42,12 @@ resource "aws_lambda_function" "get_job_function" {
 
   environment {
     variables = {
-      TESSDATA_PREFIX   = "/opt/share/tessdata"
-      LD_LIBRARY_PATH   = "/opt/lib"
-      PATH              = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
-      TMP               = "/tmp",
+      TESSDATA_PREFIX = "/opt/share/tessdata"
+      LD_LIBRARY_PATH = "/opt/lib"
+      PATH            = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
+      TMP             = "/tmp",
       # QUEUE_URL         = var.queue_url,
-      TABLE_NAME        = var.table_name,
+      TABLE_NAME = var.table_name,
     }
   }
 
