@@ -12,7 +12,7 @@ module "iam" {
 # S3 bucket related resources.
 module "s3" {
   source      = "./resources/s3"
-  bucket_name = "ndnp-open-ocr-output-bucket-test"
+  bucket_name = "ndnp-open-ocr-output-bucket-test-2"
 }
 
 # SQS related resources
@@ -21,7 +21,7 @@ module "sqs" {
   queue_name = "ndnp-open-ocr-queue"
 }
 
-# Lambda related resources
+# # Lambda related resources
 module "lambda" {
   source               = "./resources/lambda"
   source_dir           = "./lambdas"
@@ -31,6 +31,8 @@ module "lambda" {
   queue_url        = module.sqs.queue_url
   queue_arn       = module.sqs.queue_arn
   table_name           = var.table_name
+  batch_job_definition = module.ecs-fargate.batch_job_definition
+  batch_job_queue      = module.ecs-fargate.batch_job_queue
 }
 
 # # DynamoDB related resources
@@ -51,6 +53,5 @@ module "ecs-fargate" {
   security_groups     = ["sg-0656ba0feeab2cc21"]
   aws_s3_output_bucket = module.s3.bucket_name
   sqs_queue_url = module.sqs.queue_url
-  sqs_queue_name = module.sqs.queue_name
   table_name = var.table_name
 }

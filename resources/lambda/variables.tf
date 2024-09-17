@@ -32,3 +32,13 @@ variable "table_name" {
   description = "DynamoDB table for SQS message tracking"
   type = string
 }
+
+variable "batch_job_definition" {
+  description = ""
+  type = string
+}
+
+variable "batch_job_queue" {
+  description = ""
+  type = string
+}

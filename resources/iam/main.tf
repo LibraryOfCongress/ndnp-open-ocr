@@ -39,7 +39,8 @@ resource "aws_iam_policy" "iam_policy_for_lambda" {
        "s3:*",
        "dynamodb:*",
        "ecs:*",
-       "ecr:*"
+       "ecr:*",
+       "batch:*"
      ],
      "Resource": "*",
      "Effect": "Allow"
