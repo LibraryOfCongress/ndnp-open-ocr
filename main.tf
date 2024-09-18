@@ -12,7 +12,7 @@ module "iam" {
 # S3 bucket related resources.
 module "s3" {
   source      = "./resources/s3"
-  bucket_name = "ndnp-open-ocr-output-bucket-${terraform.workspace}"
+  bucket_name = "ndnp-open-ocr-output-bucket-test-2"
 }
 
 # SQS related resources
