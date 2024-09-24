@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+
 def handler(event, context):
     # Generate a new job id
     job_id = str(uuid.uuid4())
@@ -20,8 +21,6 @@ def handler(event, context):
 
     s3 = boto3.client("s3")
     batch = boto3.client("batch")
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(os.getenv("TABLE_NAME"))
 
     batch_job_queue = os.environ.get("BATCH_QUEUE")
     batch_job_definition = os.environ.get("BATCH_JOB_DEFINITION")
@@ -30,33 +29,21 @@ def handler(event, context):
     logger.info(f"Batch Job Definition: {batch_job_definition}")
 
     try:
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-
         # Get list of .tif files in the specified S3 prefix
         keys = []
-        paginator = s3.get_paginator('list_objects_v2')
+        paginator = s3.get_paginator("list_objects_v2")
         pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
 
         for page in pages:
-            if 'Contents' in page:
-                for obj in page['Contents']:
-                    file_name = obj['Key']
+            if "Contents" in page:
+                for obj in page["Contents"]:
+                    file_name = obj["Key"]
                     if file_name.lower().endswith(".tif"):
                         keys.append(file_name)
 
         # Store job metadata in DynamoDB
         output_prefix = os.path.split(prefix)[1] + "__" + job_id
         job_id = output_prefix
-        table.put_item(
-            Item={
-                "pk": "JOB",
-                "sk": output_prefix,
-                "RemainingMessages": len(keys),
-                "TotalMessages": len(keys),
-                "FailedFiles": [],
-                "Timestamp": timestamp,
-            }
-        )
 
         # Submit AWS Batch Array Job
         array_size = len(keys)
@@ -66,17 +53,15 @@ def handler(event, context):
             jobName=output_prefix,
             jobQueue=batch_job_queue,
             jobDefinition=batch_job_definition,
-            arrayProperties={
-                'size': array_size
-            },
+            arrayProperties={"size": array_size},
             containerOverrides={
-                'environment': [
-                    {'name': 'BUCKET_NAME', 'value': bucket_name},
-                    {'name': 'PREFIX', 'value': prefix},
-                    {'name': 'OUTPUT_PREFIX', 'value': output_prefix},
-                    {'name': 'JOB_ID', 'value': job_id}
+                "environment": [
+                    {"name": "BUCKET_NAME", "value": bucket_name},
+                    {"name": "PREFIX", "value": prefix},
+                    {"name": "OUTPUT_PREFIX", "value": output_prefix},
+                    {"name": "JOB_ID", "value": job_id},
                 ]
-            }
+            },
         )
 
         logger.info(f"Batch job submitted: {response['jobId']}")
@@ -88,6 +73,6 @@ def handler(event, context):
     except Exception as e:
         logger.error(f"Error occurred: {e}")
         return {
-            'statusCode': 400,
-            "body": "An error has occurred. Please check batch and bucket names and make sure they are correct."
+            "statusCode": 400,
+            "body": "An error has occurred. Please check batch and bucket names and make sure they are correct.",
         }
