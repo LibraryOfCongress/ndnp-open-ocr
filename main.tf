@@ -15,12 +15,6 @@ module "s3" {
   bucket_name = "ndnp-open-ocr-output-bucket-test-2"
 }
 
-# SQS related resources
-module "sqs" {
-  source     = "./resources/sqs"
-  queue_name = "ndnp-open-ocr-queue"
-}
-
 # # Lambda related resources
 module "lambda" {
   source               = "./resources/lambda"
@@ -28,17 +22,8 @@ module "lambda" {
   output_path          = "./resources/lambda/functions.zip"
   lambda_role_arn      = module.iam.service_role_arn
   aws_s3_output_bucket = module.s3.bucket_name
-  queue_url        = module.sqs.queue_url
-  queue_arn       = module.sqs.queue_arn
-  table_name           = var.table_name
   batch_job_definition = module.ecs-fargate.batch_job_definition
   batch_job_queue      = module.ecs-fargate.batch_job_queue
-}
-
-# # DynamoDB related resources
-module "dynamodb" {
-  source     = "./resources/dynamodb"
-  table_name = var.table_name
 }
 
 module "ecs-fargate" {
@@ -48,6 +33,4 @@ module "ecs-fargate" {
   task_role_arn       = module.iam.service_role_arn
   service_name        = "ndnp-open-ocr-service"
   aws_s3_output_bucket = module.s3.bucket_name
-  sqs_queue_url = module.sqs.queue_url
-  table_name = var.table_name
 }
