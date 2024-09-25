@@ -236,14 +236,6 @@ resource "aws_batch_job_definition" "batch_job_definition" {
         value = "us-east-2"
       },
       {
-        name  = "SQS_QUEUE_URL",
-        value = var.sqs_queue_url
-      },
-      {
-        name  = "TABLE_NAME",
-        value = var.table_name
-      },
-      {
         name  = "OUTPUT_BUCKET_NAME",
         value = var.aws_s3_output_bucket
       }
@@ -268,19 +260,6 @@ resource "aws_batch_job_definition" "batch_job_definition" {
   tags = {
     Name = "ndnp-open-ocr-batch-job-definition"
   }
-}
-
-
-
-# Variables (Define in variables.tf or adjust accordingly)
-variable "sqs_queue_url" {
-  description = "URL of the SQS queue"
-  type        = string
-}
-
-variable "table_name" {
-  description = "Name of the DynamoDB table"
-  type        = string
 }
 
 variable "aws_s3_output_bucket" {

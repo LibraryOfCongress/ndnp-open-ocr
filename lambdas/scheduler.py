@@ -10,9 +10,6 @@ logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
-    # Generate a new job id
-    job_id = str(uuid.uuid4())
-
     prefix = event["pathParameters"]["prefix"]
     bucket_name = event["pathParameters"]["bucketName"]
 
@@ -42,8 +39,7 @@ def handler(event, context):
                         keys.append(file_name)
 
         # Store job metadata in DynamoDB
-        output_prefix = os.path.split(prefix)[1] + "__" + job_id
-        job_id = output_prefix
+        output_prefix = os.path.split(prefix)[1] + "__" + str(uuid.uuid4())
 
         # Submit AWS Batch Array Job
         array_size = len(keys)
@@ -59,7 +55,6 @@ def handler(event, context):
                     {"name": "BUCKET_NAME", "value": bucket_name},
                     {"name": "PREFIX", "value": prefix},
                     {"name": "OUTPUT_PREFIX", "value": output_prefix},
-                    {"name": "JOB_ID", "value": job_id},
                 ]
             },
         )
@@ -68,7 +63,7 @@ def handler(event, context):
 
         return {
             "statusCode": 200,
-            "body": json.dumps({"job": job_id, "num_issues": len(keys)}),
+            "body": json.dumps({"job": response['jobId'], "num_issues": len(keys)}),
         }
     except Exception as e:
         logger.error(f"Error occurred: {e}")

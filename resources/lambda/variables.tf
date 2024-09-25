@@ -18,21 +18,6 @@ variable "aws_s3_output_bucket" {
   type        = string
 }
 
-variable "queue_url" {
-  description = "PDF Queue URL of the SQS queue for processing job management"
-  type = string
-}
-
-variable "queue_arn" {
-  description = "ALTO Queue ARN of the SQS queue for processing job management"
-  type = string
-}
-
-variable "table_name" {
-  description = "DynamoDB table for SQS message tracking"
-  type = string
-}
-
 variable "batch_job_definition" {
   description = ""
   type = string

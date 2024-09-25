@@ -103,7 +103,7 @@ def clear_tmp_directory():
             logging.info(f"Failed to delete {file_path}. Reason: {e}")
 
 
-def process_file(file_key, bucket_name, output_bucket_name, output_prefix, job_id):
+def process_file(file_key, bucket_name, output_bucket_name, output_prefix):
     with tempfile.TemporaryDirectory() as temp_dir:
         # Download the file
         input_file_path = download_files_from_s3(bucket_name, file_key, temp_dir)
@@ -149,7 +149,6 @@ if __name__ == "__main__":
     bucket_name = os.getenv("BUCKET_NAME")
     prefix = os.getenv("PREFIX")
     output_prefix = os.getenv("OUTPUT_PREFIX")
-    job_id = os.getenv("JOB_ID")
     output_bucket_name = os.environ.get("OUTPUT_BUCKET_NAME")
 
     array_index = int(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX", "0"))
@@ -164,4 +163,4 @@ if __name__ == "__main__":
     file_key = file_list[array_index]
     logging.info(f"Processing file: {file_key}")
 
-    process_file(file_key, bucket_name, output_bucket_name, output_prefix, job_id)
+    process_file(file_key, bucket_name, output_bucket_name, output_prefix)

@@ -10,7 +10,7 @@ To submit test queue message to test Fargate task...
 sqs = boto3.client("sqs", region_name="us-east-2")
 sqs_queue_url = "https://sqs.us-east-2.amazonaws.com/420280634985/ndnp-open-ocr-consumer-sqs-queue" #os.getenv("SQS_QUEUE_URL")
 dynamodb = boto3.resource("dynamodb")
-table = 'ndnp-open-ocr-table' #dynamodb.Table(os.getenv("TABLE_NAME"))
+# table = 'ndnp-open-ocr-table' #dynamodb.Table(os.getenv("TABLE_NAME"))
 
 messages = []
 
