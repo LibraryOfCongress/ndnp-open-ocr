@@ -31,7 +31,7 @@ run:
 
 # Terraform dev environment
 deploy_dev:
-  image: git.loc.gov:4567/devops/docker-hub-mirror/terraform:latest
+  image: hashicorp/terraform:1.1.0
   stage: dev
   before_script:
     - terraform init -input=false
