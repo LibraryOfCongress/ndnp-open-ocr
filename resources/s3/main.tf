@@ -6,7 +6,7 @@ data "aws_iam_policy_document" "s3" {
 }
 
 resource "aws_s3_bucket" "bucket" {
-  bucket = var.bucket_name
+  bucket = "${var.bucket_name}-${var.env}"
   acl    = "private"
 
   tags = {
