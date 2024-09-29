@@ -30,7 +30,6 @@ module "lambda" {
 
 module "batch" {
   source               = "./resources/batch"
-  source_dir           = "./batch"
   task_family          = "ndnp-open-ocr"
   service_name         = "ndnp-open-ocr-service"
   aws_s3_output_bucket = module.s3.bucket_name
