@@ -17,3 +17,8 @@ variable "task_role_arn" {
   description = "ARN of the task role"
   type        = string
 }
+
+variable "aws_s3_output_bucket" {
+  description = "Name of the S3 output bucket"
+  type        = string
+}

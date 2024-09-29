@@ -26,7 +26,7 @@ def handler(event, context):
     logger.info(f"Batch Job Definition: {batch_job_definition}")
 
     try:
-        # Get list of .tif files in the specified S3 prefix
+        # Get list of .tif files in the specified S3 prefix to determine number of issues to process
         keys = []
         paginator = s3.get_paginator("list_objects_v2")
         pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
@@ -39,14 +39,14 @@ def handler(event, context):
                         keys.append(file_name)
 
         # Store job metadata in DynamoDB
-        output_prefix = os.path.split(prefix)[1] + "__" + str(uuid.uuid4())
+        job_name = os.path.split(prefix)[1] + "__" + str(uuid.uuid4())
 
         # Submit AWS Batch Array Job
         array_size = len(keys)
         logger.info(f"Submitting AWS Batch array job with size: {array_size}")
 
         response = batch.submit_job(
-            jobName=output_prefix,
+            jobName=job_name,
             jobQueue=batch_job_queue,
             jobDefinition=batch_job_definition,
             arrayProperties={"size": array_size},
@@ -54,16 +54,17 @@ def handler(event, context):
                 "environment": [
                     {"name": "BUCKET_NAME", "value": bucket_name},
                     {"name": "PREFIX", "value": prefix},
-                    {"name": "OUTPUT_PREFIX", "value": output_prefix},
+                    {"name": "OUTPUT_PREFIX", "value": job_name},
                 ]
             },
         )
 
-        logger.info(f"Batch job submitted: {response['jobId']}")
+        logger.info(f"AWS Batch ID: {response['jobId']}")
+        logger.info(f"Job Name (output prefix): {job_name}")
 
         return {
             "statusCode": 200,
-            "body": json.dumps({"job": response['jobId'], "num_issues": len(keys)}),
+            "body": json.dumps({"job": job_name, "num_issues": len(keys)}),
         }
     except Exception as e:
         logger.error(f"Error occurred: {e}")

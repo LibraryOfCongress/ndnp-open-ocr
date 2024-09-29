@@ -1,4 +1,4 @@
-# VPC Networking Resources (Unchanged)
+# VPC Networking Resources
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
@@ -18,6 +18,7 @@ resource "aws_internet_gateway" "main" {
 resource "aws_route_table" "main" {
   vpc_id = aws_vpc.main.id
   route {
+    # Allow all outbound internet access
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.main.id
   }
@@ -76,35 +77,12 @@ resource "aws_ecr_repository" "repo" {
   name = "ndnp-open-ocr-container-repo"
 }
 
-resource "aws_ecr_lifecycle_policy" "example" {
-  repository = aws_ecr_repository.repo.name
-
-  policy = jsonencode({
-    rules = [
-      {
-        rulePriority = 1
-        description  = "Expire images older than 30 days"
-        selection = {
-          tagStatus   = "untagged"
-          countType   = "sinceImagePushed"
-          countUnit   = "days"
-          countNumber = 30
-        }
-        action = {
-          type = "expire"
-        }
-      }
-    ]
-  })
-}
-
 # CloudWatch Log Group for AWS Batch
 resource "aws_cloudwatch_log_group" "log_group" {
   name              = "/aws/batch/job"
-  retention_in_days = 30
+  retention_in_days = 90
 }
 
-# IAM Roles and Policies for AWS Batch
 # AWS Batch Service Role
 resource "aws_iam_role" "batch_service_role" {
   name = "ndnp-open-ocr-batch-service-role"
@@ -172,7 +150,7 @@ resource "aws_iam_role" "batch_job_role" {
 # Attach necessary policies to the job role
 resource "aws_iam_role_policy_attachment" "batch_job_role_policy" {
   role       = aws_iam_role.batch_job_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess" # Adjust based on your needs
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
 # AWS Batch Compute Environment
@@ -182,8 +160,8 @@ resource "aws_batch_compute_environment" "batch_compute_environment" {
   service_role             = aws_iam_role.batch_service_role.arn
 
   compute_resources {
-    type                = "FARGATE" # Use "FARGATE_SPOT" for cost savings
-    max_vcpus           = 1000      # Adjust based on your needs
+    type                = "FARGATE"
+    max_vcpus           = 500
     subnets             = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
     security_group_ids  = [aws_security_group.main_sg.id]
   }
@@ -214,7 +192,8 @@ resource "aws_batch_job_definition" "batch_job_definition" {
   name = "ndnp-open-ocr-batch-job-definition"
   type = "container"
 
-  platform_capabilities = ["FARGATE"]  # Specify Fargate as the platform
+  # Fargate as the compute platform
+  platform_capabilities = ["FARGATE"]
 
   container_properties = jsonencode({
     image                = "${aws_ecr_repository.repo.repository_url}:latest"
@@ -241,7 +220,7 @@ resource "aws_batch_job_definition" "batch_job_definition" {
       }
     ]
     networkConfiguration = {
-      assignPublicIp = "ENABLED"
+      assignPublicIp = "DISABLED"
     }
     logConfiguration = {
       logDriver = "awslogs"
@@ -260,9 +239,4 @@ resource "aws_batch_job_definition" "batch_job_definition" {
   tags = {
     Name = "ndnp-open-ocr-batch-job-definition"
   }
-}
-
-variable "aws_s3_output_bucket" {
-  description = "Name of the S3 output bucket"
-  type        = string
 }
