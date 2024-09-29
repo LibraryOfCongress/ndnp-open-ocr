@@ -71,30 +71,97 @@
 #   rules:
 #     - if: '$CI_COMMIT_BRANCH == "main"'
 
+# include:
+#  - template: Terraform/Base.gitlab-ci.yml
+#  - template: Jobs/SAST-IaC.gitlab-ci.yml
+
+# stages:
+#  - validate
+#  - test
+#  - build
+#  - deploy
+#  - cleanup
+# fmt:
+#  extends: .terraform:fmt
+#  needs: []
+
+# validate:
+#  extends: .terraform:validate
+#  needs: []
+
+# build:
+#  extends: .terraform:build
+
+# deploy:
+#  extends: .terraform:deploy
+#  dependencies:
+#    - build
+#  environment:
+#    name: $TF_STATE_NAME
+
 include:
- - template: Terraform/Base.gitlab-ci.yml
- - template: Jobs/SAST-IaC.gitlab-ci.yml
+  - template: Terraform/Base.gitlab-ci.yml  # Includes Terraform boilerplate
+  - template: Jobs/SAST-IaC.gitlab-ci.yml   # Includes security analysis templates
 
 stages:
- - validate
- - test
- - build
- - deploy
- - cleanup
+  - validate
+  - test
+  - build
+  - deploy
+  - cleanup
+  - package  # Your custom stage for the Python CLI
+  - dev      # Custom stages for Terraform environments
+  - staging
+  - prod
+
+# Formatting Terraform files
 fmt:
- extends: .terraform:fmt
- needs: []
+  extends: .terraform:fmt
+  needs: []
 
+# Validation stage for Terraform
 validate:
- extends: .terraform:validate
- needs: []
+  extends: .terraform:validate
+  needs: []
 
+# Terraform build stage
 build:
- extends: .terraform:build
+  extends: .terraform:build
 
+# Deployment stage from boilerplate
 deploy:
- extends: .terraform:deploy
- dependencies:
-   - build
- environment:
-   name: $TF_STATE_NAME
+  extends: .terraform:deploy
+  dependencies:
+    - build
+  environment:
+    name: $TF_STATE_NAME
+
+# --- Your Custom Additions ---
+# Python CLI Build Job
+package:
+  image: python:3.9  # Use Python image for CLI build
+  stage: package
+  script:
+    - pip install poetry
+    - cd packages/cli/
+    - poetry build
+    - poetry config http-basic.gitlab-ci-token ${CI_JOB_TOKEN} gitlab-ci-token
+    - poetry config repositories.gitlab ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
+    - poetry publish --repository gitlab --username gitlab-ci-token --password ${CI_JOB_TOKEN}
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - packages/cli/**/*
+      when: always
+
+# Terraform Dev Environment
+deploy_dev:
+  image: hashicorp/terraform:1.5.0  # Use Terraform image for Terraform tasks
+  stage: dev
+  before_script:
+    - terraform init -input=false
+  script:
+    - terraform workspace select dev || terraform workspace new dev
+    - terraform plan -input=false -out=dev.plan -var="region=$TF_VAR_region"
+    - terraform apply -input=false -auto-approve dev.plan
+  when: always
