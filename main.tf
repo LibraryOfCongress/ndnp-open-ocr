@@ -15,13 +15,13 @@ module "lambda" {
   source_dir           = "./lambdas"
   output_path          = "./resources/lambda/functions.zip"
   aws_s3_output_bucket = module.s3.bucket_name
-  batch_job_definition = module.ecs-fargate.batch_job_definition
-  batch_job_queue      = module.ecs-fargate.batch_job_queue
+  batch_job_definition = module.batch.batch_job_definition
+  batch_job_queue      = module.batch.batch_job_queue
   env                  = var.env
 }
 
-module "ecs-fargate" {
-  source               = "./resources/ecs-fargate"
+module "batch" {
+  source               = "./resources/batch"
   task_family          = "ndnp-open-ocr"
   service_name         = "ndnp-open-ocr-service"
   aws_s3_output_bucket = module.s3.bucket_name

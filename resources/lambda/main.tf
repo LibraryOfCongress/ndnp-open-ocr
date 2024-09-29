@@ -29,7 +29,7 @@ resource "aws_lambda_function" "scheduler_function" {
 }
 
 resource "aws_iam_role" "lambda_role" {
-  name               = "ndnp-open-ocr-lambda-role-dev"
+  name               = "ndnp-open-ocr-lambda-role-${var.env}"
   assume_role_policy = <<EOF
 {
  "Version": "2012-10-17",
@@ -50,7 +50,7 @@ EOF
 }
 
 resource "aws_iam_policy" "iam_policy_for_lambda" {
-  name        = "ndnp-open-ocr-iam-policy-for-lambda-dev"
+  name        = "ndnp-open-ocr-iam-policy-for-lambda-${var.env}"
   path        = "/"
   description = "AWS IAM Policy for managing aws lambda role"
   policy      = <<EOF
@@ -84,7 +84,7 @@ resource "aws_iam_role_policy_attachment" "attach_iam_policy_to_lambda_role" {
 }
 
 resource "aws_iam_role" "trust_for_lambda" {
-  name = "ndnp-open-ocr-fargate-execution-role"
+  name = "ndnp-open-ocr-fargate-execution-role-${var.env}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -126,6 +126,6 @@ resource "aws_iam_role" "trust_for_lambda" {
 
 # Log group for scheduler
 resource "aws_cloudwatch_log_group" "scheduler_function_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.scheduler_function.function_name}"
+  name              = "/aws/lambda/${aws_lambda_function.scheduler_function.function_name}-${var.env}"
   retention_in_days = 14
 }
