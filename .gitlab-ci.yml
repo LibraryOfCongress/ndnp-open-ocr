@@ -12,7 +12,7 @@ variables:
   TF_BACKEND_ADDRESS: "https://git.loc.gov/api/v4/projects/2983/terraform/state"
 
 # Build and publish CLI tool
-run:
+package_cli:
   image: python:3.9
   stage: package
   script:
@@ -34,6 +34,8 @@ deploy_dev:
   image: hashicorp/terraform:1.1.0
   stage: dev
   before_script:
+    - cd "${CI_PROJECT_DIR}"
+    - terraform version
     - terraform init -input=false
   script:
     - terraform workspace select dev || terraform workspace new dev
