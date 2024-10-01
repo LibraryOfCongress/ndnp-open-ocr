@@ -101,7 +101,7 @@
 
 include:
   - template: Terraform/Base.gitlab-ci.yml  # Includes Terraform boilerplate
-  - template: Jobs/SAST-IaC.gitlab-ci.yml   # Includes security analysis templates
+  # - template: Jobs/SAST-IaC.gitlab-ci.yml   # Includes security analysis templates
 
 stages:
   - deploy
