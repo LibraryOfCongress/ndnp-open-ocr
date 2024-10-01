@@ -104,22 +104,17 @@ include:
   - template: Jobs/SAST-IaC.gitlab-ci.yml   # Includes security analysis templates
 
 stages:
-  - validate
-  - test
-  - build
+  # - validate
+  # - test
+  # - build
   - deploy
-  - cleanup
-  - package  # Your custom stage for the Python CLI
-  - dev      # Custom stages for Terraform environments
-  - staging
-  - prod
+  # - cleanup
+  - package
 
-# Formatting Terraform files
 fmt:
   extends: .terraform:fmt
   needs: []
 
-# Validation stage for Terraform
 validate:
   extends: .terraform:validate
   needs: []
@@ -136,10 +131,9 @@ deploy:
   environment:
     name: $TF_STATE_NAME
 
-# --- Your Custom Additions ---
 # Python CLI Build Job
 package:
-  image: python:3.9  # Use Python image for CLI build
+  image: python:3.9
   stage: package
   script:
     - pip install poetry
@@ -156,7 +150,7 @@ package:
 
 # Terraform Dev Environment
 deploy_dev:
-  image: hashicorp/terraform:1.5.0  # Use Terraform image for Terraform tasks
+  image: hashicorp/terraform:1.5.0
   stage: dev
   before_script:
     - terraform init -input=false
