@@ -60,7 +60,7 @@ deploy_dev:
   before_script:
     - terraform init -input=false -backend-config="address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development" -backend-config="lock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development/lock" -backend-config="unlock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development/lock" -backend-config="username=gitlab-ci-token" -backend-config="password=${CI_JOB_TOKEN}"
   script:
-     - terraform apply -input=false
+     - terraform apply -input=false -auto-approve
   artifacts:
     when: always
   when: always
