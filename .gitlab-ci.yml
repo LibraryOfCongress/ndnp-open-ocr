@@ -108,6 +108,7 @@ stages:
   - test
   - build
   - deploy
+  - dev
   - cleanup
   - package
 
