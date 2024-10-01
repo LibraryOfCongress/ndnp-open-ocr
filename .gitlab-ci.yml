@@ -124,6 +124,7 @@ validate:
 build:
   extends: .terraform:build
 
+
 # Deployment stage from boilerplate
 deploy:
   extends: .terraform:deploy
