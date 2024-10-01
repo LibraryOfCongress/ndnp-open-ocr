@@ -104,11 +104,7 @@ include:
   - template: Jobs/SAST-IaC.gitlab-ci.yml   # Includes security analysis templates
 
 stages:
-  # - validate
-  # - test
-  # - build
   - deploy
-  # - cleanup
   - package
 
 fmt:
