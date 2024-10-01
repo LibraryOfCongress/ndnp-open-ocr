@@ -50,6 +50,7 @@ package:
 
 # Terraform Dev Environment
 deploy_dev:
+  extends: .terraform:deploy
   image:
     name: hashicorp/terraform:1.5.0
     entrypoint: [""]
@@ -64,8 +65,4 @@ deploy_dev:
         -backend-config="unlock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development/lock" \
         -backend-config="username=gitlab-ci-token" \
         -backend-config="password=${CI_JOB_TOKEN}"
-  script:
-    - terraform workspace select development || terraform workspace new development
-    - terraform plan -input=false -out=development.plan -var="region=$TF_VAR_region"
-    - terraform apply -input=false -auto-approve development.plan
   when: always
