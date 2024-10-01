@@ -1,7 +1,7 @@
 import boto3
 import click
 import requests
-from .helpers import sync_s3_batch, find_missing_pdfs
+from helpers import sync_s3_batch, find_missing_pdfs
 from rich import print
 import json
 import time
@@ -155,7 +155,7 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
     )
     # This is the prefix from the loc-preservation bucket...should stick to this if we can.
     if bucket == "loc-preservation":
-        prefix = os.path.join("loc-preservation/lcbp/ndnp/dlc/", batch_name)
+        prefix = batch_name
     else:
         prefix = batch_name
     payload = {

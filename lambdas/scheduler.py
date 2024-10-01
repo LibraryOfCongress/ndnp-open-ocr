@@ -6,48 +6,47 @@ from datetime import datetime
 import logging
 
 logger = logging.getLogger()
-# logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
-
-# Sends out SQS messages to the ALTO and PDF Generation Queues to kickoff reprocessing job, where the consumers pick up
-# the SQS messages and process them independently, Lambda by Lambda, TIFF by TIFF.
 def handler(event, context):
     # Generate a new job id
     job_id = str(uuid.uuid4())
-    # bucket_name = os.getenv("INPUT_BUCKET_NAME")
-    # Prefix to the "batch" data in INPUT_BUCKET, which for our cases is loc-preservation.
+
     prefix = event["pathParameters"]["prefix"]
     bucket_name = event["pathParameters"]["bucketName"]
 
-    print("Bucket name: " + bucket_name)
-    print("Prefix: " + prefix)
+    logger.info(f"Bucket name: {bucket_name}")
+    logger.info(f"Prefix: {prefix}")
 
-    s3 = boto3.resource("s3")
-    sqs = boto3.client("sqs")
+    s3 = boto3.client("s3")
+    batch = boto3.client("batch")
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(os.getenv("TABLE_NAME"))
 
-    logger.info("Environment variables: %s", os.environ)
+    batch_job_queue = os.environ.get("BATCH_QUEUE")
+    batch_job_definition = os.environ.get("BATCH_JOB_DEFINITION")
 
-    queue_url = os.environ.get("QUEUE_URL")
-
-    logger.info("Queue URL: %s", queue_url)
+    logger.info(f"Batch Job Queue: {batch_job_queue}")
+    logger.info(f"Batch Job Definition: {batch_job_definition}")
 
     try:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
-        # Get top-level directory input name
+        # Get list of .tif files in the specified S3 prefix
+        keys = []
+        paginator = s3.get_paginator('list_objects_v2')
+        pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
+
+        for page in pages:
+            if 'Contents' in page:
+                for obj in page['Contents']:
+                    file_name = obj['Key']
+                    if file_name.lower().endswith(".tif"):
+                        keys.append(file_name)
+
+        # Store job metadata in DynamoDB
         output_prefix = os.path.split(prefix)[1] + "__" + job_id
         job_id = output_prefix
-        messages = []
-
-        keys = []
-        for object_summary in s3.Bucket(bucket_name).objects.filter(Prefix=prefix):
-            file_name = object_summary.key
-
-            if file_name.lower().endswith(".tif"):
-                keys.append(file_name)
-
         table.put_item(
             Item={
                 "pk": "JOB",
@@ -59,40 +58,36 @@ def handler(event, context):
             }
         )
 
-        # Loop through all TIFFs in the bucket.
-        for key in keys:
-            message = {
-                "Bucket": bucket_name,
-                "Key": key,
-                "OutputPrefix": output_prefix,
-                "InputPrefix": prefix,
-                "JobId": output_prefix,
+        # Submit AWS Batch Array Job
+        array_size = len(keys)
+        logger.info(f"Submitting AWS Batch array job with size: {array_size}")
+
+        response = batch.submit_job(
+            jobName=output_prefix,
+            jobQueue=batch_job_queue,
+            jobDefinition=batch_job_definition,
+            arrayProperties={
+                'size': array_size
+            },
+            containerOverrides={
+                'environment': [
+                    {'name': 'BUCKET_NAME', 'value': bucket_name},
+                    {'name': 'PREFIX', 'value': prefix},
+                    {'name': 'OUTPUT_PREFIX', 'value': output_prefix},
+                    {'name': 'JOB_ID', 'value': job_id}
+                ]
             }
+        )
 
-            messages.append(
-                {"Id": str(uuid.uuid4()), "MessageBody": json.dumps(message)}
-            )
-
-            # Send messages in batches of 10 to speed up execution.
-            if len(messages) == 10:
-                # Send Messages to PDF Queue
-                response = sqs.send_message_batch(QueueUrl=queue_url, Entries=messages)
-
-                messages = []
-
-        if messages:
-            # Send Messages to Queue
-            response = sqs.send_message_batch(QueueUrl=queue_url, Entries=messages)
-
-        print(messages)
+        logger.info(f"Batch job submitted: {response['jobId']}")
 
         return {
             "statusCode": 200,
             "body": json.dumps({"job": job_id, "num_issues": len(keys)}),
         }
     except Exception as e:
-        logger.error("Error occurred: %s", e)
+        logger.error(f"Error occurred: {e}")
         return {
             'statusCode': 400,
-            "body": "An Error has occurred. Please check batch and bucket names and make sure they are correct."
+            "body": "An error has occurred. Please check batch and bucket names and make sure they are correct."
         }
