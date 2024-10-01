@@ -1,7 +1,7 @@
 import boto3
 import click
 import requests
-from .helpers import sync_s3_batch, find_missing_pdfs
+from helpers import sync_s3_batch, find_missing_pdfs
 from rich import print
 import json
 import time
