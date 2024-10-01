@@ -24,6 +24,7 @@ build:
 
 # Deployment stage from boilerplate
 deploy:
+  extends: .terraform:deploy
   dependencies:
     - build
   environment:
