@@ -25,11 +25,12 @@ def handler(event, context):
     logger.info(f"Batch Job Queue: {batch_job_queue}")
     logger.info(f"Batch Job Definition: {batch_job_definition}")
 
-    try:
-        # Get list of .tif files in the specified S3 prefix to determine number of issues to process
+    # Get list of TIF keys in the specified S3 prefix
+    def get_tif_files(bucket, prefix):
+        """Get list of .tif files in the specified S3 prefix."""
         keys = []
         paginator = s3.get_paginator("list_objects_v2")
-        pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
+        pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
 
         for page in pages:
             if "Contents" in page:
@@ -37,8 +38,28 @@ def handler(event, context):
                     file_name = obj["Key"]
                     if file_name.lower().endswith(".tif"):
                         keys.append(file_name)
+        return keys
 
-        # Store job metadata in DynamoDB
+    try:
+        # First, try the /ndnp/dlc/ prefix
+        keys = get_tif_files(bucket_name, prefix)
+
+        # If no files are found, try the alternative /ndnp/loc/ prefix. There are a handful of batches
+        # that are stored in the /ndnp/loc/ prefix instead of /ndnp/dlc/
+        if not keys:
+            alternative_prefix = prefix.replace("/ndnp/dlc/", "/ndnp/loc/")
+            logger.info(f"No files found at {prefix}, trying {alternative_prefix} instead.")
+            keys = get_tif_files(bucket_name, alternative_prefix)
+
+        # If no files are found in both prefixes, return an error
+        if not keys:
+            logger.error(f"No TIFF files found in both {prefix} and {alternative_prefix}.")
+            return {
+                "statusCode": 404,
+                "body": json.dumps(f"No TIFF files found at {prefix} or {alternative_prefix}."),
+            }
+
+        # Name of AWS Batch job
         job_name = os.path.split(prefix)[1] + "__" + str(uuid.uuid4())
 
         # Submit AWS Batch Array Job
@@ -66,6 +87,7 @@ def handler(event, context):
             "statusCode": 200,
             "body": json.dumps({"job": job_name, "num_issues": len(keys)}),
         }
+
     except Exception as e:
         logger.error(f"Error occurred: {e}")
         return {
