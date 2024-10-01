@@ -124,7 +124,6 @@ validate:
 build:
   extends: .terraform:build
 
-
 # Deployment stage from boilerplate
 deploy:
   extends: .terraform:deploy
@@ -153,7 +152,7 @@ package:
 # Terraform Dev Environment
 deploy_dev:
   image: hashicorp/terraform:1.5.0
-  stage: development
+  stage: dev
   before_script:
     - terraform init -input=false
   script:
