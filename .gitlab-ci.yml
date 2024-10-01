@@ -24,11 +24,12 @@ build:
 
 # Deployment stage from boilerplate
 deploy:
-  extends: .terraform:deploy
   dependencies:
     - build
   environment:
-    name: $TF_STATE_NAME
+    name: development
+    action: start
+    on_stop: destroy
   before_script:
     - terraform init -input=false \
         -backend-config="address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development" \
