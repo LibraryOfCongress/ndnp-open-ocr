@@ -9,12 +9,11 @@ variable "aws_region" {
 variable "aws_profile" {
   description = "AWS profile"
   type        = string
-  default     = "NDNP_OPEN_OCR_DEVELOPER_DEV_profile"
+  default     = "loc1"
 }
 
 provider "aws" {
-  region  = var.aws_region
-  profile = var.aws_profile
+  region = var.aws_region
 }
 
 terraform {
