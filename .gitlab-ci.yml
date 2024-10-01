@@ -36,6 +36,7 @@ deploy:
         -backend-config="unlock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development/lock" \
         -backend-config="username=gitlab-ci-token" \
         -backend-config="password=${CI_JOB_TOKEN}"
+  when: always
 
 # Python CLI Build Job
 package:
