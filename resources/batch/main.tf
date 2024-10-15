@@ -108,7 +108,7 @@ resource "aws_iam_role_policy_attachment" "batch_service_role_policy" {
 
 # AWS Batch Execution Role
 resource "aws_iam_role" "batch_execution_role" {
-  name = "ndnp-open-ocr-batch-execution-role"
+  name = "ndnp-open-ocr-batch-execution-role-${var.env}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
