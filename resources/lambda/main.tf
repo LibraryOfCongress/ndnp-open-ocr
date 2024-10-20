@@ -20,12 +20,31 @@ resource "aws_lambda_function" "scheduler_function" {
       TESSDATA_PREFIX      = "/opt/share/tessdata"
       LD_LIBRARY_PATH      = "/opt/lib"
       PATH                 = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
-      TMP                  = "/tmp",
-      BATCH_QUEUE          = var.batch_job_queue,
-      BATCH_JOB_DEFINITION = var.batch_job_definition,
+      TMP                  = "/tmp"
+      BATCH_QUEUE          = var.batch_job_queue
+      BATCH_JOB_DEFINITION = var.batch_job_definition
     }
   }
+}
 
+# Get job Lambda function to serve job metadata to CLI
+resource "aws_lambda_function" "get_job_function" {
+  function_name    = "ndnp-open-ocr-get-job-lambda-function-${var.env}"
+  filename         = var.output_path
+  handler          = "get_job_status.handler"
+  role             = aws_iam_role.lambda_role.arn
+  runtime          = "python3.11"
+  source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
+  timeout          = 500
+
+  environment {
+    variables = {
+      TESSDATA_PREFIX = "/opt/share/tessdata"
+      LD_LIBRARY_PATH = "/opt/lib"
+      PATH            = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
+      TMP             = "/tmp"
+    }
+  }
 }
 
 resource "aws_iam_role" "lambda_role" {
@@ -45,8 +64,6 @@ resource "aws_iam_role" "lambda_role" {
  ]
 }
 EOF
-
-
 }
 
 resource "aws_iam_policy" "iam_policy_for_lambda" {
@@ -99,30 +116,6 @@ resource "aws_iam_role" "trust_for_lambda" {
     ]
   })
 }
-
-
-# Get job metadata from DynamoDB to serve to CLI.
-# resource "aws_lambda_function" "get_job_function" {
-#   function_name    = "ndnp-open-ocr-get-job-lambda-function-dev"
-#   filename         = var.output_path
-#   handler          = "get_job.handler"
-#   role             = var.lambda_role_arn
-#   runtime          = "python3.11"
-#   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-#   timeout          = 500
-
-#   environment {
-#     variables = {
-#       TESSDATA_PREFIX = "/opt/share/tessdata"
-#       LD_LIBRARY_PATH = "/opt/lib"
-#       PATH            = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
-#       TMP             = "/tmp",
-
-#     }
-#   }
-
-# }
-
 
 # Log group for scheduler
 resource "aws_cloudwatch_log_group" "scheduler_function_log_group" {

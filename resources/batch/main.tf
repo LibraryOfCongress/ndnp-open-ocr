@@ -79,8 +79,13 @@ resource "aws_ecr_repository" "repo" {
 
 # CloudWatch Log Group for AWS Batch
 resource "aws_cloudwatch_log_group" "log_group" {
-  name              = "/aws/batch/job"
+  name              = "/aws/batch/job-${var.env}"
   retention_in_days = 90
+
+  lifecycle {
+    prevent_destroy = true  # Prevent destruction of the log group
+    ignore_changes  = [name]  # Ignore changes if the log group already exists
+  }
 }
 
 # AWS Batch Service Role
@@ -101,9 +106,31 @@ resource "aws_iam_role" "batch_service_role" {
   }
 }
 
+# Attach necessary policies for AWS Batch Service Role
 resource "aws_iam_role_policy_attachment" "batch_service_role_policy" {
   role       = aws_iam_role.batch_service_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole"
+}
+
+# Add ECS permissions for the Batch Service Role
+resource "aws_iam_policy" "ecs_list_clusters_policy" {
+  name = "ecs-list-clusters-policy-${var.env}"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Action = [
+        "ecs:ListClusters"
+      ],
+      Resource = "*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_list_clusters_policy_attachment" {
+  role       = aws_iam_role.batch_service_role.name
+  policy_arn = aws_iam_policy.ecs_list_clusters_policy.arn
 }
 
 # AWS Batch Execution Role
@@ -186,7 +213,6 @@ resource "aws_batch_job_queue" "batch_job_queue" {
   }
 }
 
-
 # AWS Batch Job Definition
 resource "aws_batch_job_definition" "batch_job_definition" {
   name = "ndnp-open-ocr-batch-job-definition-${var.env}"
@@ -220,7 +246,7 @@ resource "aws_batch_job_definition" "batch_job_definition" {
       }
     ]
     networkConfiguration = {
-      assignPublicIp = "DISABLED"
+      assignPublicIp = "ENABLED"
     }
     logConfiguration = {
       logDriver = "awslogs"
