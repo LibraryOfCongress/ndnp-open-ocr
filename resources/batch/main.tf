@@ -114,7 +114,7 @@ resource "aws_iam_role_policy_attachment" "batch_service_role_policy" {
 
 # Add ECS permissions for the Batch Service Role
 resource "aws_iam_policy" "ecs_list_clusters_policy" {
-  name = "ecs-list-clusters-policy-${var.env}"
+  name = "ndnp-open-ocr-ecs-list-clusters-policy-${var.env}"
 
   policy = jsonencode({
     Version = "2012-10-17",

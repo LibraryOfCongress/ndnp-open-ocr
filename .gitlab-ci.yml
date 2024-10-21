@@ -11,6 +11,35 @@ stages:
   - cleanup
   - package
 
+variables:
+  ECR_REPO_URI_DEV: "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-dev"
+  ECR_REPO_URI_STAGING: "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-staging"
+  ECR_REPO_URI_PROD: "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-prod"
+
+docker_build_and_push:
+  image: docker:24.0.2
+  services:
+    - docker:24.0.2-dind
+  stage: deploy
+  script:
+    - |
+      if [ "$TF_STATE_NAME" == "dev" ]; then
+        export ECR_REPO_URI=$ECR_REPO_URI_DEV
+      elif [ "$TF_STATE_NAME" == "staging" ]; then
+        export ECR_REPO_URI=$ECR_REPO_URI_STAGING
+      elif [ "$TF_STATE_NAME" == "prod" ]; then
+        export ECR_REPO_URI=$ECR_REPO_URI_PROD
+      fi
+    - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
+    - docker build --platform linux/amd64 -t ndnp_open_ocr:latest ./packages/ndnp_open_ocr
+    - docker build --platform linux/amd64 -t ndnp-open-ocr-container-repo:latest ./packages/ndnp_open_ocr_fargate_deployment
+    - docker tag ndnp-open-ocr-container-repo:latest $ECR_REPO_URI:latest
+    - docker push $ECR_REPO_URI:latest
+  dependencies:
+    - build
+  environment:
+    name: $TF_STATE_NAME
+
 fmt:
   extends: .terraform:fmt
   needs: []
@@ -28,6 +57,7 @@ deploy:
   extends: .terraform:deploy
   dependencies:
     - build
+    - docker_build_and_push
   environment:
     name: $TF_STATE_NAME
 
