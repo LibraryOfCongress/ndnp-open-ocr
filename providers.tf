@@ -12,9 +12,9 @@
 #   default     = "loc1"
 # }
 
-# provider "aws" {
-#   region = var.aws_region
-# }
+provider "aws" {
+  region = "us-east-2"
+}
 
 terraform {
   required_providers {
