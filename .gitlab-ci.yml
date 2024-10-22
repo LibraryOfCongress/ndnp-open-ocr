@@ -17,17 +17,17 @@ variables:
   ECR_REPO_URI_PROD: "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-prod"
 
 docker_build_and_push:
-  image: $CI_REGISTRY/group/project/docker:20.10.16
+  image:
+    name: docker:latest
   services:
-    - docker:24.0.2-dind
-  stage: deploy
+    - docker:19-dind
   before_script:
-    # Install Docker CLI
-    - yum install -y docker
-    # Install AWS CLI
-    - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    - unzip awscliv2.zip
-    - ./aws/install
+    - apk add --no-cache curl jq python3 py3-pip
+    - pip install awscli
+    - aws ecr get-login-password | docker login --username AWS --password-stdin $DOCKER_REGISTRY
+    - aws --version
+    - docker info
+    - docker --version
   script:
     - |
       if [ "$TF_STATE_NAME" == "dev" ]; then
