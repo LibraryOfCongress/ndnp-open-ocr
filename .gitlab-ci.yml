@@ -22,12 +22,7 @@ docker_build_and_push:
     - docker:24.0.2-dind
   stage: deploy
   before_script:
-    - apk add --no-cache curl jq python3 py3-pip
-    - pip install awscli
-    - aws ecr get-login-password | docker login --username AWS --password-stdin $DOCKER_REGISTRY
-    - aws --version
-    - docker info
-    - docker --version
+    - apk add --no-cache curl jq python3 py3-pip aws-cli
   script:
     - |
       if [ "$TF_STATE_NAME" == "dev" ]; then
