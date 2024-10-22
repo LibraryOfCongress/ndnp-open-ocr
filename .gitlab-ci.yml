@@ -21,6 +21,13 @@ docker_build_and_push:
   services:
     - docker:24.0.2-dind
   stage: deploy
+  before_script:
+    # Install Docker CLI
+    - yum install -y docker
+    # Install AWS CLI
+    - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    - unzip awscliv2.zip
+    - ./aws/install
   script:
     - |
       if [ "$TF_STATE_NAME" == "dev" ]; then
@@ -39,6 +46,7 @@ docker_build_and_push:
     - build
   environment:
     name: $TF_STATE_NAME
+
 
 fmt:
   extends: .terraform:fmt
