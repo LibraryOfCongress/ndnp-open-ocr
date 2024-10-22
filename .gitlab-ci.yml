@@ -8,12 +8,12 @@ stages:
   - build
   - deploy
   - dev
+  - prod
   - cleanup
   - package
 
 variables:
   ECR_REPO_URI_DEV: "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-dev"
-  ECR_REPO_URI_STAGING: "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-staging"
   ECR_REPO_URI_PROD: "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-prod"
 
 docker_build_and_push:
@@ -36,16 +36,13 @@ docker_build_and_push:
     - |
       if [ "$TF_STATE_NAME" == "dev" ]; then
         export ECR_REPO_URI=$ECR_REPO_URI_DEV
-      elif [ "$TF_STATE_NAME" == "staging" ]; then
-        export ECR_REPO_URI=$ECR_REPO_URI_STAGING
       elif [ "$TF_STATE_NAME" == "prod" ]; then
         export ECR_REPO_URI=$ECR_REPO_URI_PROD
       fi
-    - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI_DEV
+    - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
     - docker build --platform linux/amd64 -t ndnp_open_ocr:latest ./packages/ndnp_open_ocr
-    - docker build --platform linux/amd64 -t ndnp-open-ocr-container-repo:latest ./packages/ndnp_open_ocr_fargate_deployment
-    - docker tag ndnp-open-ocr-container-repo:latest $ECR_REPO_URI_DEV:latest
-    - docker push $ECR_REPO_URI_DEV:latest
+    - docker tag ndnp_open_ocr:latest $ECR_REPO_URI:latest
+    - docker push $ECR_REPO_URI:latest
   dependencies:
     - build
   environment:
@@ -102,6 +99,27 @@ deploy_dev:
     - terraform init -input=false -backend-config="address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development" -backend-config="lock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development/lock" -backend-config="unlock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development/lock" -backend-config="username=gitlab-ci-token" -backend-config="password=${CI_JOB_TOKEN}"
   script:
      - terraform apply -input=false -auto-approve
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" && $CI_PIPELINE_SOURCE == "merge_request_event"'
+  artifacts:
+    when: always
+  when: always
+
+# Terraform Prod Environment
+deploy_prod:
+  image:
+    name: hashicorp/terraform:1.5.0
+    entrypoint: [""]
+
+  stage: prod
+  dependencies:
+    - build
+  before_script:
+    - terraform init -input=false -backend-config="address=https://git.loc.gov/api/v4/projects/2983/terraform/state/prod" -backend-config="lock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/prod/lock" -backend-config="unlock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/prod/lock" -backend-config="username=gitlab-ci-token" -backend-config="password=${CI_JOB_TOKEN}"
+  script:
+     - terraform apply -input=false -auto-approve
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "prod" && $CI_PIPELINE_SOURCE == "merge_request_event"'
   artifacts:
     when: always
   when: always
