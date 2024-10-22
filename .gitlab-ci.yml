@@ -17,7 +17,7 @@ variables:
   ECR_REPO_URI_PROD: "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-prod"
 
 docker_build_and_push:
-  image: amazonlinux:2
+  image: $CI_REGISTRY/group/project/docker:20.10.16
   services:
     - docker:24.0.2-dind
   stage: deploy
