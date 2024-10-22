@@ -17,10 +17,10 @@ variables:
   ECR_REPO_URI_PROD: "342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-prod"
 
 docker_build_and_push:
-  image:
-    name: docker:latest
+  image: docker:latest
   services:
-    - docker:19-dind
+    - docker:24.0.2-dind
+  stage: deploy
   before_script:
     - apk add --no-cache curl jq python3 py3-pip
     - pip install awscli
