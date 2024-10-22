@@ -79,11 +79,11 @@ resource "aws_ecr_repository" "repo" {
 
 # CloudWatch Log Group for AWS Batch
 resource "aws_cloudwatch_log_group" "log_group" {
-  name              = "/aws/batch/job-${var.env}"
+  name              = "/aws/batch/ndnp-open-ocr-job-${var.env}"
   retention_in_days = 90
 
   lifecycle {
-    prevent_destroy = true  # Prevent destruction of the log group
+    prevent_destroy = false  # Prevent destruction of the log group
     ignore_changes  = [name]  # Ignore changes if the log group already exists
   }
 }
@@ -251,7 +251,7 @@ resource "aws_batch_job_definition" "batch_job_definition" {
     logConfiguration = {
       logDriver = "awslogs"
       options = {
-        "awslogs-group"         = "/aws/batch/job"
+        "awslogs-group"         = "/aws/batch/ndnp-open-ocr-job-${var.env}"
         "awslogs-region"        = "us-east-2"
         "awslogs-stream-prefix" = "batch"
       }
