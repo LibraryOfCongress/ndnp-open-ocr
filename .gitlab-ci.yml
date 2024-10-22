@@ -45,7 +45,7 @@ docker_build_and_push:
     - docker build --platform linux/amd64 -t ndnp_open_ocr:latest ./packages/ndnp_open_ocr
     - docker build --platform linux/amd64 -t ndnp-open-ocr-container-repo:latest ./packages/ndnp_open_ocr_fargate_deployment
     - docker tag ndnp-open-ocr-container-repo:latest $ECR_REPO_URI_DEV:latest
-    - docker push $ECR_REPO_URI:latest
+    - docker push $ECR_REPO_URI_DEV:latest
   dependencies:
     - build
   environment:
