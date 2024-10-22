@@ -97,6 +97,7 @@ def get(ctx, job: str):
 
     # Setup AWS Lambda client
     lambda_client = boto3.client("lambda", region_name="us-east-2")
+    print("JOB ID: ", job)
     payload = {"pathParameters": {"jobId": job}}
 
     try:
@@ -106,6 +107,7 @@ def get(ctx, job: str):
             InvocationType="RequestResponse",
             Payload=json.dumps(payload).encode("utf-8"),
         )
+        print(response)
         response_payload = json.loads(response["Payload"].read())
         body = response_payload[0]
 
@@ -155,7 +157,7 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
     )
     # This is the prefix from the loc-preservation bucket...should stick to this if we can.
     if bucket == "loc-preservation":
-        prefix = batch_name
+        prefix = os.path.join("loc-preservation/lcbp/ndnp/dlc", batch_name)
     else:
         prefix = batch_name
     payload = {
@@ -286,6 +288,9 @@ def job_info(ctx):
 @click.pass_context
 def reprocess(ctx, batch_name: str, bucket: str):
     """Command to kick off reprocessing job for a certain S3 NDNP batch."""
+    if not batch_name:
+        print("[red]No batch_name provided. Exiting.")
+        return
     ctx = reprocess_batch(ctx, batch_name, bucket)
 
 

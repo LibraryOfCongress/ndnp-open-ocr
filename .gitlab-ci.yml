@@ -1,25 +1,66 @@
-image: python:3.9
+include:
+  - template: Terraform/Base.gitlab-ci.yml  # Includes Terraform boilerplate
+  - template: Jobs/SAST-IaC.gitlab-ci.yml   # Includes security analysis templates
 
-run:
+stages:
+  - validate
+  - test
+  - build
+  - deploy
+  - dev
+  - cleanup
+  - package
+
+fmt:
+  extends: .terraform:fmt
+  needs: []
+
+validate:
+  extends: .terraform:validate
+  needs: []
+
+# Terraform build stage
+build:
+  extends: .terraform:build
+
+# Deployment stage from boilerplate
+deploy:
+  extends: .terraform:deploy
+  dependencies:
+    - build
+  environment:
+    name: $TF_STATE_NAME
+
+# Python CLI Build Job
+package:
+  image: python:3.9
+  stage: package
   script:
     - pip install poetry
     - cd packages/cli/
-
-    # Continue with the build and publish process
     - poetry build
     - poetry config http-basic.gitlab-ci-token ${CI_JOB_TOKEN} gitlab-ci-token
     - poetry config repositories.gitlab ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
     - poetry publish --repository gitlab --username gitlab-ci-token --password ${CI_JOB_TOKEN}
-
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       changes:
         - packages/cli/**/*
       when: always
-    # - changes:
-    #     - packages/cli/**/*
-    #   when: always
-    # - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    # - changes:
-    #     - packages/cli/**/*
-    #   when: always
+
+# Terraform Dev Environment
+deploy_dev:
+  image:
+    name: hashicorp/terraform:1.5.0
+    entrypoint: [""]
+
+  stage: dev
+  dependencies:
+    - build
+  before_script:
+    - terraform init -input=false -backend-config="address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development" -backend-config="lock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development/lock" -backend-config="unlock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/development/lock" -backend-config="username=gitlab-ci-token" -backend-config="password=${CI_JOB_TOKEN}"
+  script:
+     - terraform apply -input=false -auto-approve
+  artifacts:
+    when: always
+  when: always

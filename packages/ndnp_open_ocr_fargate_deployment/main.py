@@ -18,8 +18,6 @@ logging.basicConfig(
 
 # Initialize AWS clients
 s3 = boto3.client("s3")
-# dynamodb = boto3.resource("dynamodb")
-# table = dynamodb.Table(os.getenv("TABLE_NAME"))
 
 
 def is_valid_image(input_file_path):
@@ -105,24 +103,7 @@ def clear_tmp_directory():
             logging.info(f"Failed to delete {file_path}. Reason: {e}")
 
 
-def update_dynamodb(job_id, key, success):
-    if success:
-        table.update_item(
-            Key={"pk": "JOB", "sk": job_id},
-            UpdateExpression="SET RemainingMessages = RemainingMessages - :dec",
-            ExpressionAttributeValues={":dec": 1},
-            ReturnValues="UPDATED_NEW",
-        )
-    else:
-        table.update_item(
-            Key={"pk": "JOB", "sk": job_id},
-            UpdateExpression="SET FailedFiles = list_append(if_not_exists(FailedFiles, :empty_list), :file)",
-            ExpressionAttributeValues={":file": [key], ":empty_list": []},
-            ReturnValues="UPDATED_NEW",
-        )
-
-
-def process_file(file_key, bucket_name, output_bucket_name, output_prefix, job_id):
+def process_file(file_key, bucket_name, output_bucket_name, output_prefix):
     with tempfile.TemporaryDirectory() as temp_dir:
         # Download the file
         input_file_path = download_files_from_s3(bucket_name, file_key, temp_dir)
@@ -156,10 +137,9 @@ def process_file(file_key, bucket_name, output_bucket_name, output_prefix, job_i
             # Upload files to S3
             print("TEXT FOUND")
             upload_files_to_s3(output_path, output_bucket_name, output_prefix)
-            # update_dynamodb(job_id, file_key, success=True)
         else:
             logging.error(f"No text found in the generated PDF for {file_key}.")
-            # update_dynamodb(job_id, file_key, success=False)
+
 
 
 if __name__ == "__main__":
@@ -169,7 +149,6 @@ if __name__ == "__main__":
     bucket_name = os.getenv("BUCKET_NAME")
     prefix = os.getenv("PREFIX")
     output_prefix = os.getenv("OUTPUT_PREFIX")
-    job_id = os.getenv("JOB_ID")
     output_bucket_name = os.environ.get("OUTPUT_BUCKET_NAME")
 
     array_index = int(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX", "0"))
@@ -184,4 +163,4 @@ if __name__ == "__main__":
     file_key = file_list[array_index]
     logging.info(f"Processing file: {file_key}")
 
-    process_file(file_key, bucket_name, output_bucket_name, output_prefix, job_id)
+    process_file(file_key, bucket_name, output_bucket_name, output_prefix)

@@ -7,6 +7,11 @@
 **layer**
 *.local.ipynb
 terraform.tfstate.d/sd*
+**jupyter**
+*.tar*
+*.whl
+*.terraform*
+*.tfstate*
 **batch**
 **jupyter**
 *.tar*
