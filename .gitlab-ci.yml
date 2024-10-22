@@ -23,7 +23,15 @@ docker_build_and_push:
   stage: deploy
   before_script:
     - apk add --no-cache curl jq python3 py3-pip
-    - pip3 install awscli
+    - python3 -m venv /tmp/venv
+    - . /tmp/venv/bin/activate
+
+    # Install AWS CLI in virtual environment
+    - pip install awscli
+
+    # Set AWS region if not already set
+    - export AWS_REGION=${AWS_REGION:-"us-east-2"}
+
   script:
     - |
       if [ "$TF_STATE_NAME" == "dev" ]; then
