@@ -41,10 +41,10 @@ docker_build_and_push:
       elif [ "$TF_STATE_NAME" == "prod" ]; then
         export ECR_REPO_URI=$ECR_REPO_URI_PROD
       fi
-    - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
+    - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI_DEV
     - docker build --platform linux/amd64 -t ndnp_open_ocr:latest ./packages/ndnp_open_ocr
     - docker build --platform linux/amd64 -t ndnp-open-ocr-container-repo:latest ./packages/ndnp_open_ocr_fargate_deployment
-    - docker tag ndnp-open-ocr-container-repo:latest $ECR_REPO_URI:latest
+    - docker tag ndnp-open-ocr-container-repo:latest $ECR_REPO_URI_DEV:latest
     - docker push $ECR_REPO_URI:latest
   dependencies:
     - build
