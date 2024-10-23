@@ -51,7 +51,8 @@ deploy:
   #   - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "prod" && $CI_PIPELINE_SOURCE == "merge_request_event"'
   artifacts:
     when: always
-  when: always
+  rules:
+    - when: always
 
 # Docker Build and Push for Fargate Deployment
 deploy_fargate:
