@@ -82,7 +82,7 @@ deploy_fargate:
     # Set AWS region if not already set
     - export AWS_REGION=${AWS_REGION:-"us-east-2"}
   script:
-    - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
+    - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin 342134162356.dkr.ecr.us-east-2.amazonaws.com
     - docker build --platform linux/amd64 -t ndnp_open_ocr:latest ./packages/ndnp_open_ocr
     - docker tag ndnp_open_ocr:latest $ECR_REPO_URI:latest
     - docker push $ECR_REPO_URI:latest
