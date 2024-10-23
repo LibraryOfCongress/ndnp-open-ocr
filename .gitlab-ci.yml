@@ -14,7 +14,7 @@ stages:
 
 variables:
   AWS_REGION: "us-east-2"
-  TF_STATE_NAME: "development"
+  TF_STATE_NAME: "prod"
 
 fmt:
   extends: .terraform:fmt
