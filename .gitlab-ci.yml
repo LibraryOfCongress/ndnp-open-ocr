@@ -46,9 +46,9 @@ deploy:
 
     # Extract the ECR repository URI and save it for the next stage
     - export ECR_REPO_URI=$(terraform output -raw ecr_repo_url)
-  rules:
-    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" && $CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "prod" && $CI_PIPELINE_SOURCE == "merge_request_event"'
+  # rules:
+  #   - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" && $CI_PIPELINE_SOURCE == "merge_request_event"'
+  #   - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "prod" && $CI_PIPELINE_SOURCE == "merge_request_event"'
   artifacts:
     when: always
   when: always
