@@ -35,3 +35,8 @@ module "batch" {
   aws_s3_output_bucket = module.s3.bucket_name
   env                  = var.env
 }
+
+output "ecr_repo_url" {
+  value = module.batch.repository_url
+  description = "The URI of the ECR repository for Docker images"
+}
