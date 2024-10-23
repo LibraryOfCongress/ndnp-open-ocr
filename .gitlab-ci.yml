@@ -32,8 +32,7 @@ deploy:
   stage: deploy
   variables:
     TF_VAR_env: $TF_STATE_NAME
-  dependencies:
-    - build
+  extends: .terraform:deploy
   before_script:
     - |
       terraform init -input=false \
