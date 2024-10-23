@@ -115,6 +115,5 @@ destroy:
   script:
     - terraform destroy  -auto-approve
   dependencies:
-    - plan
-    - apply
+    - deploy
   when: manual
