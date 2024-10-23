@@ -11,10 +11,11 @@ stages:
   - cleanup
   - package
   - build_cli
+  - destroy
 
 variables:
   AWS_REGION: "us-east-2"
-  TF_STATE_NAME: "prod"
+  TF_STATE_NAME: "prod1"
 
 fmt:
   extends: .terraform:fmt
@@ -35,21 +36,24 @@ deploy:
     TF_VAR_env: $TF_STATE_NAME
   extends: .terraform:deploy
   before_script:
-    - |
-      if [ "$CI_COMMIT_BRANCH" == "main" ]; then
-        export TF_STATE_NAME="development"
-      elif [ "$CI_COMMIT_BRANCH" == "prod" ]; then
-        export TF_STATE_NAME="prod"
-      else
-        export TF_STATE_NAME="development"
-      fi
-    - |
+    # - |
+    #   if [ "$CI_COMMIT_BRANCH" == "main" ]; then
+    #     export TF_STATE_NAME="development"
+    #   elif [ "$CI_COMMIT_BRANCH" == "prod" ]; then
+    #     export TF_STATE_NAME="prod"
+    #   else
+    #     export TF_STATE_NAME="development"
+    #   fi
+    # - |
       terraform init -input=false \
         -backend-config="address=https://git.loc.gov/api/v4/projects/2983/terraform/state/${TF_STATE_NAME}" \
         -backend-config="lock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/${TF_STATE_NAME}/lock" \
         -backend-config="unlock_address=https://git.loc.gov/api/v4/projects/2983/terraform/state/${TF_STATE_NAME}/lock" \
         -backend-config="username=gitlab-ci-token" \
-        -backend-config="password=${CI_JOB_TOKEN}"
+        -backend-config="password=${CI_JOB_TOKEN}" \
+        - backend-config="lock_method=POST"
+        - backend-config="unlock_method=DELETE"
+        - backend-config="retry_wait_min=5"
   script:
     - terraform apply -input=false -auto-approve
 
@@ -105,3 +109,12 @@ build_cli:
       changes:
         - packages/cli/**/*
       when: always
+
+destroy:
+  stage: destroy
+  script:
+    - terraform destroy  -auto-approve
+  dependencies:
+    - plan
+    - apply
+  when: manual
