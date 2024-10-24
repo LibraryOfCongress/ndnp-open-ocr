@@ -88,8 +88,8 @@ deploy_fargate:
   script:
     - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin 342134162356.dkr.ecr.us-east-2.amazonaws.com
     - docker build --platform linux/amd64 -t ndnp_open_ocr:latest ./packages/ndnp_open_ocr
-    - docker tag ndnp_open_ocr:latest $ECR_REPO_URI:latest
-    - docker push $ECR_REPO_URI:latest
+    - docker tag ndnp_open_ocr:latest ndnp-open-ocr-container-repo-prod1:latest
+    - docker push ndnp-open-ocr-container-repo-prod1:latest
   environment:
     name: $TF_STATE_NAME
 
