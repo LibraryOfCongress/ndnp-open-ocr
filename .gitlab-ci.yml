@@ -34,6 +34,8 @@ deploy:
   stage: deploy
   variables:
     TF_VAR_env: $TF_STATE_NAME
+    S3_BUCKET: "ndnp-open-ocr-dependencies"
+    TF_STATE_KEY: "ndnp-open-ocr-tf-state-files/dev/terraform.tfstate"
   extends: .terraform:deploy
   before_script:
     # - |
@@ -44,8 +46,11 @@ deploy:
     #   else
     #     export TF_STATE_NAME="development"
     #   fi
-    - terraform init -input=false -reconfigure
-    - terraform workspace select ndnp-open-ocr-dev
+    - terraform init -input=false \
+        -backend-config="bucket=${S3_BUCKET}" \
+        -backend-config="key=${TF_STATE_KEY}" \
+        -backend-config="region=${AWS_REGION}" \
+        -backend-config="encrypt=true"
   script:
     - terraform apply -input=false -auto-approve
 
