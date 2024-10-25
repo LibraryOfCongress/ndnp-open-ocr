@@ -44,7 +44,7 @@ deploy:
     #   else
     #     export TF_STATE_NAME="development"
     #   fi
-    - terraform init -input=false
+    - terraform init -input=false -migrate-state
     - terraform workspace select ndnp-open-ocr-dev
   script:
     - terraform apply -input=false -auto-approve
