@@ -1,14 +1,13 @@
 # Main Terraform file to declare NDNP Open OCR resources that have to be created
 # in AWS to run the pipeline.
-# terraform {
-#   backend "http" {
-#     address        = "https://git.loc.gov/api/v4/projects/2983/terraform/state/dev"
-#     lock_address   = "https://git.loc.gov/api/v4/projects/2983/terraform/state/dev/lock"
-#     unlock_address = "https://git.loc.gov/api/v4/projects/2983/terraform/state/dev/lock"
-#     username       = "gitlab-ci-token"
-#     password       = "${CI_JOB_TOKEN}"
-#   }
-# }
+terraform {
+  backend "s3" {
+    bucket         = "ndnp-open-ocr-dependencies"  # Your S3 bucket name
+    key            = "ndnp-open-ocr-tf-state-files/dev/terraform.tfstate"  # The file path inside the bucket for your state
+    region         = "us-east-1"  # Specify the AWS region of the bucket
+    encrypt        = true  # Encrypt the state file
+  }
+}
 
 # S3 bucket related resources.
 module "s3" {
