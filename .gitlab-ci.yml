@@ -35,7 +35,7 @@ deploy:
   variables:
     TF_VAR_env: $TF_STATE_NAME
     S3_BUCKET: "ndnp-open-ocr-dependencies"
-    TF_STATE_KEY: "ndnp-open-ocr-tf-state-files/dev/terraform.tfstate"
+    TF_STATE_KEY: "env:/ndnp-open-ocr-dev/ndnp-open-ocr-tf-state-files/dev/terraform.tfstate"
   extends: .terraform:deploy
   before_script:
     - terraform init -force-copy
