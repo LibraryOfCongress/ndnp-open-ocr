@@ -38,7 +38,7 @@ deploy:
     TF_STATE_KEY: "ndnp-open-ocr-tf-state-files/dev/terraform.tfstate"
   extends: .terraform:deploy
   before_script:
-    - terraform init -auto-approve
+    - terraform init -force-copy
   script:
     - terraform apply -input=false -auto-approve
 
