@@ -38,14 +38,6 @@ deploy:
     TF_STATE_KEY: "ndnp-open-ocr-tf-state-files/dev/terraform.tfstate"
   extends: .terraform:deploy
   before_script:
-    # - |
-    #   if [ "$CI_COMMIT_BRANCH" == "main" ]; then
-    #     export TF_STATE_NAME="development"
-    #   elif [ "$CI_COMMIT_BRANCH" == "prod" ]; then
-    #     export TF_STATE_NAME="prod"
-    #   else
-    #     export TF_STATE_NAME="development"
-    #   fi
     - terraform init -input=false \
         -backend-config="bucket=${S3_BUCKET}" \
         -backend-config="key=${TF_STATE_KEY}" \
