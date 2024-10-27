@@ -83,6 +83,16 @@ deploy_fargate:
     - docker push ndnp-open-ocr-container-repo-${TF_STATE_NAME}:latest
   environment:
     name: $TF_STATE_NAME
+  rules:
+  - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "merge_request_event"'
+    variables:
+      TF_STATE_NAME: "dev-deployment"
+  - if: '$CI_COMMIT_BRANCH == "prod" && $CI_PIPELINE_SOURCE == "merge_request_event"'
+    variables:
+      TF_STATE_NAME: "prod-deployment"
+  - when: always
+    variables:
+      TF_STATE_NAME: "dev-deployment"
 
 # Python CLI Build Job
 build_cli:
