@@ -54,7 +54,9 @@ deploy:
     - if: '$CI_COMMIT_BRANCH == "prod" && $CI_PIPELINE_SOURCE == "merge_request_event"'
       variables:
         TF_STATE_NAME: "prod-deployment"
-    - when: never
+    - when: always
+      variables:
+        TF_STATE_NAME: "dev-deployment"
 
 # Docker Build and Push for Fargate Deployment
 deploy_fargate:
