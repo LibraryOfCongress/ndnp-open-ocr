@@ -42,7 +42,6 @@ deploy:
     - terraform workspace select ndnp-open-ocr-$TF_STATE_NAME || terraform workspace new ndnp-open-ocr-$TF_STATE_NAME
   script:
     - terraform apply -input=false -auto-approve
-
     # Extract the ECR repository URI and save it for the next stage
     - export ECR_REPO_URI=$(terraform output -raw ecr_repo_url)
   artifacts:
