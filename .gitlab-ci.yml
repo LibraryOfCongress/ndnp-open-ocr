@@ -50,13 +50,13 @@ deploy:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "merge_request_event"'
       variables:
-        TF_STATE_NAME: "dev-deployment"
+        TF_STATE_NAME: "development-deployment"
     - if: '$CI_COMMIT_BRANCH == "prod" && $CI_PIPELINE_SOURCE == "merge_request_event"'
       variables:
-        TF_STATE_NAME: "prod-deployment"
+        TF_STATE_NAME: "production-deployment"
     - when: always
       variables:
-        TF_STATE_NAME: "dev-deployment"
+        TF_STATE_NAME: "development-deployment"
 
 # Docker Build and Push for Fargate Deployment
 deploy_fargate:
@@ -86,7 +86,7 @@ deploy_fargate:
   rules:
   - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "merge_request_event"'
     variables:
-      TF_STATE_NAME: "dev-deployment"
+      TF_STATE_NAME: "development-deployment"
   - if: '$CI_COMMIT_BRANCH == "prod" && $CI_PIPELINE_SOURCE == "merge_request_event"'
     variables:
       TF_STATE_NAME: "production-deployment"
