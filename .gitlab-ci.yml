@@ -19,7 +19,7 @@ variables:
 workflow:
   rules:
     # Trigger development deployment on merge request submission to main
-    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "CHRONAM-2526-image-building-ci" && $CI_PIPELINE_SOURCE == "push"'
       variables:
         TF_STATE_NAME: "development-deployment"
       when: always
