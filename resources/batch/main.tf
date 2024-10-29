@@ -1,28 +1,29 @@
-# VPC Networking Resources (Unchanged)
+# VPC Networking Resources
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
   enable_dns_support   = true
   tags = {
-    Name = "ndnp-open-ocr-vpc"
+    Name = "ndnp-open-ocr-vpc-${var.env}"
   }
 }
 
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
   tags = {
-    Name = "ndnp-open-ocr-igw"
+    Name = "ndnp-open-ocr-igw-${var.env}"
   }
 }
 
 resource "aws_route_table" "main" {
   vpc_id = aws_vpc.main.id
   route {
+    # Allow all outbound internet access
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.main.id
   }
   tags = {
-    Name = "ndnp-open-ocr-route-table"
+    Name = "ndnp-open-ocr-route-table-${var.env}"
   }
 }
 
@@ -42,7 +43,7 @@ resource "aws_subnet" "subnet_1" {
   availability_zone       = "us-east-2a"
   map_public_ip_on_launch = true
   tags = {
-    Name = "ndnp-open-ocr-subnet-1"
+    Name = "ndnp-open-ocr-subnet-1-${var.env}"
   }
 }
 
@@ -52,7 +53,7 @@ resource "aws_subnet" "subnet_2" {
   availability_zone       = "us-east-2b"
   map_public_ip_on_launch = true
   tags = {
-    Name = "ndnp-open-ocr-subnet-2"
+    Name = "ndnp-open-ocr-subnet-2-${var.env}"
   }
 }
 
@@ -68,46 +69,23 @@ resource "aws_security_group" "main_sg" {
   }
 
   tags = {
-    Name = "ndnp-open-ocr-sg"
+    Name = "ndnp-open-ocr-sg-${var.env}"
   }
 }
 
 resource "aws_ecr_repository" "repo" {
-  name = "ndnp-open-ocr-container-repo"
-}
-
-resource "aws_ecr_lifecycle_policy" "example" {
-  repository = aws_ecr_repository.repo.name
-
-  policy = jsonencode({
-    rules = [
-      {
-        rulePriority = 1
-        description  = "Expire images older than 30 days"
-        selection = {
-          tagStatus   = "untagged"
-          countType   = "sinceImagePushed"
-          countUnit   = "days"
-          countNumber = 30
-        }
-        action = {
-          type = "expire"
-        }
-      }
-    ]
-  })
+  name = "ndnp-open-ocr-container-repo-${var.env}"
 }
 
 # CloudWatch Log Group for AWS Batch
 resource "aws_cloudwatch_log_group" "log_group" {
   name              = "/aws/batch/job"
-  retention_in_days = 30
+  retention_in_days = 90
 }
 
-# IAM Roles and Policies for AWS Batch
 # AWS Batch Service Role
 resource "aws_iam_role" "batch_service_role" {
-  name = "ndnp-open-ocr-batch-service-role"
+  name = "ndnp-open-ocr-batch-service-role-${var.env}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -142,7 +120,7 @@ resource "aws_iam_role" "batch_execution_role" {
   })
 
   tags = {
-    Name = "ndnp-open-ocr-batch-execution-role"
+    Name = "ndnp-open-ocr-batch-execution-role-${var.env}"
   }
 }
 
@@ -153,7 +131,7 @@ resource "aws_iam_role_policy_attachment" "batch_execution_role_policy" {
 
 # AWS Batch Job Role (for your container to access AWS resources)
 resource "aws_iam_role" "batch_job_role" {
-  name = "ndnp-open-ocr-batch-job-role"
+  name = "ndnp-open-ocr-batch-job-role-${var.env}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -165,37 +143,37 @@ resource "aws_iam_role" "batch_job_role" {
   })
 
   tags = {
-    Name = "ndnp-open-ocr-batch-job-role"
+    Name = "ndnp-open-ocr-batch-job-role-${var.env}"
   }
 }
 
 # Attach necessary policies to the job role
 resource "aws_iam_role_policy_attachment" "batch_job_role_policy" {
   role       = aws_iam_role.batch_job_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess" # Adjust based on your needs
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
 # AWS Batch Compute Environment
 resource "aws_batch_compute_environment" "batch_compute_environment" {
-  compute_environment_name = "ndnp-open-ocr-batch-compute-environment"
+  compute_environment_name = "ndnp-open-ocr-batch-compute-environment-${var.env}"
   type                     = "MANAGED"
   service_role             = aws_iam_role.batch_service_role.arn
 
   compute_resources {
-    type                = "FARGATE" # Use "FARGATE_SPOT" for cost savings
-    max_vcpus           = 1000      # Adjust based on your needs
+    type                = "FARGATE"
+    max_vcpus           = 500
     subnets             = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
     security_group_ids  = [aws_security_group.main_sg.id]
   }
 
   tags = {
-    Name = "ndnp-open-ocr-batch-compute-environment"
+    Name = "ndnp-open-ocr-batch-compute-environment-${var.env}"
   }
 }
 
 # AWS Batch Job Queue
 resource "aws_batch_job_queue" "batch_job_queue" {
-  name     = "ndnp-open-ocr-batch-job-queue"
+  name     = "ndnp-open-ocr-batch-job-queue-${var.env}"
   state    = "ENABLED"
   priority = 1
 
@@ -204,17 +182,18 @@ resource "aws_batch_job_queue" "batch_job_queue" {
   ]
 
   tags = {
-    Name = "ndnp-open-ocr-batch-job-queue"
+    Name = "ndnp-open-ocr-batch-job-queue-${var.env}"
   }
 }
 
 
 # AWS Batch Job Definition
 resource "aws_batch_job_definition" "batch_job_definition" {
-  name = "ndnp-open-ocr-batch-job-definition"
+  name = "ndnp-open-ocr-batch-job-definition-${var.env}"
   type = "container"
 
-  platform_capabilities = ["FARGATE"]  # Specify Fargate as the platform
+  # Fargate as the compute platform
+  platform_capabilities = ["FARGATE"]
 
   container_properties = jsonencode({
     image                = "${aws_ecr_repository.repo.repository_url}:latest"
@@ -236,20 +215,12 @@ resource "aws_batch_job_definition" "batch_job_definition" {
         value = "us-east-2"
       },
       {
-        name  = "SQS_QUEUE_URL",
-        value = var.sqs_queue_url
-      },
-      {
-        name  = "TABLE_NAME",
-        value = var.table_name
-      },
-      {
         name  = "OUTPUT_BUCKET_NAME",
         value = var.aws_s3_output_bucket
       }
     ]
     networkConfiguration = {
-      assignPublicIp = "ENABLED"
+      assignPublicIp = "DISABLED"
     }
     logConfiguration = {
       logDriver = "awslogs"
@@ -266,24 +237,6 @@ resource "aws_batch_job_definition" "batch_job_definition" {
   }
 
   tags = {
-    Name = "ndnp-open-ocr-batch-job-definition"
+    Name = "ndnp-open-ocr-batch-job-definition-${var.env}"
   }
-}
-
-
-
-# Variables (Define in variables.tf or adjust accordingly)
-variable "sqs_queue_url" {
-  description = "URL of the SQS queue"
-  type        = string
-}
-
-variable "table_name" {
-  description = "Name of the DynamoDB table"
-  type        = string
-}
-
-variable "aws_s3_output_bucket" {
-  description = "Name of the S3 output bucket"
-  type        = string
 }

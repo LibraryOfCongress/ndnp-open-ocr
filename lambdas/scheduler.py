@@ -6,92 +6,91 @@ from datetime import datetime
 import logging
 
 logger = logging.getLogger()
-# logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
-# Sends out SQS messages to the ALTO and PDF Generation Queues to kickoff reprocessing job, where the consumers pick up
-# the SQS messages and process them independently, Lambda by Lambda, TIFF by TIFF.
 def handler(event, context):
-    # Generate a new job id
-    job_id = str(uuid.uuid4())
-    # bucket_name = os.getenv("INPUT_BUCKET_NAME")
-    # Prefix to the "batch" data in INPUT_BUCKET, which for our cases is loc-preservation.
     prefix = event["pathParameters"]["prefix"]
     bucket_name = event["pathParameters"]["bucketName"]
 
-    print("Bucket name: " + bucket_name)
-    print("Prefix: " + prefix)
+    logger.info(f"Bucket name: {bucket_name}")
+    logger.info(f"Prefix: {prefix}")
 
-    s3 = boto3.resource("s3")
-    sqs = boto3.client("sqs")
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(os.getenv("TABLE_NAME"))
+    s3 = boto3.client("s3")
+    batch = boto3.client("batch")
 
-    logger.info("Environment variables: %s", os.environ)
+    batch_job_queue = os.environ.get("BATCH_QUEUE")
+    batch_job_definition = os.environ.get("BATCH_JOB_DEFINITION")
 
-    queue_url = os.environ.get("QUEUE_URL")
+    logger.info(f"Batch Job Queue: {batch_job_queue}")
+    logger.info(f"Batch Job Definition: {batch_job_definition}")
 
-    logger.info("Queue URL: %s", queue_url)
+    # Get list of TIF keys in the specified S3 prefix
+    def get_tif_files(bucket, prefix):
+        """Get list of .tif files in the specified S3 prefix."""
+        keys = []
+        paginator = s3.get_paginator("list_objects_v2")
+        pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
+
+        for page in pages:
+            if "Contents" in page:
+                for obj in page["Contents"]:
+                    file_name = obj["Key"]
+                    if file_name.lower().endswith(".tif"):
+                        keys.append(file_name)
+        return keys
 
     try:
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        # First, try the /ndnp/dlc/ prefix
+        keys = get_tif_files(bucket_name, prefix)
 
-        # Get top-level directory input name
-        output_prefix = os.path.split(prefix)[1] + "__" + job_id
-        job_id = output_prefix
-        messages = []
+        # If no files are found, try the alternative /ndnp/loc/ prefix. There are a handful of batches
+        # that are stored in the /ndnp/loc/ prefix instead of /ndnp/dlc/
+        if not keys:
+            alternative_prefix = prefix.replace("/ndnp/dlc/", "/ndnp/loc/")
+            logger.info(f"No files found at {prefix}, trying {alternative_prefix} instead.")
+            keys = get_tif_files(bucket_name, alternative_prefix)
 
-        keys = []
-        for object_summary in s3.Bucket(bucket_name).objects.filter(Prefix=prefix):
-            file_name = object_summary.key
-
-            if file_name.lower().endswith(".tif"):
-                keys.append(file_name)
-
-        table.put_item(
-            Item={
-                "pk": "JOB",
-                "sk": output_prefix,
-                "RemainingMessages": len(keys),
-                "FailedFiles": [],
-                "Timestamp": timestamp,
+        # If no files are found in both prefixes, return an error
+        if not keys:
+            logger.error(f"No TIFF files found in both {prefix} and {alternative_prefix}.")
+            return {
+                "statusCode": 404,
+                "body": json.dumps(f"No TIFF files found at {prefix} or {alternative_prefix}."),
             }
+
+        # Name of AWS Batch job
+        job_name = os.path.split(prefix)[1] + "__" + str(uuid.uuid4())
+
+        # Submit AWS Batch Array Job
+        array_size = len(keys)
+        logger.info(f"Submitting AWS Batch array job with size: {array_size}")
+
+        response = batch.submit_job(
+            jobName=job_name,
+            jobQueue=batch_job_queue,
+            jobDefinition=batch_job_definition,
+            arrayProperties={"size": array_size},
+            containerOverrides={
+                "environment": [
+                    {"name": "BUCKET_NAME", "value": bucket_name},
+                    {"name": "PREFIX", "value": prefix},
+                    {"name": "OUTPUT_PREFIX", "value": job_name},
+                ]
+            },
         )
 
-        # Loop through all TIFFs in the bucket.
-        for key in keys:
-            message = {
-                "Bucket": bucket_name,
-                "Key": key,
-                "OutputPrefix": output_prefix,
-                "InputPrefix": prefix,
-                "JobId": output_prefix,
-            }
-
-            messages.append(
-                {"Id": str(uuid.uuid4()), "MessageBody": json.dumps(message)}
-            )
-
-            # Send messages in batches of 10 to speed up execution.
-            if len(messages) == 10:
-                # Send Messages to PDF Queue
-                response = sqs.send_message_batch(QueueUrl=queue_url, Entries=messages)
-
-                messages = []
-
-        if messages:
-            # Send Messages to Queue
-            response = sqs.send_message_batch(QueueUrl=queue_url, Entries=messages)
-
-        print(messages)
+        logger.info(f"AWS Batch ID: {response['jobId']}")
+        logger.info(f"Job Name (output prefix): {job_name}")
 
         return {
             "statusCode": 200,
-            "body": json.dumps({"job": job_id, "num_issues": len(keys)}),
+            "body": json.dumps({"job": job_name, "num_issues": len(keys)}),
         }
+
     except Exception as e:
-        logger.error("Error occurred: %s", e)
+        logger.error(f"Error occurred: {e}")
         return {
-            'statusCode': 400,
-            "body": "An Error has occurred. Please check batch and bucket names and make sure they are correct."
+            "statusCode": 400,
+            "body": "An error has occurred. Please check batch and bucket names and make sure they are correct.",
         }

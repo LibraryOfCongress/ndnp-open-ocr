@@ -6,7 +6,7 @@ This repository contains a Terraform module for creating resources required for 
 
 There are 3 primary components that need to be treated on an individual basis:
 
-1. NDNP Open OCR (currently in functions/src). This is the NDNP Open OCR pipeline that can be run locally or at scale in AWS. It has all of the OCR logic in it.
+1. NDNP Open OCR (currently in packages/ndnp_open_ocr). This is the NDNP Open OCR pipeline that can be run locally or at scale in AWS. It has all of the OCR logic in it.
 2. Terraform Deployment. This deploys NDNP Open OCR to AWS to run at scale.
 3. Command Line Interface. This is the local CLI tool that can be used and distributed to control the AWS infrastructure laid out by Terraform.
 
@@ -17,9 +17,8 @@ There are 3 primary components that need to be treated on an individual basis:
 
 The module creates AWS resources for the application including:
 
-- **IAM Roles and Policies**: To allow the Lambdas/Fargate tasks to access S3, use DynamoDB table, etc...
-- **Lambda Functions**: Includes scheduler function for creating SQS messages.
-- **SQS Queue**: For storing a message for each TIFF that needs to be processed by the Fargate tasks that hold NDNP Open OCR library.
+- **IAM Roles and Policies**: To allow the Lambdas/Fargate tasks to access S3, trigger AWS Batch, etc...
+- **Lambda Functions**: Includes scheduler function for creating new job in AWS Batch
 - **S3 Bucket**: For storing the PDF and ALTO outputs from NDNP Open OCR.
 - **Cloudwatch Log Groups**: For storing logs of the Lambda functions and ECS/Fargate tasks.
 

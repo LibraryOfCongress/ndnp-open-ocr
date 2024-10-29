@@ -8,27 +8,22 @@ variable "output_path" {
   type        = string
 }
 
-variable "lambda_role_arn" {
-  description = "ARN of the IAM role for the Lambda function"
-  type        = string
-}
-
 variable "aws_s3_output_bucket" {
   description = "Name of the S3 bucket that Lambda will use for storing outputs"
   type        = string
 }
 
-variable "queue_url" {
-  description = "PDF Queue URL of the SQS queue for processing job management"
+variable "batch_job_definition" {
+  description = ""
   type = string
 }
 
-variable "queue_arn" {
-  description = "ALTO Queue ARN of the SQS queue for processing job management"
+variable "batch_job_queue" {
+  description = ""
   type = string
 }
 
-variable "table_name" {
-  description = "DynamoDB table for SQS message tracking"
-  type = string
+variable "env" {
+  description = "The environment (dev, test, prod)"
+  type        = string
 }

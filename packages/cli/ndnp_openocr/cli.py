@@ -1,7 +1,7 @@
 import boto3
 import click
 import requests
-from .helpers import sync_s3_batch, find_missing_pdfs
+from helpers import sync_s3_batch, find_missing_pdfs
 from rich import print
 import json
 import time
@@ -82,48 +82,65 @@ def sync(ctx, job, output_dir, local_batch):
 )
 @click.pass_context
 def get(ctx, job: str):
+    """Retrieve and process job information from AWS Lambda."""
+
+    # Fetch job ID from keyring if not provided
     if job is None:
-        # Try to get the last job ID from keyring
         job = keyring.get_password("ndnp_openocr", "job_id")
         if job is None:
-            print("No job ID provided and none found in keyring. Exiting.")
+            print("[red]No job ID provided and none found in keyring. Exiting.")
             return
         else:
-            print(f"Using job ID from keyring: {job}")
+            print(f"[green]Using job ID from keyring: {job}")
     else:
-        # Update the keyring with the new job ID for future use
         keyring.set_password("ndnp_openocr", "job_id", job)
 
+    # Setup AWS Lambda client
     lambda_client = boto3.client("lambda", region_name="us-east-2")
+    print("JOB ID: ", job)
     payload = {"pathParameters": {"jobId": job}}
+
     try:
-        # Async invoke the scheduler Lambda function passing the prefix and bucket name
-        # as path parameters (modeled from API Gateway request, should be changed later).
+        # Invoke Lambda function to get job status
         response = lambda_client.invoke(
             FunctionName=ctx.obj["GET_JOB_ARN"],
             InvocationType="RequestResponse",
             Payload=json.dumps(payload).encode("utf-8"),
         )
-    except Exception as e:
-        print(f"Failed to trigger Lambda function: {e}")
+        print(response)
+        response_payload = json.loads(response["Payload"].read())
+        body = response_payload[0]
 
-    response_payload = json.loads(response["Payload"].read())
-    # print(response_payload)
-    body = response_payload[0]
-
-    if int(body["RemainingMessages"]) == 0:
-        print(
-            "[green]Processing complete. \n\nYou can pull down batch with: ndnp_openocr sync --output-dir=OUTPUT_DIR --local-batch=PATH/TO/LOCAL/BATCH/batch.xml".format(
-                job
+        # Check job status and print appropriate messages
+        if int(body["RemainingMessages"]) == 0:
+            print(
+                f"[green]Processing complete. \n\nYou can pull down batch with: "
+                f"ndnp_openocr sync --output-dir=OUTPUT_DIR --local-batch=PATH/TO/LOCAL/BATCH/batch.xml"
             )
-        )
-        print("[yellow]These have failed: " + str(body["FailedFiles"]))
-    else:
-        print(str(body["RemainingMessages"]) + " newspapers remaining for processing")
-        print(
-            "[yellow]These newspapers have failed to OCR and will be EXCLUDED from outputs in S3: "
-            + str(body["FailedFiles"])
-        )
+            print(f"[yellow]These have failed: {body['FailedFiles']}")
+        else:
+            print(f"{body['RemainingMessages']} newspapers remaining for processing")
+            print(
+                f"[yellow]These newspapers have failed to OCR and will be EXCLUDED from outputs in S3: "
+                f"{body['FailedFiles']}"
+            )
+
+        # Print dead-letter queue list if available
+        if 'dlq_list' in body:
+            print("[red]These files are in the dead-letter queue and need manual intervention:")
+            for item in body['dlq_list']:
+                print(f"  - {item}")
+
+        # Print JP2 files used instead of TIFFs if available
+        if 'Jp2s' in body:
+            print("[blue]These JP2 files were used instead of TIFFs:")
+            for jp2 in body['Jp2s']:
+                print(f"  - {jp2}")
+
+        print(f"[gray]{body}")
+
+    except Exception as e:
+        print(f"[red]Failed to trigger Lambda function: {e}")
 
     return ctx
 
@@ -140,7 +157,7 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
     )
     # This is the prefix from the loc-preservation bucket...should stick to this if we can.
     if bucket == "loc-preservation":
-        prefix = os.path.join("loc-preservation/lcbp/ndnp/dlc/", batch_name)
+        prefix = os.path.join("loc-preservation/lcbp/ndnp/dlc", batch_name)
     else:
         prefix = batch_name
     payload = {
@@ -271,6 +288,9 @@ def job_info(ctx):
 @click.pass_context
 def reprocess(ctx, batch_name: str, bucket: str):
     """Command to kick off reprocessing job for a certain S3 NDNP batch."""
+    if not batch_name:
+        print("[red]No batch_name provided. Exiting.")
+        return
     ctx = reprocess_batch(ctx, batch_name, bucket)
 
 
