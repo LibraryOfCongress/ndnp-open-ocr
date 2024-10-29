@@ -18,10 +18,12 @@ variables:
 
 workflow:
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+    # Trigger development deployment on merge request submission to main
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "merge_request_event"'
       variables:
         TF_STATE_NAME: "development-deployment"
       when: always
+    # Trigger production deployment on a successful merge (push) to prod
     - if: '$CI_COMMIT_BRANCH == "prod" && $CI_PIPELINE_SOURCE == "push"'
       variables:
         TF_STATE_NAME: "production-deployment"
