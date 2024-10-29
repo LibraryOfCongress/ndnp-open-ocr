@@ -16,6 +16,18 @@ stages:
 variables:
   AWS_REGION: "us-east-2"
 
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+      variables:
+        TF_STATE_NAME: "development-deployment"
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "prod" && $CI_PIPELINE_SOURCE == "push"'
+      variables:
+        TF_STATE_NAME: "production-deployment"
+      when: always
+    - when: never
+
 fmt:
   extends: .terraform:fmt
   needs: []
@@ -29,7 +41,6 @@ deploy:
   image:
     name: hashicorp/terraform:1.5.0
     entrypoint: [""]
-
   stage: deploy
   variables:
     TF_VAR_env: $TF_STATE_NAME
@@ -41,20 +52,9 @@ deploy:
     - terraform workspace select ndnp-open-ocr-$TF_STATE_NAME || terraform workspace new ndnp-open-ocr-$TF_STATE_NAME
   script:
     - terraform apply -input=false -auto-approve
-    # Extract the ECR repository URI and save it for the next stage
     - export ECR_REPO_URI=$(terraform output -raw ecr_repo_url)
   artifacts:
     when: always
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "merge_request_event"'
-      variables:
-        TF_STATE_NAME: "development-deployment"
-    - if: '$CI_COMMIT_BRANCH == "prod" && $CI_PIPELINE_SOURCE == "merge_request_event"'
-      variables:
-        TF_STATE_NAME: "production-deployment"
-    - when: always
-      variables:
-        TF_STATE_NAME: "development-deployment"
 
 # Docker Build and Push for Fargate Deployment
 deploy_fargate:
@@ -68,11 +68,7 @@ deploy_fargate:
     - apk add --no-cache curl jq python3 py3-pip
     - python3 -m venv /tmp/venv
     - . /tmp/venv/bin/activate
-
-    # Install AWS CLI in virtual environment
     - pip install awscli
-
-    # Set AWS region if not already set
     - export AWS_REGION=${AWS_REGION:-"us-east-2"}
   script:
     - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin 342134162356.dkr.ecr.us-east-2.amazonaws.com
@@ -81,21 +77,15 @@ deploy_fargate:
     - docker push 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-${TF_STATE_NAME}:latest
   environment:
     name: $TF_STATE_NAME
-  rules:
-  - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "merge_request_event"'
-    variables:
-      TF_STATE_NAME: "development-deployment"
-  - if: '$CI_COMMIT_BRANCH == "prod" && $CI_PIPELINE_SOURCE == "merge_request_event"'
-    variables:
-      TF_STATE_NAME: "production-deployment"
-  - when: always
-    variables:
-      TF_STATE_NAME: "development-deployment"
 
 # Python CLI Build Job
 build_cli:
   image: python:3.9
   stage: build_cli
+  variables:
+    OUTPUT_BUCKET_NAME: "ndnp-open-ocr-output-bucket-${TF_STATE_NAME}"
+    SCHEDULER_ARN: "arn:aws:lambda:us-east-2:420280634985:function:ndnp-open-ocr-scheduler-lambda-function-${TF_STATE_NAME}"
+    GET_JOB_ARN: "arn:aws:lambda:us-east-2:420280634985:function:ndnp-open-ocr-get-job-lambda-function-${TF_STATE_NAME}"
   script:
     - pip install poetry
     - cd packages/cli/
@@ -108,13 +98,6 @@ build_cli:
     - poetry config http-basic.gitlab-ci-token ${CI_JOB_TOKEN} gitlab-ci-token
     - poetry config repositories.gitlab ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
     - poetry publish --repository gitlab --username gitlab-ci-token --password ${CI_JOB_TOKEN}
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      variables:
-        TF_STATE_NAME: "development-deployment"
-      changes:
-        - packages/cli/**/*
-      when: always
 
 destroy:
   stage: destroy
