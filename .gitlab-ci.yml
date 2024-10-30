@@ -90,7 +90,6 @@ build_cli:
     - pip install poetry
     - cd packages/cli/
     # Inject stage-specific variables into a config file
-    - echo "INPUT_BUCKET_NAME = '${INPUT_BUCKET_NAME}'" > config.py
     - echo "OUTPUT_BUCKET_NAME = '${OUTPUT_BUCKET_NAME}'" >> config.py
     - echo "SCHEDULER_ARN = '${SCHEDULER_ARN}'" >> config.py
     - echo "GET_JOB_ARN = '${GET_JOB_ARN}'" >> config.py
