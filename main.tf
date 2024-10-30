@@ -33,6 +33,8 @@ module "batch" {
   service_name         = "ndnp-open-ocr-service"
   aws_s3_output_bucket = module.s3.bucket_name
   env                  = var.env
+  get_job_function_name = module.lambda.get_job_function_name
+  get_job_function_invoke_arn = module.lambda.get_job_function_invoke_arn
 }
 
 output "ecr_repo_url" {

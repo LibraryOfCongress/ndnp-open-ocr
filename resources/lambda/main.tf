@@ -42,29 +42,12 @@ resource "aws_lambda_function" "get_job_function" {
       LD_LIBRARY_PATH = "/opt/lib"
       PATH            = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
       TMP             = "/tmp"
+      BATCH_QUEUE          = var.batch_job_queue
+      OUTPUT_BUCKET_NAME          = var.aws_s3_output_bucket
     }
   }
 }
 
-# Describe jobs Lambda function to get detailed Batch job metadata
-resource "aws_lambda_function" "describe_function" {
-  function_name    = "ndnp-open-ocr-describe-lambda-function-${var.env}"
-  filename         = var.output_path
-  handler          = "lambdas/describe.handler"
-  role             = aws_iam_role.lambda_role.arn
-  runtime          = "python3.11"
-  source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  timeout          = 500
-
-  environment {
-    variables = {
-      TESSDATA_PREFIX = "/opt/share/tessdata"
-      LD_LIBRARY_PATH = "/opt/lib"
-      PATH            = "/opt/bin:/usr/local/bin:/usr/bin:/bin"
-      TMP             = "/tmp"
-    }
-  }
-}
 
 resource "aws_iam_role" "lambda_role" {
   name               = "ndnp-open-ocr-lambda-role-${var.env}"
@@ -138,18 +121,12 @@ resource "aws_iam_role_policy_attachment" "attach_iam_policy_to_lambda_role" {
 
 # Log group for scheduler
 resource "aws_cloudwatch_log_group" "scheduler_function_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.scheduler_function.function_name}-${var.env}"
+  name              = "/aws/lambda/${aws_lambda_function.scheduler_function.function_name}"
   retention_in_days = 14
 }
 
 # Log group for get job function
 resource "aws_cloudwatch_log_group" "get_job_function_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.get_job_function.function_name}-${var.env}"
-  retention_in_days = 14
-}
-
-# Log group for describe jobs function
-resource "aws_cloudwatch_log_group" "describe_function_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.describe_function.function_name}-${var.env}"
+  name              = "/aws/lambda/${aws_lambda_function.get_job_function.function_name}"
   retention_in_days = 14
 }

@@ -84,7 +84,7 @@ resource "aws_cloudwatch_log_group" "log_group" {
 
   lifecycle {
     prevent_destroy = false  # Prevent destruction of the log group
-    ignore_changes  = [name]  # Ignore changes if the log group already exists
+    ignore_changes  = [name] # Ignore changes if the log group already exists
   }
 }
 
@@ -95,9 +95,9 @@ resource "aws_iam_role" "batch_service_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Service = "batch.amazonaws.com" },
-      Action   = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 
@@ -140,9 +140,9 @@ resource "aws_iam_role" "batch_execution_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Service = "ecs-tasks.amazonaws.com" },
-      Action   = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 
@@ -163,9 +163,9 @@ resource "aws_iam_role" "batch_job_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Service = "ecs-tasks.amazonaws.com" },
-      Action   = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 
@@ -187,10 +187,10 @@ resource "aws_batch_compute_environment" "batch_compute_environment" {
   service_role             = aws_iam_role.batch_service_role.arn
 
   compute_resources {
-    type                = "FARGATE"
-    max_vcpus           = 500
-    subnets             = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
-    security_group_ids  = [aws_security_group.main_sg.id]
+    type               = "FARGATE"
+    max_vcpus          = 500
+    subnets            = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
+    security_group_ids = [aws_security_group.main_sg.id]
   }
 
   tags = {
@@ -222,20 +222,20 @@ resource "aws_batch_job_definition" "batch_job_definition" {
   platform_capabilities = ["FARGATE"]
 
   container_properties = jsonencode({
-    image                = "${aws_ecr_repository.repo.repository_url}:latest"
-    executionRoleArn     = aws_iam_role.batch_execution_role.arn
-    jobRoleArn           = aws_iam_role.batch_job_role.arn
+    image            = "${aws_ecr_repository.repo.repository_url}:latest"
+    executionRoleArn = aws_iam_role.batch_execution_role.arn
+    jobRoleArn       = aws_iam_role.batch_job_role.arn
     resourceRequirements = [
       {
         type  = "VCPU"
-        value = "1"  # Adjust based on your job's CPU needs
+        value = "1" # Adjust based on your job's CPU needs
       },
       {
         type  = "MEMORY"
-        value = "2048"  # Adjust based on your job's memory needs
+        value = "2048" # Adjust based on your job's memory needs
       }
     ]
-    environment          = [
+    environment = [
       {
         name  = "AWS_REGION",
         value = "us-east-2"
@@ -266,3 +266,45 @@ resource "aws_batch_job_definition" "batch_job_definition" {
     Name = "ndnp-open-ocr-batch-job-definition-${var.env}"
   }
 }
+
+# # Automatic Trigger for Get Status to write logs to S3
+# resource "aws_cloudwatch_event_rule" "batch_job_completed" {
+#   name          = "ndnp-open-ocr-batch-job-completed-${var.env}"
+#   description   = "EventBridge rule for AWS Batch job state change"
+#   event_pattern = <<EOF
+# {
+#   "source": ["aws.batch"],
+#   "detail-type": ["Batch Job State Change"],
+#   "detail": {
+#     "status": ["SUCCEEDED", "FAILED"]
+#   }
+# }
+# EOF
+# }
+
+# resource "aws_cloudwatch_event_target" "batch_job_completed_target" {
+#   rule = aws_cloudwatch_event_rule.batch_job_completed.name
+#   arn  = var.get_job_function_invoke_arn
+
+#   input_transformer {
+#     input_paths = {
+#       jobName = "$.detail.jobName"
+#     }
+#     input_template = <<EOF
+# {
+#   "pathParameters": {
+#     "jobName": "<jobName>"
+#   }
+# }
+# EOF
+#   }
+# }
+
+
+# resource "aws_lambda_permission" "allow_eventbridge_to_invoke" {
+#   statement_id  = "AllowExecutionFromEventBridge"
+#   action        = "lambda:InvokeFunction"
+#   function_name = var.get_job_function_name
+#   principal     = "events.amazonaws.com"
+#   source_arn    = aws_cloudwatch_event_rule.batch_job_completed.arn
+# }

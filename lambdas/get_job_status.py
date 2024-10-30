@@ -1,20 +1,20 @@
 import json
 import boto3
+import os
 from datetime import datetime
 from botocore.exceptions import ClientError
 
 # Initialize the AWS Batch and S3 clients
 batch = boto3.client("batch")
 s3 = boto3.client("s3")
-lambda_client = boto3.client("lambda", region_name="us-east-2")
 
 
 def handler(event, context):
     # Extract parameters from the event
-    queue_name = "ndnp-open-ocr-batch-job-queue-dillonpeterson12"
-    bucket_name = "ndnp-open-ocr-output-bucket-test-dillonpeterson12"
+    queue_name = os.environ.get("BATCH_QUEUE")
+    bucket_name = os.environ.get("OUTPUT_BUCKET_NAME")
     prefix = "notvalidated"
-    job_name = event['pathParameters']['jobName']
+    job_name = event["pathParameters"]["jobName"]
 
     if not queue_name or not bucket_name or not prefix or not job_name:
         return {
@@ -33,6 +33,11 @@ def handler(event, context):
     ]
 
     if succeeded_jobs:
+        log_to_s3(
+            bucket_name,
+            job_name,
+            "Job completed successfully with all TIFs processed without error.",
+        )
         return {
             "statusCode": 200,
             "body": json.dumps(
@@ -53,8 +58,17 @@ def handler(event, context):
         array_size = job["arrayProperties"]["size"]
         # Count the number of sub-jobs that haven't been processed yet
         pending_subtasks = sum(
-            1 for index in range(array_size)
-            if batch.describe_jobs(jobs=[f"{job['jobId']}:{index}"])["jobs"][0]["status"] not in ["SUCCEEDED", "FAILED"]
+            1
+            for index in range(array_size)
+            if batch.describe_jobs(jobs=[f"{job['jobId']}:{index}"])["jobs"][0][
+                "status"
+            ]
+            not in ["SUCCEEDED", "FAILED"]
+        )
+        log_to_s3(
+            bucket_name,
+            job_name,
+            f"Job is still running. {pending_subtasks} subtasks left before completion.",
         )
         return {
             "statusCode": 200,
@@ -75,6 +89,11 @@ def handler(event, context):
         if other_jobs:
             job = other_jobs[0]
             array_size = job["arrayProperties"]["size"]
+            log_to_s3(
+                bucket_name,
+                job_name,
+                f"Job is in status {status}. {array_size} subtasks in total.",
+            )
             return {
                 "statusCode": 200,
                 "body": json.dumps(
@@ -91,6 +110,11 @@ def handler(event, context):
     ]
 
     if not array_jobs:
+        log_to_s3(
+            bucket_name,
+            job_name,
+            f"No FAILED array jobs found for job name: {job_name}.",
+        )
         return {
             "statusCode": 200,
             "body": json.dumps(f"No FAILED array jobs found for job name: {job_name}."),
@@ -165,6 +189,8 @@ def handler(event, context):
                 }
             )
 
+    log_to_s3(bucket_name, job_name, job_results)
+
     # Return the details in a visually presentable JSON format
     return {"statusCode": 200, "body": json.dumps(job_results, indent=4)}
 
@@ -181,3 +207,13 @@ def get_file_list(bucket_name, prefix):
                 if key.lower().endswith(".tif"):
                     s3_keys.append(key)
     return s3_keys
+
+
+def log_to_s3(bucket_name, job_name, log_data):
+    file_name = f"{job_name}/batch-logs-metadata.json"
+    s3.put_object(
+        Bucket=bucket_name,
+        Key=file_name,
+        Body=json.dumps(log_data, indent=2),
+        ContentType="application/json",
+    )
