@@ -12,7 +12,7 @@ idaptive-aws-cli-login -u dpeterson -t loc.my.idaptive.app -r us-east-2\
 
 To kickoff batch processing job
 ```sh
-python cli.py reprocess --batch_name=notvalidated --bucket=ndnp-open-ocr-output-bucket-test
+python cli.py reprocess --batch_name=notvalidated_orig --bucket=ndnp-open-ocr-output-development-deployment
 ```
 
 To pull data down from reprocessing job:

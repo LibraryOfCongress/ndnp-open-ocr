@@ -11,16 +11,23 @@ from botocore.config import Config
 import keyring
 import shutil
 
+# Import the generated config file with injected values
+import config
+
 CONFIG_KEYS = ["job_id", "output_dir"]
 
 
 def initialize_config():
     """Initialize the configuration dictionary from keyring or set defaults."""
-    config = {}
+    config_dict = {
+        "OUTPUT_BUCKET_NAME": config.OUTPUT_BUCKET_NAME,
+        "SCHEDULER_ARN": config.SCHEDULER_ARN,
+        "GET_JOB_ARN": config.GET_JOB_ARN,
+    }
+    # Load other config values from keyring as needed
     for key in CONFIG_KEYS:
-        # Fetch from keyring, or None if not present
-        config[key] = keyring.get_password("ndnp_openocr", key)
-    return config
+        config_dict[key] = keyring.get_password("ndnp_openocr", key)
+    return config_dict
 
 
 def reprocess_batch(ctx, batch_name: str, bucket: str):
@@ -48,7 +55,7 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
         # Async invoke the scheduler Lambda function passing the prefix and bucket name
         # as path parameters (modeled from API Gateway request, should be changed later).
         response = lambda_client.invoke(
-            FunctionName=ctx.obj["SCHEDULER_ARN"],
+            FunctionName=ctx.obj['config']["SCHEDULER_ARN"],
             InvocationType="RequestResponse",
             Payload=json.dumps(payload).encode("utf-8"),
         )
@@ -86,14 +93,6 @@ def cli(ctx):
     # Initialize the context dict (these probably should somehow be populated by Terraform in the future...)
     ctx.ensure_object(dict)
     ctx.obj["config"] = initialize_config()
-    ctx.obj["INPUT_BUCKET_NAME"] = "loc-preservation"
-    ctx.obj["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
-    ctx.obj["SCHEDULER_ARN"] = (
-    "arn:aws:lambda:us-east-2:420280634985:function:ndnp-open-ocr-scheduler-lambda-function-dillonpeterson12"
-)
-    ctx.obj["GET_JOB_ARN"] = (
-    "arn:aws:lambda:us-east-2:420280634985:function:ndnp-open-ocr-get-job-lambda-function-dillonpeterson12"
-)
 
 
 @click.command()
@@ -126,7 +125,7 @@ def sync(ctx, job, output_dir, local_batch):
         print(f"[green]Using output directory: {output_dir}")
 
     # Proceed with the command's main functionality
-    bucket = ctx.obj["OUTPUT_BUCKET_NAME"]
+    bucket = ctx.obj['config']["OUTPUT_BUCKET_NAME"]
     sync_s3_batch(bucket, job, local_batch, output_dir)
 
 
@@ -134,7 +133,7 @@ def sync(ctx, job, output_dir, local_batch):
 @click.option(
     "--job",
     default=None,
-    help="The job ID. If not provided, the last used job ID is fetched from the keyring."
+    help="The job ID. If not provided, the last used job ID is fetched from the keyring.",
 )
 @click.pass_context
 def get(ctx, job: str):
@@ -156,11 +155,10 @@ def get(ctx, job: str):
     print("JOB ID: ", job)
     payload = {"pathParameters": {"jobName": job}}
 
-
     try:
         # Invoke Lambda function to get job status
         response = lambda_client.invoke(
-            FunctionName=ctx.obj["GET_JOB_ARN"],
+            FunctionName=ctx.obj['config']["GET_JOB_ARN"],
             InvocationType="RequestResponse",
             Payload=json.dumps(payload).encode("utf-8"),
         )
@@ -176,11 +174,11 @@ def get(ctx, job: str):
 @click.command(name="delete")
 @click.option(
     "--job-id",
-    help="The job ID to delete from S3. Uses the stored job ID if not provided."
+    help="The job ID to delete from S3. Uses the stored job ID if not provided.",
 )
 @click.option(
     "--output-dir",
-    help="The local directory to delete. Uses the stored output directory if not provided."
+    help="The local directory to delete. Uses the stored output directory if not provided.",
 )
 @click.pass_context
 def delete(ctx, job_id, output_dir):
@@ -202,7 +200,7 @@ def delete(ctx, job_id, output_dir):
     if click.confirm(
         f"Are you sure you want to delete S3 directory for job_id: {job_id} and local directory: {output_dir}?"
     ):
-        bucket_name = ctx.obj["OUTPUT_BUCKET_NAME"]
+        bucket_name = ctx.obj['config']["OUTPUT_BUCKET_NAME"]
 
         # Delete S3 directory
         s3 = boto3.resource("s3")
@@ -250,12 +248,12 @@ def job_info(ctx):
 @click.option(
     "--batch_name",
     default="",
-    help="The batch_name in loc-preservation bucket to reprocess."
+    help="The batch_name in loc-preservation bucket to reprocess.",
 )
 @click.option(
     "--bucket",
     default="loc-preservation",
-    help="The s3 bucket that the batch is located in."
+    help="The s3 bucket that the batch is located in.",
 )
 @click.pass_context
 def reprocess(ctx, batch_name: str, bucket: str):
