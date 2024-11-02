@@ -29,7 +29,8 @@ def handler(event, context):
     succeeded_response = batch.list_jobs(jobQueue=queue_name, jobStatus="SUCCEEDED")
 
     # Filter to find the specific job we’re interested in. jobName is unique, so only
-    # one job with this name should exist.
+    # one job with this name should exist. Every jobName has array jobs associated with it.
+    # We only want to check the array jobs for the jobName we’re interested in.
     succeeded_jobs = [
         job
         for job in succeeded_response["jobSummaryList"]
