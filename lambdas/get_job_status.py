@@ -10,13 +10,14 @@ s3 = boto3.client("s3")
 
 
 def handler(event, context):
-    # Extract parameters from the event
+    # Pull necessary parameters from the event object
     queue_name = os.environ.get("BATCH_QUEUE")
     bucket_name = os.environ.get("OUTPUT_BUCKET_NAME")
     prefix = "notvalidated"
     job_name = event["pathParameters"]["jobName"]
 
-    if not queue_name or not bucket_name or not prefix or not job_name:
+    if not job_name:
+        # Return an error if job_name is missing
         return {
             "statusCode": 400,
             "body": json.dumps(
@@ -24,14 +25,18 @@ def handler(event, context):
             ),
         }
 
-    # Check for SUCCEEDED jobs
+    # Check for all completed jobs currently marked as "SUCCEEDED" in the batch
     succeeded_response = batch.list_jobs(jobQueue=queue_name, jobStatus="SUCCEEDED")
+
+    # Filter to find the specific job we’re interested in. jobName is unique, so only
+    # one job with this name should exist.
     succeeded_jobs = [
         job
         for job in succeeded_response["jobSummaryList"]
         if "arrayProperties" in job and job["jobName"] == job_name
     ]
 
+    # If the job has already succeeded, log this info and return it
     if succeeded_jobs:
         log_to_s3(
             bucket_name,
@@ -45,7 +50,7 @@ def handler(event, context):
             ),
         }
 
-    # Check if job is still running
+    # Repeat the above process for "RUNNING" jobs to monitor in-progress tasks
     running_response = batch.list_jobs(jobQueue=queue_name, jobStatus="RUNNING")
     running_jobs = [
         job
@@ -56,7 +61,7 @@ def handler(event, context):
     if running_jobs:
         job = running_jobs[0]
         array_size = job["arrayProperties"]["size"]
-        # Count the number of sub-jobs that haven't been processed yet
+        # Count the sub-jobs (array tasks) that haven't finished yet
         pending_subtasks = sum(
             1
             for index in range(array_size)
@@ -77,7 +82,7 @@ def handler(event, context):
             ),
         }
 
-    # Check for other job statuses (STARTING, PENDING, SUBMITTED)
+    # Check for jobs in intermediate statuses to give users an update on their job’s state
     other_statuses = ["STARTING", "PENDING", "SUBMITTED"]
     for status in other_statuses:
         response = batch.list_jobs(jobQueue=queue_name, jobStatus=status)
@@ -101,7 +106,7 @@ def handler(event, context):
                 ),
             }
 
-    # Query FAILED jobs
+    # Now handle the "FAILED" jobs to gather data on any sub-tasks that didn't complete successfully
     response = batch.list_jobs(jobQueue=queue_name, jobStatus="FAILED")
     array_jobs = [
         job
@@ -120,12 +125,11 @@ def handler(event, context):
             "body": json.dumps(f"No FAILED array jobs found for job name: {job_name}."),
         }
 
-    # Get list of files from S3 for job index association
+    # Retrieve file paths associated with this job for error tracking purposes
     file_list = get_file_list(bucket_name, prefix)
-
     job_results = []
 
-    # Loop through each array job and get details of sub-jobs
+    # Gather detailed data for each failed array job, including the status and error description
     for array_job in array_jobs:
         array_job_id = array_job["jobId"]
         job_description = batch.describe_jobs(jobs=[array_job_id])
@@ -135,14 +139,12 @@ def handler(event, context):
         array_failed = False
         failed_sub_jobs = []
 
-        # Loop through sub-jobs in the array
         for index in range(array_size):
             sub_job_id = f"{array_job_id}:{index}"
             sub_job_description = batch.describe_jobs(jobs=[sub_job_id])
             sub_job = sub_job_description["jobs"][0]
             job_status = sub_job["status"]
             exit_code = sub_job["container"].get("exitCode", "N/A")
-            reason = sub_job["container"].get("reason", "No reason provided")
             job_index = sub_job["arrayProperties"].get("index", None)
             file_path = (
                 file_list[job_index]
@@ -150,14 +152,14 @@ def handler(event, context):
                 else "Unknown file path"
             )
 
-            # Map exit codes to human-readable descriptions
+            # Map exit codes to readable messages for the error log
             exit_code_description = {
                 0: "Success",
                 1: "The TIF was corrupt. JP2 used instead",
                 2: "OCR Failure: No text found in PDF",
             }.get(exit_code, "Unknown error")
 
-            # If the sub-job failed, collect its details
+            # If the job failed, collect the failure details
             if job_status == "FAILED":
                 array_failed = True
                 failed_sub_jobs.append(
@@ -165,13 +167,13 @@ def handler(event, context):
                         "job_id": sub_job_id,
                         "status": job_status,
                         "exit_code": exit_code,
-                        "reason": reason,
+                        "reason": exit_code_description,
                         "file_path": file_path,
                         "description": exit_code_description,
                     }
                 )
 
-        # If the entire array job was successful, add a success message
+        # Append the job results based on whether the array job failed or succeeded
         if not array_failed:
             job_results.append(
                 {
@@ -191,11 +193,12 @@ def handler(event, context):
 
     log_to_s3(bucket_name, job_name, job_results)
 
-    # Return the details in a visually presentable JSON format
+    # Send the detailed job results as a structured JSON response
     return {"statusCode": 200, "body": json.dumps(job_results, indent=4)}
 
 
 def get_file_list(bucket_name, prefix):
+    # Retrieve and filter all .tif files within the specified prefix
     s3_keys = []
     paginator = s3.get_paginator("list_objects_v2")
     pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
@@ -210,6 +213,7 @@ def get_file_list(bucket_name, prefix):
 
 
 def log_to_s3(bucket_name, job_name, log_data):
+    # Write logs to S3 under the job name directory for organized access
     file_name = f"{job_name}/batch-logs-metadata.json"
     s3.put_object(
         Bucket=bucket_name,

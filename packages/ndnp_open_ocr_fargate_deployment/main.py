@@ -107,9 +107,7 @@ def process_file(file_key, bucket_name, output_bucket_name, output_prefix):
     with tempfile.TemporaryDirectory() as temp_dir:
         input_file_path = download_files_from_s3(bucket_name, file_key, temp_dir)
 
-        jp2_used = False
-        if input_file_path.endswith(".jp2"):
-            jp2_used = True
+        jp2_used = input_file_path.endswith(".jp2")
 
         # Process the file and generate OCR output
         output_path = os.path.join(temp_dir, "output")
