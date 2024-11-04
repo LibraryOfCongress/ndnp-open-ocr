@@ -140,7 +140,9 @@ def sync(ctx, job, output_dir, local_batch):
 def get(ctx, job: str):
     """Retrieve and process job information from AWS Lambda."""
 
-    # Fetch job ID from keyring if not provided
+    # The keyring library saves the job_id from the last run job so that Nathan
+    # can easily check the status of the last job without having to remember or paste in the job_id.
+    # the keystore is only accessible by the user running the CLI, and it's the native keystore for the system.
     if job is None:
         job = keyring.get_password("ndnp_openocr", "job_id")
         if job is None:

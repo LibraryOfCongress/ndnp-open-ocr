@@ -96,6 +96,10 @@ build_cli:
     - poetry build
     - poetry config http-basic.gitlab-ci-token ${CI_JOB_TOKEN} gitlab-ci-token
     - poetry config repositories.gitlab ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
+    # Publish the package to the GitLab Package Registry. The deployment process currently requires manual installation and upgrading
+    # of the deployed CLI tool on NDNPQR. This will be automated in the future.
+    # To install the latest package on NDNPQR after it has been published with the line below, I simply run
+    # pip install --upgrade
     - poetry publish --repository gitlab --username gitlab-ci-token --password ${CI_JOB_TOKEN}
 
 destroy:

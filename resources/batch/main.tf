@@ -83,8 +83,8 @@ resource "aws_cloudwatch_log_group" "log_group" {
   retention_in_days = 90
 
   lifecycle {
-    prevent_destroy = false  # Prevent destruction of the log group
-    ignore_changes  = [name] # Ignore changes if the log group already exists
+    prevent_destroy = false  # Destroy log group on spin down.
+    ignore_changes  = [name]
   }
 }
 
@@ -267,44 +267,44 @@ resource "aws_batch_job_definition" "batch_job_definition" {
   }
 }
 
-# # Automatic Trigger for Get Status to write logs to S3
-# resource "aws_cloudwatch_event_rule" "batch_job_completed" {
-#   name          = "ndnp-open-ocr-batch-job-completed-${var.env}"
-#   description   = "EventBridge rule for AWS Batch job state change"
-#   event_pattern = <<EOF
-# {
-#   "source": ["aws.batch"],
-#   "detail-type": ["Batch Job State Change"],
-#   "detail": {
-#     "status": ["SUCCEEDED", "FAILED"]
-#   }
-# }
-# EOF
-# }
+# Automatic Trigger for Get Status to write logs to S3
+resource "aws_cloudwatch_event_rule" "batch_job_completed" {
+  name          = "ndnp-open-ocr-batch-job-completed-${var.env}"
+  description   = "EventBridge rule for AWS Batch job state change"
+  event_pattern = <<EOF
+{
+  "source": ["aws.batch"],
+  "detail-type": ["Batch Job State Change"],
+  "detail": {
+    "status": ["SUCCEEDED", "FAILED"]
+  }
+}
+EOF
+}
 
-# resource "aws_cloudwatch_event_target" "batch_job_completed_target" {
-#   rule = aws_cloudwatch_event_rule.batch_job_completed.name
-#   arn  = var.get_job_function_invoke_arn
+resource "aws_cloudwatch_event_target" "batch_job_completed_target" {
+  rule = aws_cloudwatch_event_rule.batch_job_completed.name
+  arn  = var.get_job_function_invoke_arn
 
-#   input_transformer {
-#     input_paths = {
-#       jobName = "$.detail.jobName"
-#     }
-#     input_template = <<EOF
-# {
-#   "pathParameters": {
-#     "jobName": "<jobName>"
-#   }
-# }
-# EOF
-#   }
-# }
+  input_transformer {
+    input_paths = {
+      jobName = "$.detail.jobName"
+    }
+    input_template = <<EOF
+{
+  "pathParameters": {
+    "jobName": "<jobName>"
+  }
+}
+EOF
+  }
+}
 
 
-# resource "aws_lambda_permission" "allow_eventbridge_to_invoke" {
-#   statement_id  = "AllowExecutionFromEventBridge"
-#   action        = "lambda:InvokeFunction"
-#   function_name = var.get_job_function_name
-#   principal     = "events.amazonaws.com"
-#   source_arn    = aws_cloudwatch_event_rule.batch_job_completed.arn
-# }
+resource "aws_lambda_permission" "allow_eventbridge_to_invoke" {
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = var.get_job_function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.batch_job_completed.arn
+}
