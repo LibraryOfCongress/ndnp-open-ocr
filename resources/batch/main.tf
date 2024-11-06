@@ -180,6 +180,16 @@ resource "aws_iam_role_policy_attachment" "batch_job_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
+resource "aws_iam_role_policy_attachment" "batch_execution_role_cloudwatch_policy" {
+  role       = aws_iam_role.batch_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "batch_job_role_cloudwatch_policy" {
+  role       = aws_iam_role.batch_job_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
 # AWS Batch Compute Environment
 resource "aws_batch_compute_environment" "batch_compute_environment" {
   compute_environment_name = "ndnp-open-ocr-batch-compute-environment-${var.env}"
@@ -251,7 +261,7 @@ resource "aws_batch_job_definition" "batch_job_definition" {
     logConfiguration = {
       logDriver = "awslogs"
       options = {
-        "awslogs-group"         = "/aws/batch/ndnp-open-ocr-job-${var.env}"
+        "awslogs-group"         = "/aws/batch/job"
         "awslogs-region"        = "us-east-2"
         "awslogs-stream-prefix" = "batch"
       }
@@ -282,29 +292,29 @@ resource "aws_cloudwatch_event_rule" "batch_job_completed" {
 EOF
 }
 
-resource "aws_cloudwatch_event_target" "batch_job_completed_target" {
-  rule = aws_cloudwatch_event_rule.batch_job_completed.name
-  arn  = var.get_job_function_invoke_arn
+# resource "aws_cloudwatch_event_target" "batch_job_completed_target" {
+#   rule = aws_cloudwatch_event_rule.batch_job_completed.name
+#   arn  = var.get_job_function_invoke_arn
 
-  input_transformer {
-    input_paths = {
-      jobName = "$.detail.jobName"
-    }
-    input_template = <<EOF
-{
-  "pathParameters": {
-    "jobName": "<jobName>"
-  }
-}
-EOF
-  }
-}
+#   input_transformer {
+#     input_paths = {
+#       jobName = "$.detail.jobName"
+#     }
+#     input_template = <<EOF
+# {
+#   "pathParameters": {
+#     "jobName": "<jobName>"
+#   }
+# }
+# EOF
+#   }
+# }
 
 
-resource "aws_lambda_permission" "allow_eventbridge_to_invoke" {
-  statement_id  = "AllowExecutionFromEventBridge"
-  action        = "lambda:InvokeFunction"
-  function_name = var.get_job_function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.batch_job_completed.arn
-}
+# resource "aws_lambda_permission" "allow_eventbridge_to_invoke" {
+#   statement_id  = "AllowExecutionFromEventBridge"
+#   action        = "lambda:InvokeFunction"
+#   function_name = var.get_job_function_name
+#   principal     = "events.amazonaws.com"
+#   source_arn    = aws_cloudwatch_event_rule.batch_job_completed.arn
+# }
