@@ -16,3 +16,4 @@ terraform.tfstate.d/sd*
 **jupyter**
 *.tar*
 *.whl
+*old_terraform

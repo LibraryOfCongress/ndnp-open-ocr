@@ -105,13 +105,13 @@ def clear_tmp_directory():
 
 def process_file(file_key, bucket_name, output_bucket_name, output_prefix):
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Download the file
         input_file_path = download_files_from_s3(bucket_name, file_key, temp_dir)
 
-        # Process the file
+        jp2_used = input_file_path.endswith(".jp2")
+
+        # Process the file and generate OCR output
         output_path = os.path.join(temp_dir, "output")
         os.makedirs(output_path, exist_ok=True)
-
         processor = OCRProcessor(
             input_file_path,
             output_path,
@@ -120,26 +120,30 @@ def process_file(file_key, bucket_name, output_bucket_name, output_prefix):
         processor.generate_pdf()
         processor.generate_alto()
 
-        # Check if the generated PDF contains text
         generated_pdf_path = processor.get_postprocessed_pdf_path()
-        logging.info("GENERATED PDF PATH: {}".format(generated_pdf_path))
         text_found = False
         with open(generated_pdf_path, "rb") as f:
             reader = PdfReader(f)
-            print(reader)
             for page in reader.pages:
                 text = page.extract_text()
                 if text:
                     text_found = True
                     break
 
-        if text_found:
-            # Upload files to S3
-            print("TEXT FOUND")
-            upload_files_to_s3(output_path, output_bucket_name, output_prefix)
-        else:
+        # Track JP2 usage and No Text errors using exit codes
+        if not text_found:
             logging.error(f"No text found in the generated PDF for {file_key}.")
+            sys.exit(2)  # Exit code 2 for "No Text" error
 
+        elif jp2_used:
+            upload_files_to_s3(output_path, output_bucket_name, output_prefix)
+            logging.info(f"JP2 was used instead of TIF for {file_key}.")
+            sys.exit(1)  # Exit code 1 for "JP2 used" condition
+
+        else:
+            upload_files_to_s3(output_path, output_bucket_name, output_prefix)
+            logging.info(f"File processed successfully: {file_key}")
+            sys.exit(0)  # Exit code 0 for success
 
 
 if __name__ == "__main__":

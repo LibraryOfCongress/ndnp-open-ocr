@@ -2,3 +2,13 @@ output "scheduler_function_invoke_arn" {
   description = "The ARN to be used to invoke the Scheduler function"
   value = aws_lambda_function.scheduler_function.invoke_arn
 }
+
+output "get_job_function_name" {
+  description = "The name of the GetJob function"
+  value = aws_lambda_function.get_job_function.function_name
+}
+
+output "get_job_function_invoke_arn" {
+  description = "The ARN to be used to invoke the GetJob function"
+  value = aws_lambda_function.get_job_function.arn
+}

@@ -256,7 +256,7 @@ resource "aws_batch_job_definition" "batch_job_definition" {
       options = {
         "awslogs-group"         = "/aws/batch/job"
         "awslogs-region"        = "us-east-2"
-        "awslogs-stream-prefix" = "batch"
+        "awslogs-stream-prefix" = "ndnp-open-ocr-batch"
       }
     }
   })

@@ -79,8 +79,13 @@ resource "aws_ecr_repository" "repo" {
 
 # CloudWatch Log Group for AWS Batch
 resource "aws_cloudwatch_log_group" "log_group" {
-  name              = "/aws/batch/job"
+  name              = "/aws/batch/ndnp-open-ocr-job-${var.env}"
   retention_in_days = 90
+
+  lifecycle {
+    prevent_destroy = false  # Destroy log group on spin down.
+    ignore_changes  = [name]
+  }
 }
 
 # AWS Batch Service Role
@@ -90,9 +95,9 @@ resource "aws_iam_role" "batch_service_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Service = "batch.amazonaws.com" },
-      Action   = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 
@@ -101,21 +106,43 @@ resource "aws_iam_role" "batch_service_role" {
   }
 }
 
+# Attach necessary policies for AWS Batch Service Role
 resource "aws_iam_role_policy_attachment" "batch_service_role_policy" {
   role       = aws_iam_role.batch_service_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole"
 }
 
+# Add ECS permissions for the Batch Service Role
+resource "aws_iam_policy" "ecs_list_clusters_policy" {
+  name = "ndnp-open-ocr-ecs-list-clusters-policy-${var.env}"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Action = [
+        "ecs:ListClusters"
+      ],
+      Resource = "*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_list_clusters_policy_attachment" {
+  role       = aws_iam_role.batch_service_role.name
+  policy_arn = aws_iam_policy.ecs_list_clusters_policy.arn
+}
+
 # AWS Batch Execution Role
 resource "aws_iam_role" "batch_execution_role" {
-  name = "ndnp-open-ocr-batch-execution-role"
+  name = "ndnp-open-ocr-batch-execution-role-${var.env}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Service = "ecs-tasks.amazonaws.com" },
-      Action   = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 
@@ -136,9 +163,9 @@ resource "aws_iam_role" "batch_job_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Service = "ecs-tasks.amazonaws.com" },
-      Action   = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 
@@ -153,6 +180,16 @@ resource "aws_iam_role_policy_attachment" "batch_job_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
+resource "aws_iam_role_policy_attachment" "batch_execution_role_cloudwatch_policy" {
+  role       = aws_iam_role.batch_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "batch_job_role_cloudwatch_policy" {
+  role       = aws_iam_role.batch_job_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
 # AWS Batch Compute Environment
 resource "aws_batch_compute_environment" "batch_compute_environment" {
   compute_environment_name = "ndnp-open-ocr-batch-compute-environment-${var.env}"
@@ -160,10 +197,10 @@ resource "aws_batch_compute_environment" "batch_compute_environment" {
   service_role             = aws_iam_role.batch_service_role.arn
 
   compute_resources {
-    type                = "FARGATE"
-    max_vcpus           = 500
-    subnets             = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
-    security_group_ids  = [aws_security_group.main_sg.id]
+    type               = "FARGATE"
+    max_vcpus          = 500
+    subnets            = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
+    security_group_ids = [aws_security_group.main_sg.id]
   }
 
   tags = {
@@ -186,7 +223,6 @@ resource "aws_batch_job_queue" "batch_job_queue" {
   }
 }
 
-
 # AWS Batch Job Definition
 resource "aws_batch_job_definition" "batch_job_definition" {
   name = "ndnp-open-ocr-batch-job-definition-${var.env}"
@@ -196,20 +232,20 @@ resource "aws_batch_job_definition" "batch_job_definition" {
   platform_capabilities = ["FARGATE"]
 
   container_properties = jsonencode({
-    image                = "${aws_ecr_repository.repo.repository_url}:latest"
-    executionRoleArn     = aws_iam_role.batch_execution_role.arn
-    jobRoleArn           = aws_iam_role.batch_job_role.arn
+    image            = "${aws_ecr_repository.repo.repository_url}:latest"
+    executionRoleArn = aws_iam_role.batch_execution_role.arn
+    jobRoleArn       = aws_iam_role.batch_job_role.arn
     resourceRequirements = [
       {
         type  = "VCPU"
-        value = "1"  # Adjust based on your job's CPU needs
+        value = "1" # Adjust based on your job's CPU needs
       },
       {
         type  = "MEMORY"
-        value = "2048"  # Adjust based on your job's memory needs
+        value = "2048" # Adjust based on your job's memory needs
       }
     ]
-    environment          = [
+    environment = [
       {
         name  = "AWS_REGION",
         value = "us-east-2"
@@ -220,7 +256,7 @@ resource "aws_batch_job_definition" "batch_job_definition" {
       }
     ]
     networkConfiguration = {
-      assignPublicIp = "DISABLED"
+      assignPublicIp = "ENABLED"
     }
     logConfiguration = {
       logDriver = "awslogs"
@@ -240,3 +276,45 @@ resource "aws_batch_job_definition" "batch_job_definition" {
     Name = "ndnp-open-ocr-batch-job-definition-${var.env}"
   }
 }
+
+# Automatic Trigger for Get Status to write logs to S3
+resource "aws_cloudwatch_event_rule" "batch_job_completed" {
+  name          = "ndnp-open-ocr-batch-job-completed-${var.env}"
+  description   = "EventBridge rule for AWS Batch job state change"
+  event_pattern = <<EOF
+{
+  "source": ["aws.batch"],
+  "detail-type": ["Batch Job State Change"],
+  "detail": {
+    "status": ["SUCCEEDED", "FAILED"]
+  }
+}
+EOF
+}
+
+# resource "aws_cloudwatch_event_target" "batch_job_completed_target" {
+#   rule = aws_cloudwatch_event_rule.batch_job_completed.name
+#   arn  = var.get_job_function_invoke_arn
+
+#   input_transformer {
+#     input_paths = {
+#       jobName = "$.detail.jobName"
+#     }
+#     input_template = <<EOF
+# {
+#   "pathParameters": {
+#     "jobName": "<jobName>"
+#   }
+# }
+# EOF
+#   }
+# }
+
+
+# resource "aws_lambda_permission" "allow_eventbridge_to_invoke" {
+#   statement_id  = "AllowExecutionFromEventBridge"
+#   action        = "lambda:InvokeFunction"
+#   function_name = var.get_job_function_name
+#   principal     = "events.amazonaws.com"
+#   source_arn    = aws_cloudwatch_event_rule.batch_job_completed.arn
+# }

@@ -11,16 +11,80 @@ from botocore.config import Config
 import keyring
 import shutil
 
+# Import the generated config file with injected values
+import config
+
 CONFIG_KEYS = ["job_id", "output_dir"]
+REGION = "us-east-2"
 
 
 def initialize_config():
     """Initialize the configuration dictionary from keyring or set defaults."""
-    config = {}
+    config_dict = {
+        "OUTPUT_BUCKET_NAME": config.OUTPUT_BUCKET_NAME,
+        "SCHEDULER_ARN": config.SCHEDULER_ARN,
+        "GET_JOB_ARN": config.GET_JOB_ARN,
+    }
+    # Load other config values from keyring as needed
     for key in CONFIG_KEYS:
-        # Fetch from keyring, or None if not present
-        config[key] = keyring.get_password("ndnp_openocr", key)
-    return config
+        config_dict[key] = keyring.get_password("ndnp_openocr", key)
+    return config_dict
+
+
+def reprocess_batch(ctx, batch_name: str, bucket: str):
+    """Kicks off reprocessing job for a certain S3 NDNP batch."""
+    lambda_client = boto3.client(
+        "lambda",
+        region_name=REGION,
+        config=Config(
+            read_timeout=900,  # Time in seconds
+            connect_timeout=10,  # Time in seconds
+        ),
+    )
+    # This is the prefix from the loc-preservation bucket...should stick to this if we can.
+    if bucket == "loc-preservation":
+        prefix = os.path.join("loc-preservation/lcbp/ndnp/dlc", batch_name)
+    else:
+        prefix = batch_name
+    payload = {
+        "pathParameters": {
+            "prefix": prefix,
+            "bucketName": bucket,
+        }
+    }
+    try:
+        # Async invoke the scheduler Lambda function passing the prefix and bucket name
+        # as path parameters (modeled from API Gateway request, should be changed later).
+        response = lambda_client.invoke(
+            FunctionName=ctx.obj['config']["SCHEDULER_ARN"],
+            InvocationType="RequestResponse",
+            Payload=json.dumps(payload).encode("utf-8"),
+        )
+
+        response_payload = json.loads(response["Payload"].read())
+        print(response_payload)
+
+        body = json.loads(response_payload["body"])
+        job_id = body["job"]
+
+        keyring.set_password("ndnp_openocr", "job_id", job_id)
+
+        print(
+            '\n🚀 [green]Job successfully kicked off for "{}" prefix in "{}" bucket'.format(
+                prefix, bucket
+            )
+        )
+
+        print(
+            "\n [bold cyan] To check status of the job, run: \n ndnp_openocr get --job {}".format(
+                job_id
+            )
+        )
+
+    except Exception as e:
+        print(f"Failed to trigger Lambda function: {e}")
+
+    return ctx
 
 
 @click.group()
@@ -30,14 +94,6 @@ def cli(ctx):
     # Initialize the context dict (these probably should somehow be populated by Terraform in the future...)
     ctx.ensure_object(dict)
     ctx.obj["config"] = initialize_config()
-    ctx.obj["INPUT_BUCKET_NAME"] = "loc-preservation"
-    ctx.obj["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-test"
-    ctx.obj["SCHEDULER_ARN"] = (
-        "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-scheduler-lambda-function-dev"
-    )
-    ctx.obj["GET_JOB_ARN"] = (
-        "arn:aws:lambda:us-east-2:342134162356:function:ndnp-open-ocr-get-job-lambda-function-dev"
-    )
 
 
 @click.command()
@@ -70,7 +126,7 @@ def sync(ctx, job, output_dir, local_batch):
         print(f"[green]Using output directory: {output_dir}")
 
     # Proceed with the command's main functionality
-    bucket = ctx.obj["OUTPUT_BUCKET_NAME"]
+    bucket = ctx.obj['config']["OUTPUT_BUCKET_NAME"]
     sync_s3_batch(bucket, job, local_batch, output_dir)
 
 
@@ -84,7 +140,9 @@ def sync(ctx, job, output_dir, local_batch):
 def get(ctx, job: str):
     """Retrieve and process job information from AWS Lambda."""
 
-    # Fetch job ID from keyring if not provided
+    # The keyring library saves the job_id from the last run job so that Nathan
+    # can easily check the status of the last job without having to remember or paste in the job_id.
+    # the keystore is only accessible by the user running the CLI, and it's the native keystore for the system.
     if job is None:
         job = keyring.get_password("ndnp_openocr", "job_id")
         if job is None:
@@ -96,107 +154,22 @@ def get(ctx, job: str):
         keyring.set_password("ndnp_openocr", "job_id", job)
 
     # Setup AWS Lambda client
-    lambda_client = boto3.client("lambda", region_name="us-east-2")
+    lambda_client = boto3.client("lambda", region_name=REGION)
     print("JOB ID: ", job)
-    payload = {"pathParameters": {"jobId": job}}
+    payload = {"pathParameters": {"jobName": job}}
 
     try:
         # Invoke Lambda function to get job status
         response = lambda_client.invoke(
-            FunctionName=ctx.obj["GET_JOB_ARN"],
+            FunctionName=ctx.obj['config']["GET_JOB_ARN"],
             InvocationType="RequestResponse",
             Payload=json.dumps(payload).encode("utf-8"),
         )
-        print(response)
-        response_payload = json.loads(response["Payload"].read())
-        body = response_payload[0]
-
-        # Check job status and print appropriate messages
-        if int(body["RemainingMessages"]) == 0:
-            print(
-                f"[green]Processing complete. \n\nYou can pull down batch with: "
-                f"ndnp_openocr sync --output-dir=OUTPUT_DIR --local-batch=PATH/TO/LOCAL/BATCH/batch.xml"
-            )
-            print(f"[yellow]These have failed: {body['FailedFiles']}")
-        else:
-            print(f"{body['RemainingMessages']} newspapers remaining for processing")
-            print(
-                f"[yellow]These newspapers have failed to OCR and will be EXCLUDED from outputs in S3: "
-                f"{body['FailedFiles']}"
-            )
-
-        # Print dead-letter queue list if available
-        if 'dlq_list' in body:
-            print("[red]These files are in the dead-letter queue and need manual intervention:")
-            for item in body['dlq_list']:
-                print(f"  - {item}")
-
-        # Print JP2 files used instead of TIFFs if available
-        if 'Jp2s' in body:
-            print("[blue]These JP2 files were used instead of TIFFs:")
-            for jp2 in body['Jp2s']:
-                print(f"  - {jp2}")
-
-        print(f"[gray]{body}")
-
-    except Exception as e:
-        print(f"[red]Failed to trigger Lambda function: {e}")
-
-    return ctx
-
-
-def reprocess_batch(ctx, batch_name: str, bucket: str):
-    """Kicks off reprocessing job for a certain S3 NDNP batch."""
-    lambda_client = boto3.client(
-        "lambda",
-        region_name="us-east-2",
-        config=Config(
-            read_timeout=900,  # Time in seconds
-            connect_timeout=10,  # Time in seconds
-        ),
-    )
-    # This is the prefix from the loc-preservation bucket...should stick to this if we can.
-    if bucket == "loc-preservation":
-        prefix = os.path.join("loc-preservation/lcbp/ndnp/dlc", batch_name)
-    else:
-        prefix = batch_name
-    payload = {
-        "pathParameters": {
-            "prefix": prefix,
-            "bucketName": bucket,
-        }
-    }
-    try:
-        # Async invoke the scheduler Lambda function passing the prefix and bucket name
-        # as path parameters (modeled from API Gateway request, should be changed later).
-        response = lambda_client.invoke(
-            FunctionName=ctx.obj["SCHEDULER_ARN"],
-            InvocationType="RequestResponse",
-            Payload=json.dumps(payload).encode("utf-8"),
-        )
-
         response_payload = json.loads(response["Payload"].read())
         print(response_payload)
 
-        body = json.loads(response_payload["body"])
-        job_id = body["job"]
-
-        keyring.set_password("ndnp_openocr", "job_id", job_id)
-
-        print(
-            '\n🚀 [green]Job successfully kicked off for "{}" prefix in "{}" bucket'.format(
-                prefix, bucket
-            )
-        )
-
-        print(
-            "\n [bold cyan] To check status of the job, run: \n ndnp_openocr get --job {}".format(
-                job_id
-            )
-        )
-
     except Exception as e:
-        print(f"Failed to trigger Lambda function: {e}")
+        print(f"[red]Failed to trigger Lambda function: {e}")
 
     return ctx
 
@@ -230,10 +203,10 @@ def delete(ctx, job_id, output_dir):
     if click.confirm(
         f"Are you sure you want to delete S3 directory for job_id: {job_id} and local directory: {output_dir}?"
     ):
-        bucket_name = ctx.obj["OUTPUT_BUCKET_NAME"]
+        bucket_name = ctx.obj['config']["OUTPUT_BUCKET_NAME"]
 
         # Delete S3 directory
-        s3 = boto3.resource("s3")
+        s3 = boto3.resource("s3", region_name=REGION)
         bucket = s3.Bucket(bucket_name)
         prefix = f"{job_id}/"  # Assuming the job_id is the prefix for the files in S3
         try:

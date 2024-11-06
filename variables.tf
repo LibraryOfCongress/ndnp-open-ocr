@@ -7,5 +7,5 @@ variable "s3_bucket_name" {
 variable "env" {
   description = "The environment (dev, test, prod) from CI"
   type        = string
-  default     = "dev" # Optional, a default stage
+  default     = "development-deployment"
 }
