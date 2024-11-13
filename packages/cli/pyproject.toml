@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ndnp_openocr"
-version = "0.1.7"
+version = "0.1.8"
 description = ""
 authors = ["Library of Congress"]
 
@@ -24,3 +24,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 ndnp_openocr = 'ndnp_openocr.cli:cli'
+
+[[tool.poetry.include]]
+path = "ndnp_openocr/config.py"

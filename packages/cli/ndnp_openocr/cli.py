@@ -1,7 +1,7 @@
 import boto3
 import click
 import requests
-from helpers import sync_s3_batch, find_missing_pdfs
+from .helpers import sync_s3_batch
 from rich import print
 import json
 import time
@@ -12,7 +12,7 @@ import keyring
 import shutil
 
 # Import the generated config file with injected values
-import config
+from . import config
 
 CONFIG_KEYS = ["job_id", "output_dir"]
 REGION = "us-east-2"
