@@ -2,7 +2,7 @@ data "aws_iam_policy_document" "s3" {
   statement {
     actions   = ["s3:*"]
     resources = [
-      "arn:aws:s3:::${var.bucket_name}/*"
+      "arn:aws:s3:::${var.bucket_name}-${var.env}/*"
     ]
   }
   # Enforce SSL
@@ -12,8 +12,8 @@ data "aws_iam_policy_document" "s3" {
     actions   = ["s3:*"]
     # TODO: Should the environment name be included in the bucket name?
     resources = [
-      "arn:aws:s3:::${var.bucket_name}",
-      "arn:aws:s3:::${var.bucket_name}/*"
+      "arn:aws:s3:::${var.bucket_name}-${var.env}",
+      "arn:aws:s3:::${var.bucket_name}-${var.env}/*"
     ]
 
     condition {
@@ -22,6 +22,15 @@ data "aws_iam_policy_document" "s3" {
       values   = ["false"]
     }
   }
+}
+
+# Add public access block
+resource "aws_s3_bucket_public_access_block" "block_public_access" {
+  bucket = aws_s3_bucket.bucket.id
+  block_public_acls       = true
+  ignore_public_acls      = true
+  block_public_policy     = true
+  restrict_public_buckets = true
 }
 
 resource "aws_s3_bucket" "bucket" {
