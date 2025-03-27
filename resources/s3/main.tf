@@ -4,6 +4,10 @@ data "aws_iam_policy_document" "s3" {
     resources = [
       "arn:aws:s3:::${var.bucket_name}-${var.env}/*"
     ]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
   }
   # Enforce SSL
   statement {
@@ -24,10 +28,12 @@ data "aws_iam_policy_document" "s3" {
   }
 }
 # seperate ACL
-resource "aws_s3_bucket_acl" "bucket_acl" {
-  bucket = aws_s3_bucket.bucket.id
-  acl    = "private"
-}
+# commenting this out for now since the bucket doesn't
+# allow acls
+# resource "aws_s3_bucket_acl" "bucket_acl" {
+#   bucket = aws_s3_bucket.bucket.id
+#   acl    = "private"
+# }
 
 # Add public access block
 resource "aws_s3_bucket_public_access_block" "block_public_access" {
@@ -40,7 +46,6 @@ resource "aws_s3_bucket_public_access_block" "block_public_access" {
 
 resource "aws_s3_bucket" "bucket" {
   bucket = "${var.bucket_name}-${var.env}"
-  
   tags = {
     Environment = var.env
   }
