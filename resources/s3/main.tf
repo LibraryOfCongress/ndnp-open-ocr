@@ -19,7 +19,10 @@ data "aws_iam_policy_document" "s3" {
       "arn:aws:s3:::${var.bucket_name}-${var.env}",
       "arn:aws:s3:::${var.bucket_name}-${var.env}/*"
     ]
-
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
     condition {
       test     = "Bool"
       variable = "aws:SecureTransport"
