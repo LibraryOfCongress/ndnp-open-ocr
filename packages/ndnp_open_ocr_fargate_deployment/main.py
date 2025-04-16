@@ -1,7 +1,6 @@
 import os
 import sys
 import boto3
-import json
 import tempfile
 import logging
 import datetime
@@ -16,9 +15,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-# Initialize AWS clients
 s3 = boto3.client("s3")
-
 
 def is_valid_image(input_file_path):
     try:
@@ -26,9 +23,7 @@ def is_valid_image(input_file_path):
             img.verify()  # Verify that the file is a valid image
         return True
     except Exception as e:
-        logging.error(
-            f"Image file is invalid or corrupted: {input_file_path}, error: {e}"
-        )
+        logging.error(f"Image file is invalid or corrupted: {input_file_path}, error: {e}")
         return False
 
 
@@ -51,42 +46,62 @@ def download_files_from_s3(bucket_name, key, temp_dir):
     input_file_path = os.path.join(temp_dir, file_name + file_ext)
     logging.debug("INPUT FILE PATH: %s", input_file_path)
 
-    # Download the original file as specified by the key
+    # Download the original TIF
     s3.download_file(bucket_name, key, input_file_path)
 
+    # If TIF is invalid, fallback to JP2
     if not is_valid_image(input_file_path):
         input_file_path = input_file_path.replace(".tif", ".jp2")
         s3.download_file(bucket_name, key.replace(".tif", ".jp2"), input_file_path)
 
-    # Download the .pdf, .tiff, and .xml files
+    # Download additional sidecar files (.pdf, .xml)
     extensions = [".pdf", ".xml"]
     for ext in extensions:
         s3_key = os.path.join(os.path.dirname(key), file_name + ext)
         download_path = os.path.join(temp_dir, file_name + ext)
 
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
         try:
             logging.info(f"{current_time} - Attempting to download: {s3_key}")
             s3.download_file(bucket_name, s3_key, download_path)
             logging.info(f"{current_time} - Successfully downloaded: {s3_key}")
         except Exception as e:
-            logging.info(f"{current_time} - Error downloading {s3_key}. Error: {e} ")
+            logging.info(f"{current_time} - Error downloading {s3_key}. Error: {e}")
 
     return input_file_path
 
 
-def upload_files_to_s3(output_dir, output_bucket_name, output_prefix):
+def upload_files_to_s3(
+    output_dir,
+    output_bucket_name,
+    output_prefix,
+    original_file_key,
+    original_prefix,
+):
+    """
+    Upload OCR outputs while preserving the relative folder structure from the original TIF.
+    """
+    # Figure out subdirectory structure relative to the prefix
+    # e.g. if original_prefix = "lcbp/ndnp/loc/batch_lc_20090321_volvo/data"
+    # and original_file_key = "lcbp/ndnp/loc/batch_lc_20090321_volvo/data/sn83030214/00175036945/1898120101/0001.tif"
+    # Then rel_path might be "sn83030214/00175036945/1898120101/0001.tif"
+    rel_path = os.path.relpath(original_file_key, original_prefix)
+
+    rel_dir = os.path.dirname(rel_path)  # e.g. "sn83030214/00175036945/1898120101"
+    file_base, _ = os.path.splitext(os.path.basename(rel_path))  # e.g. "0001"
+
     for output_file in os.listdir(output_dir):
-        print(output_file)
-        print(output_dir)
+        # For example, if 'output_file' is "0001.pdf", we want to store it as:
+        #   output_prefix/sn83030214/00175036945/1898120101/0001.pdf
         output_file_path = os.path.join(output_dir, output_file)
-        print(output_prefix)
-        output_key = os.path.join(output_prefix, output_file)
-        print(output_key)
+
+        # If you want to rename the output files (e.g. "0001_ocr.pdf"), do it here. For example:
+        #   new_filename = file_base + "_ocr" + os.path.splitext(output_file)[1]
+        # But if they're already named the way you like, use output_file directly.
+
+        output_key = os.path.join(output_prefix, rel_dir, output_file)
         s3.upload_file(output_file_path, output_bucket_name, output_key)
-        logging.info(f"Successfully uploaded {output_file_path} to {output_key}")
-        print("Success")
+        logging.info(f"Successfully uploaded {output_file_path} to s3://{output_bucket_name}/{output_key}")
     clear_tmp_directory()
 
 
@@ -103,7 +118,7 @@ def clear_tmp_directory():
             logging.info(f"Failed to delete {file_path}. Reason: {e}")
 
 
-def process_file(file_key, bucket_name, output_bucket_name, output_prefix):
+def process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefix):
     with tempfile.TemporaryDirectory() as temp_dir:
         input_file_path = download_files_from_s3(bucket_name, file_key, temp_dir)
 
@@ -130,36 +145,34 @@ def process_file(file_key, bucket_name, output_bucket_name, output_prefix):
                     text_found = True
                     break
 
-        # Track JP2 usage and No Text errors using exit codes
+        # Track text presence and JP2 usage
         if not text_found:
             logging.error(f"No text found in the generated PDF for {file_key}.")
-            sys.exit(2)  # Exit code 2 for "No Text" error
+            sys.exit(2)  # "No Text" error
 
-        elif jp2_used:
-            upload_files_to_s3(output_path, output_bucket_name, output_prefix)
+        # Upload everything (PDF, ALTO, etc.) to S3, preserving folder structure
+        upload_files_to_s3(output_path, output_bucket_name, output_prefix, file_key, prefix)
+
+        if jp2_used:
             logging.info(f"JP2 was used instead of TIF for {file_key}.")
-            sys.exit(1)  # Exit code 1 for "JP2 used" condition
-
+            sys.exit(1)  # "JP2 used" condition
         else:
-            upload_files_to_s3(output_path, output_bucket_name, output_prefix)
             logging.info(f"File processed successfully: {file_key}")
-            sys.exit(0)  # Exit code 0 for success
+            sys.exit(0)
 
 
 if __name__ == "__main__":
     logging.info("Starting NDNP Open OCR Processing...")
 
-    # Retrieve environment variables
     bucket_name = os.getenv("BUCKET_NAME")
-    prefix = os.getenv("PREFIX")
+    prefix = os.getenv("PREFIX")  # The original top-level prefix you used in get_file_list
     output_prefix = os.getenv("OUTPUT_PREFIX")
-    output_bucket_name = os.environ.get("OUTPUT_BUCKET_NAME")
+    output_bucket_name = os.getenv("OUTPUT_BUCKET_NAME")
 
     array_index = int(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX", "0"))
 
-    # Get the list of files to process
+    # Grab the files from the original prefix
     file_list = get_file_list(bucket_name, prefix)
-
     if array_index >= len(file_list):
         logging.error(f"Array index {array_index} out of range.")
         sys.exit(1)
@@ -167,4 +180,4 @@ if __name__ == "__main__":
     file_key = file_list[array_index]
     logging.info(f"Processing file: {file_key}")
 
-    process_file(file_key, bucket_name, output_bucket_name, output_prefix)
+    process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefix)
