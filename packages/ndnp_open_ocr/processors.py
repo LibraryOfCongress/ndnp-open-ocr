@@ -458,6 +458,7 @@ class OCRProcessor:
 
             alto_processor = AltoProcessor(self._get_alto_file_path())
             alto_processor.add_description_tags()
+            alto_processor.fix_alto_file_hyphenation()
             alto_processor.convert_pixels_to_inches(dpi)
             alto_processor.save(self._get_alto_file_path())
             del xml
