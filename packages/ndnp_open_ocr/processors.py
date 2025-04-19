@@ -111,52 +111,42 @@ class AltoProcessor:
                     element[attribute] = str(inch1200_value)
 
     def fix_alto_file_hyphenation(self):
-        """Replaces HYP tag with appropriate SUBS_CONTENT tags, per NDNP
-        specifications for hyphenation in ALTO files."""
+        """Replaces HYP tag with appropriate SUBS_CONTENT tags, per NDNP specs."""
         try:
-            with open(self.filepath, "r") as f:
-                xml = f.read()
-                soup = BeautifulSoup(xml, "xml")
+            soup = self.soup
 
-                # Find all TextLines where the content is equal to "Content"
-                text_lines = soup.find_all("TextLine")
+            # Find all TextLines where the content is equal to "Content"
+            text_lines = soup.find_all("TextLine")
 
-                for index, line in enumerate(text_lines):
-                    hyp_tag = soup.new_tag("HYP", attrs={"CONTENT": "-"})
-                    strings = line.find_all("String")
+            for index, line in enumerate(text_lines):
+                hyp_tag = soup.new_tag("HYP", attrs={"CONTENT": "-"})
+                strings = line.find_all("String")
 
-                    # If there are no strings in this line, then there are no hyphens to fix. Exit function in this case.
-                    if len(strings) == 0:
-                        return
-                    last_string = strings[-1]
-                    content = last_string.get("CONTENT")
+                # If there are no strings in this line, then there are no hyphens to fix. Exit function in this case.
+                if len(strings) == 0:
+                    return
+                last_string = strings[-1]
+                content = last_string.get("CONTENT")
 
-                    # Line-to-Line Hyphenation Check: If the last string ends with a hyphen, it means that there is a linebreak and the other portion of the hyphenation is in the next line
-                    if content.endswith("-") and len(content) > 1:
-                        next_line = text_lines[index + 1]
-                        next_line_string = next_line.find_all("String")[0]
+                # Line-to-Line Hyphenation Check: If the last string ends with a hyphen, it means that there is a linebreak and the other portion of the hyphenation is in the next line
+                if content.endswith("-") and len(content) > 1:
+                    next_line = text_lines[index + 1]
+                    next_line_string = next_line.find_all("String")[0]
 
-                        # Insert HypTag at end of last_string line
-                        line.append(hyp_tag)
-                        last_string["CONTENT"] = last_string.get("CONTENT").replace(
-                            "-", ""
-                        )
-                        combined_word = last_string.get(
-                            "CONTENT"
-                        ) + next_line_string.get("CONTENT")
-                        last_string["SUBS_CONTENT"] = combined_word
-                        next_line_string["SUBS_CONTENT"] = combined_word
-                        last_string["SUBS_TYPE"] = "HypPart1"
-                        next_line_string["SUBS_TYPE"] = "HypPart2"
-
-                f.close()
-
-                # Overwrite old ALTO file with the new and fixed XML contents.
-                with open(self.filepath, "w") as f:
-                    f.write(str(soup))
-                    f.close()
+                    # Insert HypTag at end of last_string line
+                    line.append(hyp_tag)
+                    last_string["CONTENT"] = last_string.get("CONTENT").replace(
+                        "-", ""
+                    )
+                    combined_word = last_string.get(
+                        "CONTENT"
+                    ) + next_line_string.get("CONTENT")
+                    last_string["SUBS_CONTENT"] = combined_word
+                    next_line_string["SUBS_CONTENT"] = combined_word
+                    last_string["SUBS_TYPE"] = "HypPart1"
+                    next_line_string["SUBS_TYPE"] = "HypPart2"
         except Exception as e:
-            logging.error("ALTO file hyphenation fix failed: {}".format(e))
+            logger.error(f"ALTO file hyphenation fix failed: {e}")
 
     def save(self, output_file):
         with open(output_file, "w") as f:
