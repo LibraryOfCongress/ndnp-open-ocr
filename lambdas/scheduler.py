@@ -3,7 +3,6 @@ import re
 import boto3
 import json
 import uuid
-from datetime import datetime
 import logging
 
 logger = logging.getLogger()
@@ -11,12 +10,11 @@ logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
-    # Retrieve the S3 bucket and prefix from path parameters
-    prefix_input = event["pathParameters"]["prefix"]
+    batch_name = event["pathParameters"]["batchName"]
     bucket_name = event["pathParameters"]["bucketName"]
 
-    logger.info(f"Bucket name: {bucket_name}")
-    logger.info(f"Prefix input: {prefix_input}")
+    logger.info(f"Batch Name: {batch_name}")
+    logger.info(f"Bucket Name: {bucket_name}")
 
     s3 = boto3.client("s3")
     batch = boto3.client("batch")
@@ -41,35 +39,31 @@ def handler(event, context):
         return keys
 
     try:
-        # Build the S3 prefix based on the filename passed in
-        batch_name = os.path.split(prefix_input.rstrip("/"))[-1]
-        logger.info(f"Batch name: {batch_name}")
-        # Extract the directory code from the batch name
-        # Example: batch_name = "loc-preservation/lcbp/ndnp/virginia/batch_va_2023_01" should equal va
         m = re.search(r"batch[_-]([a-zA-Z]+)_", batch_name)
         if m:
             code = m.group(1).lower()
-            # If the code is "va", set it to "virginia". There will be others in the future such as florida (fl vs fu, ...)
-            if code == "va":
-                dir_code = "virginia"
-            else:
-                dir_code = code
+            dir_code = "virginia" if code in ["vi", "va"] else "loc" if code == "lc" else code
         else:
             dir_code = batch_name
 
-        # Construct the prefix for the S3 bucket
-        # Example: prefix = "loc-preservation/lcbp/ndnp/virginia/batch_va_2023_01/"
-        prefix = os.path.join(
-            os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp/"),
-            dir_code,
-            batch_name,
-        )
-        logger.info(f"Constructed prefix: {prefix}")
-
-        # Retrieve TIFF files from the constructed prefix
+        prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp/")
+        prefix = os.path.join(prefix_base, dir_code, batch_name)
         keys = get_tif_files(bucket_name, prefix)
 
-        # If still no keys, then exit with error.
+        # Check alternative prefixes if no TIFF files found
+        if not keys:
+            if dir_code == "dlc":
+                alt_dir_code = "loc"
+                alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name)
+                keys = get_tif_files(bucket_name, alt_prefix)
+                prefix = alt_prefix if keys else prefix
+
+            elif dir_code == "virginia":
+                alt_dir_code = "vi"
+                alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name)
+                keys = get_tif_files(bucket_name, alt_prefix)
+                prefix = alt_prefix if keys else prefix
+
         if not keys:
             logger.error(f"No TIFF files found in prefix: {prefix}")
             return {
@@ -77,7 +71,6 @@ def handler(event, context):
                 "body": json.dumps(f"No TIFF files found at prefix: {prefix}"),
             }
 
-        # Generate a unique job name using the (potentially updated) prefix directory name
         job_name = os.path.split(prefix.rstrip("/"))[-1] + "__" + str(uuid.uuid4())
         array_size = len(keys)
         logger.info(f"Submitting AWS Batch array job with size: {array_size}")
@@ -98,7 +91,6 @@ def handler(event, context):
 
         logger.info(f"AWS Batch ID: {response['jobId']}")
         logger.info(f"Job Name (output prefix): {job_name}")
-
         return {
             "statusCode": 200,
             "body": json.dumps({"job": job_name, "num_issues": len(keys)}),
