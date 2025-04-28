@@ -41,14 +41,9 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
             connect_timeout=10,  # Time in seconds
         ),
     )
-    # This is the prefix from the loc-preservation bucket...should stick to this if we can.
-    if bucket == "loc-preservation":
-        prefix = os.path.join("loc-preservation/lcbp/ndnp/dlc", batch_name)
-    else:
-        prefix = batch_name
     payload = {
         "pathParameters": {
-            "prefix": prefix,
+            "batchName": batch_name,
             "bucketName": bucket,
         }
     }
