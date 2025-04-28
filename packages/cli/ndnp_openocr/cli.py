@@ -65,8 +65,8 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
         keyring.set_password("ndnp_openocr", "job_id", job_id)
 
         print(
-            '\n🚀 [green]Job successfully kicked off for "{}" prefix in "{}" bucket'.format(
-                prefix, bucket
+            '\n🚀 [green]Job successfully kicked off for "{}" batch in "{}" bucket'.format(
+                batch_name, bucket
             )
         )
 
