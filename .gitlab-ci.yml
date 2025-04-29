@@ -26,7 +26,7 @@ workflow:
       variables:
         TF_STATE_NAME: "production-deployment"
       when: always
-    - when: never
+    - when: always
 
 fmt:
   extends: .terraform:fmt
@@ -90,7 +90,7 @@ build_cli:
     - pip install poetry
     - cd packages/cli/
     # Inject stage-specific variables into a config file
-    - echo "OUTPUT_BUCKET_NAME = '${OUTPUT_BUCKET_NAME}'" >> ndnp_openocr/config.py
+    - echo "OUTPUT_BUCKET_NAME = '${OUTPUT_BUCKET_NAME}'" > ndnp_openocr/config.py
     - echo "SCHEDULER_ARN = '${SCHEDULER_ARN}'" >> ndnp_openocr/config.py
     - echo "GET_JOB_ARN = '${GET_JOB_ARN}'" >> ndnp_openocr/config.py
     - poetry build
