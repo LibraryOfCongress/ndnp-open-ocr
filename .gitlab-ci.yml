@@ -26,7 +26,7 @@ workflow:
       variables:
         TF_STATE_NAME: "production-deployment"
       when: always
-    - when: always
+    - when: never
 
 fmt:
   extends: .terraform:fmt
