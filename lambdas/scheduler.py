@@ -42,11 +42,11 @@ def handler(event, context):
         m = re.search(r"batch[_-]([a-zA-Z]+)_", batch_name)
         if m:
             code = m.group(1).lower()
-            dir_code = "virginia" if code in ["vi", "va"] else "loc" if code == "lc" else code
+            dir_code = "virginia" if code == 'va' else "loc" if code == "lc" else code
         else:
             dir_code = batch_name
 
-        prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp/")
+        prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp")
         prefix = os.path.join(prefix_base, dir_code, batch_name)
         keys = get_tif_files(bucket_name, prefix)
 
