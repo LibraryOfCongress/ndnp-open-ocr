@@ -317,29 +317,16 @@ resource "aws_cloudwatch_event_rule" "batch_job_completed" {
 EOF
 }
 
-# resource "aws_cloudwatch_event_target" "batch_job_completed_target" {
-#   rule = aws_cloudwatch_event_rule.batch_job_completed.name
-#   arn  = var.get_job_function_invoke_arn
+resource "aws_cloudwatch_event_target" "batch_job_completed_target" {
+  rule = aws_cloudwatch_event_rule.batch_job_completed.name
+  arn  = var.batch_completion_function_arn
+}
 
-#   input_transformer {
-#     input_paths = {
-#       jobName = "$.detail.jobName"
-#     }
-#     input_template = <<EOF
-# {
-#   "pathParameters": {
-#     "jobName": "<jobName>"
-#   }
-# }
-# EOF
-#   }
-# }
-
-
-# resource "aws_lambda_permission" "allow_eventbridge_to_invoke" {
-#   statement_id  = "AllowExecutionFromEventBridge"
-#   action        = "lambda:InvokeFunction"
-#   function_name = var.get_job_function_name
-#   principal     = "events.amazonaws.com"
-#   source_arn    = aws_cloudwatch_event_rule.batch_job_completed.arn
-# }
+# Lambda Permission for EventBridge invocation
+resource "aws_lambda_permission" "allow_eventbridge_to_invoke_batch_completion_lambda" {
+  statement_id  = "AllowExecutionFromEventBridgeBatchCompletion"
+  action        = "lambda:InvokeFunction"
+  function_name = var.batch_completion_function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.batch_job_completed.arn
+}
