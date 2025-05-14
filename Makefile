@@ -21,5 +21,5 @@ push_fargate:
 	aws ecr get-login-password --region us-east-2 --profile NDNP_OPEN_OCR_DEVELOPER_DEV_profile | docker login --username AWS --password-stdin 342134162356.dkr.ecr.us-east-2.amazonaws.com
 	docker build --platform linux/amd64 -t ndnp_open_ocr:latest ./packages/ndnp_open_ocr
 	docker build --platform linux/amd64 -t ndnp-open-ocr-container-repo:latest ./packages/ndnp_open_ocr_fargate_deployment
-	docker tag ndnp-open-ocr-container-repo:latest 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo:latest
-	docker push 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo:latest
+	docker tag ndnp-open-ocr-container-repo:latest 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-development-deployment:latest
+	docker push 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-development-deployment:latest

@@ -1,5 +1,19 @@
 FROM python:3.12.0
 
+ARG EXIFTOOL_VERSION=13.27
+
+# ExifTool does not maintain old versions of the tarball on their website
+# which is why we are copying the tarball from the vendor directory.
+# This is a workaround until we can find a better solution.
+COPY vendor/Image-ExifTool-${EXIFTOOL_VERSION}.tar.gz /tmp/
+RUN cd /tmp \
+ && tar xzf Image-ExifTool-13.27.tar.gz \
+ && cd Image-ExifTool-13.27 \
+ && perl Makefile.PL \
+ && make \
+ && make install \
+ && exiftool -ver
+
 RUN apt-get update
 RUN apt-get install -y ghostscript -y qpdf
 # Update and install depedencies
@@ -25,9 +39,6 @@ ARG TESSERACT_DATA_VERSION=4.1.0
 
 RUN curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/raw/${TESSERACT_DATA_VERSION}/osd.traineddata > /usr/local/share/tessdata/osd.traineddata && \
     curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/raw/${TESSERACT_DATA_VERSION}/eng.traineddata > /usr/local/share/tessdata/eng.traineddata
-
-#### ExifTool INSTALL #####
-RUN wget --no-check-certificate https://exiftool.org/Image-ExifTool-12.87.tar.gz && tar xvf Image-ExifTool-12.87.tar.gz && cd Image-ExifTool-12.87/ && perl Makefile.PL && make && make test && make install
 
 
 # Copy files from same directory as Dockerfile to /app
