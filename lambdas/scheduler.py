@@ -42,7 +42,7 @@ def handler(event, context):
         m = re.search(r"batch[_-]([a-zA-Z]+)_", batch_name)
         if m:
             code = m.group(1).lower()
-            dir_code = "virginia" if code == 'va' else "loc" if code == "lc" else code
+            dir_code = "vi" if code in ["vi", "va"] else "loc" if code == "lc" else code
         else:
             dir_code = batch_name
 
@@ -58,8 +58,8 @@ def handler(event, context):
                 keys = get_tif_files(bucket_name, alt_prefix)
                 prefix = alt_prefix if keys else prefix
 
-            elif dir_code == "virginia":
-                alt_dir_code = "vi"
+            elif dir_code == "vi":
+                alt_dir_code = "virginia"
                 alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name)
                 keys = get_tif_files(bucket_name, alt_prefix)
                 prefix = alt_prefix if keys else prefix
