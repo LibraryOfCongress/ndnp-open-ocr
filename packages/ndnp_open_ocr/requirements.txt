@@ -38,3 +38,7 @@ typer==0.6.1
 urllib3==2.2.1
 wheel==0.42.0
 wrapt==1.16.0
+onnxruntime==1.17.0
+torch==2.2.0
+torchvision==0.17.0
+ocr-fileformat==0.2.3
