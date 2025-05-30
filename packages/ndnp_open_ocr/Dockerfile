@@ -1,4 +1,13 @@
+#--------------------------------------------------------------------------------
+# Stage 1: grab OCR-Fileformat CLI and assets from the official image
+#--------------------------------------------------------------------------------
+FROM ubma/ocr-fileformat:latest AS ocr
+
+#--------------------------------------------------------------------------------
+# Stage 2: NDNP Open OCR Image Building
+#--------------------------------------------------------------------------------
 FROM python:3.12.0
+
 
 ARG EXIFTOOL_VERSION=13.27
 
@@ -16,6 +25,7 @@ RUN cd /tmp \
 
 RUN apt-get update
 RUN apt-get install -y ghostscript -y qpdf
+
 # Update and install depedencies
 RUN apt-get update && \
     apt-get install -y wget unzip bc vim python3-pip libleptonica-dev git
@@ -40,6 +50,8 @@ ARG TESSERACT_DATA_VERSION=4.1.0
 RUN curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/raw/${TESSERACT_DATA_VERSION}/osd.traineddata > /usr/local/share/tessdata/osd.traineddata && \
     curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/raw/${TESSERACT_DATA_VERSION}/eng.traineddata > /usr/local/share/tessdata/eng.traineddata
 
+COPY --from=ocr /usr/local/bin/ocr-*       /usr/local/bin/
+COPY --from=ocr /usr/local/share/ocr-fileformat /usr/local/share/ocr-fileformat
 
 # Copy files from same directory as Dockerfile to /app
 WORKDIR /app/ndnp_open_ocr
