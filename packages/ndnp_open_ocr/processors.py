@@ -389,24 +389,16 @@ class OCRProcessor:
                 logging.info("Generating segmented PDF file")
                 alto_path = self._get_alto_file_path()
                 hocr_path = os.path.join(self.output_path, f"{self._get_file_name()}_seg.hocr")
-                host_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.path.dirname(alto_path))
-                # Convert ALTO to HOCR using ocr-fileformat -- FIXME: USE this one after fixing the docker image
-                # subprocess.run([
-                #     "ocr-transform",
-                #     "alto2.0",
-                #     "hocr",
-                #     alto_path,
-                #     hocr_path,
-                # ], check=True)
+
+                # Convert ALTO to HOCR using ocr-fileformat
                 subprocess.run([
-                    "docker", "run", "--rm",
-                    "--entrypoint", "ocr-transform",
-                    "-v", f"{host_dir}:/data",
-                    "ubma/ocr-fileformat",
-                    "alto2.0", "hocr",
-                    f"/data/{os.path.basename(alto_path)}",
-                    f"/data/{os.path.basename(hocr_path)}"
+                    "ocr-transform",
+                    "alto2.0",
+                    "hocr",
+                    alto_path,
+                    hocr_path,
                 ], check=True)
+
 
 
                 combiner = hkr.HOCRCombiner("ocrx_word")

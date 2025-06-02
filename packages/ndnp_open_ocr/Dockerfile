@@ -6,7 +6,7 @@ FROM ubma/ocr-fileformat:latest AS ocr
 #--------------------------------------------------------------------------------
 # Stage 2: NDNP Open OCR Image Building
 #--------------------------------------------------------------------------------
-FROM python:3.12.0
+FROM python:3.11.0
 
 
 ARG EXIFTOOL_VERSION=13.27
@@ -28,7 +28,7 @@ RUN apt-get install -y ghostscript -y qpdf
 
 # Update and install depedencies
 RUN apt-get update && \
-    apt-get install -y wget unzip bc vim python3-pip libleptonica-dev git
+    apt-get install -y wget unzip bc vim python3-pip libleptonica-dev git cmake
 RUN apt-get install -y software-properties-common
 
 # Packages to complie Tesseract
@@ -50,6 +50,9 @@ ARG TESSERACT_DATA_VERSION=4.1.0
 RUN curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/raw/${TESSERACT_DATA_VERSION}/osd.traineddata > /usr/local/share/tessdata/osd.traineddata && \
     curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/raw/${TESSERACT_DATA_VERSION}/eng.traineddata > /usr/local/share/tessdata/eng.traineddata
 
+RUN apt-get install  protobuf-compiler \
+      libprotobuf-dev -y
+
 COPY --from=ocr /usr/local/bin/ocr-*       /usr/local/bin/
 COPY --from=ocr /usr/local/share/ocr-fileformat /usr/local/share/ocr-fileformat
 
@@ -57,8 +60,16 @@ COPY --from=ocr /usr/local/share/ocr-fileformat /usr/local/share/ocr-fileformat
 WORKDIR /app/ndnp_open_ocr
 COPY . .
 
+ENV CMAKE_ARGS="-DBUILD_SHARED_LIBS=ON"
+
+RUN rm -f /usr/lib/x86_64-linux-gnu/libprotobuf.a \
+          /usr/lib/x86_64-linux-gnu/libprotoc.a
+
 RUN pip install --upgrade pip
+# RUN pip install -r vendor/AmericanStories/requirements.txt
 RUN pip install -r requirements.txt
+
+RUN apt-get install default-jre-headless -y
 
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/lib
 ENV TESSDATA_PREFIX /usr/local/share/tessdata
