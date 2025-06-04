@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import exiftool
 import subprocess
 import os
+import shutil
 import pikepdf
 import pytesseract
 import datetime
@@ -388,23 +389,30 @@ class OCRProcessor:
             if self.use_segmenter:
                 logging.info("Generating segmented PDF file")
                 alto_path = self._get_alto_file_path()
-                hocr_path = os.path.join(self.output_path, f"{self._get_file_name()}_seg.hocr")
+                hocr_path = os.path.join(
+                    self.output_path, f"{self._get_file_name()}_seg.hocr"
+                )
 
                 # Convert ALTO to HOCR using ocr-fileformat
-                subprocess.run([
-                    "ocr-transform",
-                    "alto2.0",
-                    "hocr",
-                    alto_path,
-                    hocr_path,
-                ], check=True)
-
-
+                subprocess.run(
+                    [
+                        "ocr-transform",
+                        "alto2.0",
+                        "hocr",
+                        alto_path,
+                        hocr_path,
+                    ],
+                    check=True,
+                )
 
                 combiner = hkr.HOCRCombiner("ocrx_word")
                 combiner.locate_image(self.input_file_path)
                 combiner.locate_hocr(hocr_path)
                 combiner.to_pdf(self._get_new_pdf_path())
+
+                # Remove the HOCR file now that PDF is combined
+                if os.path.isfile(hocr_path):
+                    os.remove(hocr_path)
 
             else:
                 pdf = pytesseract.image_to_pdf_or_hocr(input_file_path, extension="pdf")
@@ -466,7 +474,8 @@ class OCRProcessor:
                 os.makedirs(regions_dir, exist_ok=True)
                 print(f"Regions directory created: {regions_dir}")
 
-                crops, boxes = segment_page("./test/0020.tif")
+                crops, boxes = segment_page(self.input_file_path)
+
                 print(f"Detected {len(crops)} regions")
                 logging.info("Detected %d regions", len(crops))
                 offsets_dict = {}
@@ -483,24 +492,18 @@ class OCRProcessor:
                     offsets_dict[str(rid)] = [boxes[idx][0], boxes[idx][1]]
                     boxes_dict[str(rid)] = list(boxes[idx])
 
-                offsets_path = os.path.join(regions_dir, "region_offsets.json")
-                boxes_path = os.path.join(regions_dir, "region_boxes.json")
-                with open(offsets_path, "w") as f:
-                    json.dump(offsets_dict, f)
-                with open(boxes_path, "w") as f:
-                    json.dump(boxes_dict, f)
-                logging.debug(
-                    "Saved offsets to %s and boxes to %s", offsets_path, boxes_path
-                )
 
                 merge_alto_region_xmls(
                     source_image_path=self.input_file_path,
                     region_dir=regions_dir,
-                    offsets_file=os.path.join(regions_dir, "region_offsets.json"),
-                    boxes_file=os.path.join(regions_dir, "region_boxes.json"),
+                    boxes_dict=boxes_dict,
                     output_file=self._get_alto_file_path(),
                 )
                 logging.info("Composite ALTO written to %s", self._get_alto_file_path())
+
+                # # Clean up regions directory once composite ALTO is created
+                if os.path.isdir(regions_dir):
+                    shutil.rmtree(regions_dir)
             else:
                 logging.debug(
                     "Segmentation disabled or utilities missing; using whole image"

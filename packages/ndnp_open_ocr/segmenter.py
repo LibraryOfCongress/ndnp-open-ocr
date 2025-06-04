@@ -51,14 +51,15 @@ def get_onnx_input_name(model):
     feed = list(set(inputs) - set(inits))
     return feed[0]
 
+
 def non_max_suppression(pred, conf_thres=0.25, iou_thres=0.45):
     # very minimal wrapper around torchvision nms
-    pred = pred[pred[:,4] > conf_thres]
+    pred = pred[pred[:, 4] > conf_thres]
     if not pred.shape[0]:
         return []
     boxes = pred[:, :4]
-    scores= pred[:, 4]
-    keep  = nms(boxes, scores, iou_thres)
+    scores = pred[:, 4]
+    keep = nms(boxes, scores, iou_thres)
     return pred[keep]
 
 
@@ -86,8 +87,8 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
         # v8 NMS expects (bs, boxes, 6) → list of 1 tensor
         out = nms_yolov8(
             preds.unsqueeze(0),
-            conf_thres=0.05,
-            iou_thres=0.01,
+            conf_thres=0.005,
+            iou_thres=0.06,
             max_det=1000,
             agnostic=True,
         )
@@ -170,30 +171,28 @@ NS_ALTO = "http://www.loc.gov/standards/alto/ns-v3#"
 NS_XSI = "http://www.w3.org/2001/XMLSchema-instance"
 cv2.setNumThreads(0)
 
+import xml.etree.ElementTree as ET
+import copy
 
-def merge_alto_region_xmls(
-    source_image_path: str,
-    region_dir: str,
-    offsets_file: str,
-    boxes_file: str,
-    output_file: str,
-):
-    logger.debug("Merging regions from %s", region_dir)
-    import xml.etree.ElementTree as ET
-    import copy
 
-    ET.register_namespace("", NS_ALTO)
-    ET.register_namespace("xsi", NS_XSI)
+def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_file):
+    """
+    Merge per-region ALTO files by directly using boxes_dict[rid] = [x0, y0, x1, y1].
+    """
+    # 1) Create root <alto> and <Layout>/<Page> exactly as before, using the page size.
+    #    You can compute page width/height from max(x1), max(y1) in boxes_dict if you want:
+    max_x = max(v[2] for v in boxes_dict.values())
+    max_y = max(v[3] for v in boxes_dict.values())
 
     root = ET.Element(
         f"{{{NS_ALTO}}}alto",
         {
             "xmlns": NS_ALTO,
             "xmlns:xsi": NS_XSI,
-            "xsi:schemaLocation": "http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-0.xsd",
+            "xsi:schemaLocation": "http://www.loc.gov/standards/alto/ns-v3# "
+            "http://www.loc.gov/alto/v3/alto-3-0.xsd",
         },
     )
-
     desc = ET.SubElement(root, f"{{{NS_ALTO}}}Description")
     ET.SubElement(desc, f"{{{NS_ALTO}}}MeasurementUnit").text = "pixel"
     src_info = ET.SubElement(desc, f"{{{NS_ALTO}}}sourceImageInformation")
@@ -204,15 +203,6 @@ def merge_alto_region_xmls(
     ET.SubElement(sw, f"{{{NS_ALTO}}}softwareName").text = "tesseract 5.5.0"
 
     layout = ET.SubElement(root, f"{{{NS_ALTO}}}Layout")
-
-    with open(offsets_file) as f:
-        region_offsets = json.load(f)
-    with open(boxes_file) as f:
-        region_boxes = json.load(f)
-
-    max_x = max(v[2] for v in region_boxes.values())
-    max_y = max(v[3] for v in region_boxes.values())
-
     page = ET.SubElement(
         layout,
         f"{{{NS_ALTO}}}Page",
@@ -229,31 +219,41 @@ def merge_alto_region_xmls(
         {"HPOS": "0", "VPOS": "0", "WIDTH": str(max_x), "HEIGHT": str(max_y)},
     )
 
-    blocks = []
+    # 2) For each region file (named “region_<rid>.xml”):
     for fn in sorted(os.listdir(region_dir)):
         if not fn.startswith("region_") or not fn.endswith(".xml"):
             continue
-        rid = fn.split("_")[1].split(".")[0]
-        dx, dy = region_offsets.get(rid, (0, 0))
-        tree = ET.parse(os.path.join(region_dir, fn))
-        rps = tree.getroot().find(f".//{{{NS_ALTO}}}PrintSpace")
+
+        rid = fn.split("_")[1].split(".")[0]  # e.g. “17”
+        x0, y0, x1, y1 = boxes_dict[rid]  # full-page offsets
+
+        # 3) Parse the region’s ALTO and extract every <ComposedBlock> under <PrintSpace>
+        tree_region = ET.parse(os.path.join(region_dir, fn))
+        root_region = tree_region.getroot()
+        rps = root_region.find(f".//{{{NS_ALTO}}}PrintSpace")
         if rps is None:
             continue
+
+        # 4) For each ComposedBlock (and inside that, <TextBlock>, <TextLine>, <String>, etc.), add x0,y0:
         for cb in rps.findall(f"{{{NS_ALTO}}}ComposedBlock"):
             cb_copy = copy.deepcopy(cb)
             for el in cb_copy.iter():
+                # If the element has HPOS/VPOS, shift it by (x0,y0):
                 if "HPOS" in el.attrib:
-                    el.attrib["HPOS"] = str(int(el.attrib["HPOS"]) + dx)
+                    orig_hpos = float(el.attrib["HPOS"])
+                    new_hpos = int(round(orig_hpos)) + x0
+                    el.set("HPOS", str(new_hpos))
                 if "VPOS" in el.attrib:
-                    el.attrib["VPOS"] = str(int(el.attrib["VPOS"]) + dy)
-            blocks.append(cb_copy)
+                    orig_vpos = float(el.attrib["VPOS"])
+                    new_vpos = int(round(orig_vpos)) + y0
+                    el.set("VPOS", str(new_vpos))
+                # If there are WIDTH/HEIGHT attributes, you can keep them unchanged;
+                # they still refer to the same width/height in “pixels,” no need to shift.
 
-    blocks.sort(
-        key=lambda b: (int(b.attrib.get("VPOS", 0)), int(b.attrib.get("HPOS", 0)))
-    )
-    for b in blocks:
-        ps.append(b)
+            # 5) Append that shifted ComposedBlock into the Page’s PrintSpace in the final doc:
+            ps.append(cb_copy)
 
+    # 6) After all regions are appended, renumber IDs exactly as before:
     id_specs = [
         (f"{{{NS_ALTO}}}String", "string"),
         (f"{{{NS_ALTO}}}TextBlock", "block"),
@@ -262,7 +262,6 @@ def merge_alto_region_xmls(
         (f"{{{NS_ALTO}}}Illustration", "cblock"),
         (f"{{{NS_ALTO}}}GraphicalElement", "cblock"),
     ]
-
     for tag, prefix in id_specs:
         elems = root.findall(f".//{tag}")
         try:
@@ -277,6 +276,7 @@ def merge_alto_region_xmls(
         for i, el in enumerate(elems):
             el.set("ID", f"{prefix}_{i}")
 
-    tree = ET.ElementTree(root)
-    tree.write(output_file, encoding="utf-8", xml_declaration=True)
-    logger.debug("Composite ALTO written to %s", output_file)
+    # 7) Write out the merged ALTO file:
+    merged_tree = ET.ElementTree(root)
+    merged_tree.write(output_file, encoding="utf-8", xml_declaration=True)
+    print(f"Composite ALTO written to: {output_file}")
