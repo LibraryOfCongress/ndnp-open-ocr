@@ -17,6 +17,9 @@ logging.basicConfig(
 
 s3 = boto3.client("s3")
 
+# Determine if segmentation should be used based on environment variable
+USE_SEGMENTATION = os.getenv("USE_SEGMENTATION", "false").lower() == "true"
+
 
 def is_valid_image(input_file_path):
     try:
@@ -136,7 +139,7 @@ def process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefi
             input_file_path,
             output_path,
             preprocessing_method=PreprocessingMethod.ORIGINAL,
-            use_segmenter=True,
+            use_segmenter=USE_SEGMENTATION,
         )
         processor.process()
 
@@ -179,6 +182,8 @@ if __name__ == "__main__":
     output_bucket_name = os.getenv("OUTPUT_BUCKET_NAME")
 
     array_index = int(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX", "0"))
+
+    logging.info("Segmentation mode: %s", USE_SEGMENTATION)
 
     # Grab the files from the original prefix
     file_list = get_file_list(bucket_name, prefix)

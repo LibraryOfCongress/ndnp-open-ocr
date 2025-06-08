@@ -12,6 +12,11 @@ logger.setLevel(logging.INFO)
 def handler(event, context):
     batch_name = event["pathParameters"]["batchName"]
     bucket_name = event["pathParameters"]["bucketName"]
+    use_segmenter = False
+    if event.get("queryStringParameters"):
+        flag = event["queryStringParameters"].get("use_segmenter", "false")
+        use_segmenter = str(flag).lower() == "true"
+    logger.info(f"Use segmenter: {use_segmenter}")
 
     logger.info(f"Batch Name: {batch_name}")
     logger.info(f"Bucket Name: {bucket_name}")
@@ -85,6 +90,7 @@ def handler(event, context):
                     {"name": "BUCKET_NAME", "value": bucket_name},
                     {"name": "PREFIX", "value": prefix},
                     {"name": "OUTPUT_PREFIX", "value": job_name},
+                    {"name": "USE_SEGMENTATION", "value": str(use_segmenter).lower()},
                 ]
             },
         )
