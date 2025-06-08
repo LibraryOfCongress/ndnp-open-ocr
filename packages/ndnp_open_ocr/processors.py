@@ -17,7 +17,7 @@ from tempfile import NamedTemporaryFile
 import json
 
 # Optional segmentation based OCR utilities
-from segmenter import segment_page, merge_alto_region_xmls
+from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
 
 
 logger = logging.getLogger(__name__)
@@ -397,7 +397,7 @@ class OCRProcessor:
                 subprocess.run(
                     [
                         "ocr-transform",
-                        "alto2.0",
+                        "alto",
                         "hocr",
                         alto_path,
                         hocr_path,
@@ -446,7 +446,7 @@ class OCRProcessor:
             subprocess.run(
                 [
                     "ocr-transform",
-                    "alto2.0",
+                    "alto",
                     "hocr",
                     alto_path,
                     hocr_path,
@@ -491,7 +491,6 @@ class OCRProcessor:
                     logging.debug("Wrote region %s ALTO to %s", rid, xml_path)
                     offsets_dict[str(rid)] = [boxes[idx][0], boxes[idx][1]]
                     boxes_dict[str(rid)] = list(boxes[idx])
-
 
                 merge_alto_region_xmls(
                     source_image_path=self.input_file_path,

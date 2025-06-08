@@ -10,19 +10,26 @@ from typing import List, Tuple
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-REPO_ROOT = "./vendor/AmericanStories"  # adjust if cloned elsewhere
-SRC_DIR = os.path.join(REPO_ROOT, "src")
+# === derive REPO_ROOT from this file’s location ===
+THIS_DIR  = os.path.dirname(__file__)  # e.g. /app/ndnp_open_ocr
+REPO_ROOT = os.path.abspath(os.path.join(THIS_DIR,"vendor", "AmericanStories"))
+SRC_DIR   = os.path.join(REPO_ROOT, "src")
+
+if not os.path.isdir(SRC_DIR):
+    raise FileNotFoundError(f"Cannot find segmentation sources: {SRC_DIR}")
+
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
+# now imports from AmericanStories/src will work, no matter where you run Python from
 import onnx
 import onnxruntime as ort
 import torch
 from torchvision.ops import nms
 from effocr.engines.yolov8_ops import non_max_suppression as nms_yolov8
 
-layout_model_path = "vendor/american_stories_models/layout_model_new.onnx"
-line__model_path = "vendor/american_stories_models/line_model_new.onnx"
+layout_model_path = os.path.join(REPO_ROOT, "american_stories_models", "layout_model_new.onnx")
+line_model_path   = os.path.join(REPO_ROOT, "american_stories_models", "line_model_new.onnx")
 
 # ----------------------------------------------------------------------
 # Utilities from the sample segmentation script
