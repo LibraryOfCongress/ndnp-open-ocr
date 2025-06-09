@@ -5,6 +5,8 @@ import logging
 import cv2
 import numpy as np
 from typing import List, Tuple
+import xml.etree.ElementTree as ET
+import copy
 
 
 logger = logging.getLogger(__name__)
@@ -30,6 +32,9 @@ from effocr.engines.yolov8_ops import non_max_suppression as nms_yolov8
 
 layout_model_path = os.path.join(REPO_ROOT, "american_stories_models", "layout_model_new.onnx")
 line_model_path   = os.path.join(REPO_ROOT, "american_stories_models", "line_model_new.onnx")
+NS_ALTO = "http://www.loc.gov/standards/alto/ns-v3#"
+NS_XSI = "http://www.w3.org/2001/XMLSchema-instance"
+cv2.setNumThreads(0)
 
 # ----------------------------------------------------------------------
 # Utilities from the sample segmentation script
@@ -37,6 +42,7 @@ line_model_path   = os.path.join(REPO_ROOT, "american_stories_models", "line_mod
 
 
 def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=False):
+    """Resize ``im`` to ``new_shape`` with padding to maintain aspect ratio for model input."""
     shape = im.shape[:2]
     r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
     new_unpad = (int(round(shape[1] * r)), int(round(shape[0] * r)))
@@ -53,6 +59,7 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=False):
 
 
 def get_onnx_input_name(model):
+    """Return the name of the first input tensor for the ONNX model."""
     inputs = [n.name for n in model.graph.input]
     inits = [n.name for n in model.graph.initializer]
     feed = list(set(inputs) - set(inits))
@@ -60,6 +67,7 @@ def get_onnx_input_name(model):
 
 
 def non_max_suppression(pred, conf_thres=0.25, iou_thres=0.45):
+    """Thin out overlapping detections using torchvision's NMS."""
     # very minimal wrapper around torchvision nms
     pred = pred[pred[:, 4] > conf_thres]
     if not pred.shape[0]:
@@ -85,7 +93,7 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
     # 3) ONNX inference
     raw = session.run(None, {input_name: im_model})[0]
     preds = torch.from_numpy(raw)[0]
-    print(f"▶ raw ONNX out: {raw.shape}")
+    logger.debug("Raw ONNX out shape: %s", raw.shape)
 
     # 4) NMS
     if backend == "yolo":
@@ -103,9 +111,7 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
     else:
         raise ValueError(f"Unknown backend: {backend}")
 
-    print(
-        f"▶ post‐NMS detections: {det.shape if isinstance(det, torch.Tensor) else len(det)}"
-    )
+    logger.debug("Post-NMS detections: %s", det.shape if isinstance(det, torch.Tensor) else len(det))
 
     # 5) map back to original coords
     h, w = img.shape[:2]
@@ -121,7 +127,7 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
         if ox1 > ox0 and oy1 > oy0:
             boxes.append((ox0, oy0, ox1, oy1))
             crops.append((i, img[oy0:oy1, ox0:ox1]))
-    print(f"▶ final regions: {len(boxes)}\n")
+    logger.debug("Final regions: %d", len(boxes))
     return crops, boxes
 
 
@@ -153,7 +159,6 @@ def segment_page(
     """
 
     logger.debug("Segmenting image %s", image_path)
-    print(f"Segmenting image {image_path}", file=sys.stderr)
     img = cv2.imread(image_path)
     if img is None:
         raise FileNotFoundError(image_path)
@@ -173,14 +178,6 @@ def segment_page(
 
 
 # Stitching logic from the reference script ------------------------------------
-
-NS_ALTO = "http://www.loc.gov/standards/alto/ns-v3#"
-NS_XSI = "http://www.w3.org/2001/XMLSchema-instance"
-cv2.setNumThreads(0)
-
-import xml.etree.ElementTree as ET
-import copy
-
 
 def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_file):
     """
@@ -286,4 +283,4 @@ def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_fil
     # 7) Write out the merged ALTO file:
     merged_tree = ET.ElementTree(root)
     merged_tree.write(output_file, encoding="utf-8", xml_declaration=True)
-    print(f"Composite ALTO written to: {output_file}")
+    logger.info("Composite ALTO written to: %s", output_file)

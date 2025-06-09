@@ -372,7 +372,7 @@ class OCRProcessor:
     def _write_temp_image(self, image):
         """Write the preprocessed image to a temporary .tif file with lossless compression."""
         temp_file = NamedTemporaryFile(delete=False, suffix=".tif")
-        print(temp_file.name)
+        logger.debug("Temporary image file created at %s", temp_file.name)
         cv2.imwrite(temp_file.name, image, [cv2.IMWRITE_TIFF_COMPRESSION, 1])
         return temp_file.name
 
@@ -461,22 +461,20 @@ class OCRProcessor:
         will create a new ALTO using Tesseract, with specified preprocessing settings applied to the
         input, then will postprocess the ALTO to fix hyphenation, units, etc...
         """
-        print("Generating ALTO file")
         try:
             logging.info("Generating ALTO file")
-            print(f"Input file path: {self.input_file_path}")
+            logger.info("Input file path: %s", self.input_file_path)
             if self.use_segmenter:
                 logging.info("Segmentation mode enabled")
-                print("Segmenting page into regions")
+                logger.debug("Segmenting page into regions")
                 regions_dir = os.path.join(
                     self.output_path, f"{self._get_file_name()}_regions"
                 )
                 os.makedirs(regions_dir, exist_ok=True)
-                print(f"Regions directory created: {regions_dir}")
+                logger.debug("Regions directory created: %s", regions_dir)
 
                 crops, boxes = segment_page(self.input_file_path)
 
-                print(f"Detected {len(crops)} regions")
                 logging.info("Detected %d regions", len(crops))
                 offsets_dict = {}
                 boxes_dict = {}
@@ -487,7 +485,6 @@ class OCRProcessor:
                     xml_path = os.path.join(regions_dir, f"region_{rid}.xml")
                     with open(xml_path, "wb") as f:
                         f.write(xml)
-                    cv2.imwrite(os.path.join(regions_dir, f"region_{rid}.tif"), crop)
                     logging.debug("Wrote region %s ALTO to %s", rid, xml_path)
                     offsets_dict[str(rid)] = [boxes[idx][0], boxes[idx][1]]
                     boxes_dict[str(rid)] = list(boxes[idx])
@@ -528,9 +525,5 @@ class OCRProcessor:
 
     def process(self):
         """OCR an issue in an NDNP batch, generates a new PDF and ALTO file to replace the originals."""
-        if self.use_segmenter:
-            self.generate_alto()
-            self.generate_pdf()
-        else:
-            self.generate_pdf()
-            self.generate_alto()
+        self.generate_alto()
+        self.generate_pdf()
