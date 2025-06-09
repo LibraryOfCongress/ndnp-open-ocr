@@ -394,23 +394,14 @@ class OCRProcessor:
                 )
 
                 # Convert ALTO to HOCR using ocr-fileformat
-                subprocess.run(
-                    [
-                        "ocr-transform",
-                        "alto",
-                        "hocr",
-                        alto_path,
-                        hocr_path,
-                    ],
-                    check=True,
-                )
+                self._alto_to_hocr(alto_path, hocr_path)
 
                 combiner = hkr.HOCRCombiner("ocrx_word")
                 combiner.locate_image(self.input_file_path)
                 combiner.locate_hocr(hocr_path)
                 combiner.to_pdf(self._get_new_pdf_path())
 
-                # Remove the HOCR file now that PDF is combined
+                # Remove the HOCR file now that PDF is combinedåå
                 if os.path.isfile(hocr_path):
                     os.remove(hocr_path)
 
