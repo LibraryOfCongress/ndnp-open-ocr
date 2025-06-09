@@ -112,6 +112,31 @@ resource "aws_iam_role_policy_attachment" "batch_service_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole"
 }
 
+# ECS Cluster Management Policy
+resource "aws_iam_policy" "ecs_cluster_management_policy" {
+  name = "ndnp-open-ocr-ecs-cluster-management-policy-${var.env}"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ecs:ListClusters",
+          "ecs:DeleteCluster"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach combined policy to AWS Batch Service Role
+resource "aws_iam_role_policy_attachment" "ecs_cluster_management_policy_attachment" {
+  role       = aws_iam_role.batch_service_role.name
+  policy_arn = aws_iam_policy.ecs_cluster_management_policy.arn
+}
+
 # Add ECS permissions for the Batch Service Role
 resource "aws_iam_policy" "ecs_list_clusters_policy" {
   name = "ndnp-open-ocr-ecs-list-clusters-policy-${var.env}"
