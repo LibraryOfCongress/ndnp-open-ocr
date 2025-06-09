@@ -23,14 +23,15 @@ if not os.path.isdir(SRC_DIR):
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-# now imports from AmericanStories/src will work, no matter where you run Python from
 import onnx
 import onnxruntime as ort
 import torch
 from torchvision.ops import nms
 from effocr.engines.yolov8_ops import non_max_suppression as nms_yolov8
 
+# Used as the segmentation model that generates the crops for the TIF image
 layout_model_path = os.path.join(REPO_ROOT, "american_stories_models", "layout_model_new.onnx")
+# A line detection model that is no longer used.
 line_model_path   = os.path.join(REPO_ROOT, "american_stories_models", "line_model_new.onnx")
 NS_ALTO = "http://www.loc.gov/standards/alto/ns-v3#"
 NS_XSI = "http://www.w3.org/2001/XMLSchema-instance"
