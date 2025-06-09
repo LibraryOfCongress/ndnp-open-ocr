@@ -31,8 +31,14 @@ def initialize_config():
     return config_dict
 
 
-def reprocess_batch(ctx, batch_name: str, bucket: str):
-    """Kicks off reprocessing job for a certain S3 NDNP batch."""
+def reprocess_batch(ctx, batch_name: str, bucket: str, segmentation: bool):
+    """Kicks off reprocessing job for a certain S3 NDNP batch.
+
+    Parameters
+    ----------
+    segmentation: bool
+        Flag to indicate whether the OCR job should run in segmentation mode.
+    """
     lambda_client = boto3.client(
         "lambda",
         region_name=REGION,
@@ -45,7 +51,8 @@ def reprocess_batch(ctx, batch_name: str, bucket: str):
         "pathParameters": {
             "batchName": batch_name,
             "bucketName": bucket,
-        }
+        },
+        "queryStringParameters": {"use_segmenter": str(segmentation).lower()},
     }
     try:
         # Async invoke the scheduler Lambda function passing the prefix and bucket name
@@ -253,13 +260,18 @@ def job_info(ctx):
     default="loc-preservation",
     help="The s3 bucket that the batch is located in.",
 )
+@click.option(
+    "--segmentation/--no-segmentation",
+    default=False,
+    help="Enable segmentation based OCR processing.",
+)
 @click.pass_context
-def reprocess(ctx, batch_name: str, bucket: str):
+def reprocess(ctx, batch_name: str, bucket: str, segmentation: bool):
     """Command to kick off reprocessing job for a certain S3 NDNP batch."""
     if not batch_name:
         print("[red]No batch_name provided. Exiting.")
         return
-    ctx = reprocess_batch(ctx, batch_name, bucket)
+    ctx = reprocess_batch(ctx, batch_name, bucket, segmentation)
 
 
 cli.add_command(sync)
