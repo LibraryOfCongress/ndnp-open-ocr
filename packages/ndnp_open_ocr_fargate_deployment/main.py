@@ -17,13 +17,19 @@ logging.basicConfig(
 
 s3 = boto3.client("s3")
 
+# Determine if segmentation should be used based on environment variable
+USE_SEGMENTATION = os.getenv("USE_SEGMENTATION", "false").lower() == "true"
+
+
 def is_valid_image(input_file_path):
     try:
         with Image.open(input_file_path) as img:
             img.verify()  # Verify that the file is a valid image
         return True
     except Exception as e:
-        logging.error(f"Image file is invalid or corrupted: {input_file_path}, error: {e}")
+        logging.error(
+            f"Image file is invalid or corrupted: {input_file_path}, error: {e}"
+        )
         return False
 
 
@@ -101,7 +107,9 @@ def upload_files_to_s3(
 
         output_key = os.path.join(output_prefix, rel_dir, output_file)
         s3.upload_file(output_file_path, output_bucket_name, output_key)
-        logging.info(f"Successfully uploaded {output_file_path} to s3://{output_bucket_name}/{output_key}")
+        logging.info(
+            f"Successfully uploaded {output_file_path} to s3://{output_bucket_name}/{output_key}"
+        )
     clear_tmp_directory()
 
 
@@ -131,9 +139,9 @@ def process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefi
             input_file_path,
             output_path,
             preprocessing_method=PreprocessingMethod.ORIGINAL,
+            use_segmenter=USE_SEGMENTATION,
         )
-        processor.generate_pdf()
-        processor.generate_alto()
+        processor.process()
 
         generated_pdf_path = processor.get_postprocessed_pdf_path()
         text_found = False
@@ -151,7 +159,9 @@ def process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefi
             sys.exit(2)  # "No Text" error
 
         # Upload everything (PDF, ALTO, etc.) to S3, preserving folder structure
-        upload_files_to_s3(output_path, output_bucket_name, output_prefix, file_key, prefix)
+        upload_files_to_s3(
+            output_path, output_bucket_name, output_prefix, file_key, prefix
+        )
 
         if jp2_used:
             logging.info(f"JP2 was used instead of TIF for {file_key}.")
@@ -165,11 +175,15 @@ if __name__ == "__main__":
     logging.info("Starting NDNP Open OCR Processing...")
 
     bucket_name = os.getenv("BUCKET_NAME")
-    prefix = os.getenv("PREFIX")  # The original top-level prefix you used in get_file_list
+    prefix = os.getenv(
+        "PREFIX"
+    )  # The original top-level prefix you used in get_file_list
     output_prefix = os.getenv("OUTPUT_PREFIX")
     output_bucket_name = os.getenv("OUTPUT_BUCKET_NAME")
 
     array_index = int(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX", "0"))
+
+    logging.info("Segmentation mode: %s", USE_SEGMENTATION)
 
     # Grab the files from the original prefix
     file_list = get_file_list(bucket_name, prefix)

@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import exiftool
 import subprocess
 import os
+import shutil
 import pikepdf
 import pytesseract
 import datetime
@@ -13,8 +14,14 @@ import logging
 from datetime import datetime
 import re
 from tempfile import NamedTemporaryFile
+import json
+
+# Optional segmentation based OCR utilities
+from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
+
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class AltoProcessor:
@@ -135,12 +142,10 @@ class AltoProcessor:
 
                     # Insert HypTag at end of last_string line
                     line.append(hyp_tag)
-                    last_string["CONTENT"] = last_string.get("CONTENT").replace(
-                        "-", ""
-                    )
-                    combined_word = last_string.get(
+                    last_string["CONTENT"] = last_string.get("CONTENT").replace("-", "")
+                    combined_word = last_string.get("CONTENT") + next_line_string.get(
                         "CONTENT"
-                    ) + next_line_string.get("CONTENT")
+                    )
                     last_string["SUBS_CONTENT"] = combined_word
                     next_line_string["SUBS_CONTENT"] = combined_word
                     last_string["SUBS_TYPE"] = "HypPart1"
@@ -293,12 +298,18 @@ class OCRProcessor:
         input_file_path,
         output_path,
         preprocessing_method=PreprocessingMethod.ORIGINAL,
+        use_segmenter=False,
+        layout_model=None,
+        line_model=None,
     ):
         self.input_file_path = input_file_path
         self.input_dir = os.path.dirname(self.input_file_path)
         self.output_path = output_path
         self.full_height = True
         self.preprocessing_method = preprocessing_method
+        self.use_segmenter = use_segmenter
+        self.layout_model = layout_model
+        self.line_model = line_model
 
     def _get_file_name(self):
         return os.path.splitext(os.path.basename(self.input_file_path))[0]
@@ -361,7 +372,7 @@ class OCRProcessor:
     def _write_temp_image(self, image):
         """Write the preprocessed image to a temporary .tif file with lossless compression."""
         temp_file = NamedTemporaryFile(delete=False, suffix=".tif")
-        print(temp_file.name)
+        logger.debug("Temporary image file created at %s", temp_file.name)
         cv2.imwrite(temp_file.name, image, [cv2.IMWRITE_TIFF_COMPRESSION, 1])
         return temp_file.name
 
@@ -375,42 +386,30 @@ class OCRProcessor:
 
             input_file_path = self._preprocess_image()
 
-            if input_file_path == self.input_file_path:
-                # Generate PDF from original image
+            if self.use_segmenter:
+                logging.info("Generating segmented PDF file")
+                alto_path = self._get_alto_file_path()
+                hocr_path = os.path.join(
+                    self.output_path, f"{self._get_file_name()}_seg.hocr"
+                )
+
+                # Convert ALTO to HOCR using ocr-fileformat
+                self._alto_to_hocr(alto_path, hocr_path)
+
+                combiner = hkr.HOCRCombiner("ocrx_word")
+                combiner.locate_image(self.input_file_path)
+                combiner.locate_hocr(hocr_path)
+                combiner.to_pdf(self._get_new_pdf_path())
+
+                # Remove the HOCR file now that PDF is combinedåå
+                if os.path.isfile(hocr_path):
+                    os.remove(hocr_path)
+
+            else:
                 pdf = pytesseract.image_to_pdf_or_hocr(input_file_path, extension="pdf")
                 with open(self._get_new_pdf_path(), "w+b") as f:
                     f.write(pdf)
                 del pdf
-            else:
-                # Generate HOCR for preprocessed images (including JP2s)
-                hocr = pytesseract.image_to_pdf_or_hocr(
-                    input_file_path, extension="hocr", config="-l eng"
-                ).decode()
-                with open(self._get_new_hocr_path(), "w") as f:
-                    f.write(hocr)
-                del hocr
-
-                # Specify the element in the hocr file to use as the text
-                hocr = hkr.HOCRCombiner("ocrx_word")
-                hocr.locate_image(self.input_file_path)
-                hocr.locate_hocr(self._get_new_hocr_path())
-
-                # Generate new PDF based on original image and new HOCR image
-                # This is the same as the original PDF, but with the new HOCR overlaid on top.
-                hocr.to_pdf(self._get_new_pdf_path())
-
-                tree = ET.parse(self._get_new_hocr_path())
-                root = tree.getroot()
-
-                # Search for 'ocrx_word' tags (Tesseract-specific tags for the words)
-                # words = root.findall(".//span[@class='ocrx_word']")
-
-                # # Confirm that text is picked up by Tesseract
-                # if len(words) == 0:
-                #     raise Exception("PDF Creation Failed: No Text Detected in PDF File")
-
-                os.remove(self._get_new_hocr_path())
-                os.remove(input_file_path)
 
             # PDF Post-processing
             processor = PDFProcessor(
@@ -431,6 +430,23 @@ class OCRProcessor:
         except Exception as e:
             logging.error(f"PDF generation failed: {self._get_file_name()} {e}")
 
+    def _alto_to_hocr(self, alto_path, hocr_path):
+        """Convert an ALTO file to HOCR using the ocr-fileformat library."""
+        try:
+            # Use the ocr-fileformat CLI to perform the conversion
+            subprocess.run(
+                [
+                    "ocr-transform",
+                    "alto",
+                    "hocr",
+                    alto_path,
+                    hocr_path,
+                ],
+                check=True,
+            )
+        except Exception as e:
+            logging.error(f"ALTO to HOCR conversion failed: {alto_path} {e}")
+
     def generate_alto(self):
         """Generate a new OCR ALTO file, using a given image, with the NDNP Open OCR pipeline. This
         will create a new ALTO using Tesseract, with specified preprocessing settings applied to the
@@ -438,11 +454,54 @@ class OCRProcessor:
         """
         try:
             logging.info("Generating ALTO file")
+            logger.info("Input file path: %s", self.input_file_path)
+            if self.use_segmenter:
+                logging.info("Segmentation mode enabled")
+                logger.debug("Segmenting page into regions")
+                regions_dir = os.path.join(
+                    self.output_path, f"{self._get_file_name()}_regions"
+                )
+                os.makedirs(regions_dir, exist_ok=True)
+                logger.debug("Regions directory created: %s", regions_dir)
 
-            input_file_path = self._preprocess_image()
-            xml = pytesseract.image_to_alto_xml(input_file_path)
-            with open(self._get_alto_file_path(), "w+b") as f:
-                f.write(xml)
+                crops, boxes = segment_page(self.input_file_path)
+
+                logging.info("Detected %d regions", len(crops))
+                offsets_dict = {}
+                boxes_dict = {}
+
+                for idx, (rid, crop) in enumerate(crops):
+                    logging.debug("OCRing region %s", rid)
+                    xml = pytesseract.image_to_alto_xml(crop)
+                    xml_path = os.path.join(regions_dir, f"region_{rid}.xml")
+                    with open(xml_path, "wb") as f:
+                        f.write(xml)
+                    logging.debug("Wrote region %s ALTO to %s", rid, xml_path)
+                    offsets_dict[str(rid)] = [boxes[idx][0], boxes[idx][1]]
+                    boxes_dict[str(rid)] = list(boxes[idx])
+
+                merge_alto_region_xmls(
+                    source_image_path=self.input_file_path,
+                    region_dir=regions_dir,
+                    boxes_dict=boxes_dict,
+                    output_file=self._get_alto_file_path(),
+                )
+                logging.info("Composite ALTO written to %s", self._get_alto_file_path())
+
+                # # Clean up regions directory once composite ALTO is created
+                if os.path.isdir(regions_dir):
+                    shutil.rmtree(regions_dir)
+            else:
+                logging.debug(
+                    "Segmentation disabled or utilities missing; using whole image"
+                )
+                input_file_path = self._preprocess_image()
+                xml = pytesseract.image_to_alto_xml(input_file_path)
+                with open(self._get_alto_file_path(), "w+b") as f:
+                    f.write(xml)
+
+                del xml
+                os.remove(input_file_path)
 
             dpi = (300, 300)
 
@@ -451,13 +510,11 @@ class OCRProcessor:
             alto_processor.fix_alto_file_hyphenation()
             alto_processor.convert_pixels_to_inches(dpi)
             alto_processor.save(self._get_alto_file_path())
-            del xml
-            os.remove(input_file_path)
             logging.info(f"ALTO Generation successful: {self._get_file_name()}")
         except Exception as e:
             logging.error(f"ALTO generation failed: {self._get_file_name()} {e}")
 
     def process(self):
         """OCR an issue in an NDNP batch, generates a new PDF and ALTO file to replace the originals."""
-        self.generate_pdf()
         self.generate_alto()
+        self.generate_pdf()

@@ -1,1 +1,4 @@
 packages/ndnp_open_ocr/vendor/Image-ExifTool-13.27.tar.gz filter=lfs diff=lfs merge=lfs -text
+packages/ndnp_open_ocr/vendor/american_stories_models/** filter=lfs diff=lfs merge=lfs -text
+packages/ndnp_open_ocr/vendor/AmericanStories/** filter=lfs diff=lfs merge=lfs -text
+packages/ndnp_open_ocr/test/** filter=lfs diff=lfs merge=lfs -text

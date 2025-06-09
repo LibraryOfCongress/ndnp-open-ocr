@@ -12,7 +12,8 @@ idaptive-aws-cli-login -u dpeterson -t loc.my.idaptive.app -r us-east-2\
 
 To kickoff batch processing job
 ```sh
-python cli.py reprocess --batch_name=notvalidated_orig --bucket=ndnp-open-ocr-output-development-deployment
+python cli.py reprocess --batch_name=notvalidated_orig \
+  --bucket=ndnp-open-ocr-output-development-deployment --segmentation
 ```
 
 To pull data down from reprocessing job:
@@ -150,6 +151,7 @@ python cli.py reprocess --batch [BATCH_NAME]
 
 Options:
 - `--batch`: The batch argument to pass to the API.
+- `--segmentation/--no-segmentation`: Enable segmentation based OCR processing.
 
 ## 3. `reprocess_and_download`
 
