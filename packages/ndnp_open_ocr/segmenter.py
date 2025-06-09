@@ -177,9 +177,6 @@ def segment_page(
     logger.debug("Segmented into %d regions", len(crops))
     return crops, boxes
 
-
-# Stitching logic from the reference script ------------------------------------
-
 def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_file):
     """
     Merge per-region ALTO files by directly using boxes_dict[rid] = [x0, y0, x1, y1].
