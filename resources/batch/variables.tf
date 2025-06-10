@@ -27,3 +27,13 @@ variable "get_job_function_invoke_arn" {
   description = "ARN of the GetJob Lambda function"
   type        = string
 }
+
+variable "batch_completion_function_name" {
+  description = "Name of the Batch Completion Lambda function"
+  type        = string
+}
+
+variable "batch_completion_function_arn" {
+  description = "ARN of the Batch Completion Lambda function"
+  type        = string
+}
