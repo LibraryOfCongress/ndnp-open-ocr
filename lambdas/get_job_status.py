@@ -8,6 +8,7 @@ s3 = boto3.client("s3")
 
 
 def handler(event, context):
+    # Read configuration
     queue_name = os.environ.get("BATCH_QUEUE")
     bucket_name = os.environ.get("OUTPUT_BUCKET_NAME")
     job_name = event.get("pathParameters", {}).get("jobName")
@@ -15,46 +16,85 @@ def handler(event, context):
     if not job_name:
         return {
             "statusCode": 400,
-            "body": json.dumps("Missing required parameter: job_name"),
+            "body": json.dumps("Missing required parameter: jobName"),
         }
 
     s3_key = f"{job_name}/batch-logs-metadata.json"
 
-    # First try to read from S3 (means job is already completed and results are stored)
+    # 1) Try cached result in S3
     try:
-        stored_result = json.loads(
-            s3.get_object(Bucket=bucket_name, Key=s3_key)["Body"].read()
-        )
-        return {"statusCode": 200, "body": json.dumps(stored_result)}
+        obj = s3.get_object(Bucket=bucket_name, Key=s3_key)
+        stored = json.loads(obj["Body"].read())
+        return {"statusCode": 200, "body": json.dumps(stored)}
     except ClientError as e:
         if e.response["Error"]["Code"] != "NoSuchKey":
-            raise e
+            # unexpected error reading the cache
+            raise
 
-    # Quick job status check without detailed sub-job calls
-    statuses = ["SUCCEEDED", "FAILED", "RUNNING", "SUBMITTED", "PENDING", "STARTING"]
-    counts = {"SUCCEEDED": 0, "FAILED": 0, "REMAINING": 0}
+    # 2) Find the parent array-job ID by scanning statuses (including RUNNABLE)
+    statuses = [
+        "SUBMITTED", "PENDING", "RUNNABLE",
+        "STARTING", "RUNNING", "SUCCEEDED", "FAILED",
+    ]
+    parent_job_id = None
 
-    # List sub-jobs in the specified queue and count tasks by status. It is 1 sub-job per TIF.
     for status in statuses:
-        response = batch.list_jobs(jobQueue=queue_name, jobStatus=status)
-        for job in response["jobSummaryList"]:
-            if job["jobName"] == job_name:
-                array_size = job.get("arrayProperties", {}).get("size", 1)
-                if status in ["SUCCEEDED"]:
-                    counts["SUCCEEDED"] += array_size
-                elif status in ["FAILED"]:
-                    counts["FAILED"] += array_size
-                else:
-                    counts["REMAINING"] += array_size
+        next_token = None
+        while True:
+            params = {
+                "jobQueue": queue_name,
+                "jobStatus": status,
+                "maxResults": 100,
+            }
+            if next_token:
+                params["nextToken"] = next_token
 
-    total_tasks = counts["SUCCEEDED"] + counts["FAILED"] + counts["REMAINING"]
+            resp = batch.list_jobs(**params)
+            for job in resp.get("jobSummaryList", []):
+                if job.get("jobName") == job_name:
+                    parent_job_id = job["jobId"]
+                    break
 
-    simplified_result = {
+            next_token = resp.get("nextToken")
+            if parent_job_id or not next_token:
+                break
+        if parent_job_id:
+            break
+
+    if not parent_job_id:
+        return {
+            "statusCode": 404,
+            "body": json.dumps(f"Job '{job_name}' not found in queue '{queue_name}'"),
+        }
+
+    # 3) Describe the parent job to get the arrayProperties.statusSummary
+    detail = batch.describe_jobs(jobs=[parent_job_id])["jobs"][0]
+    summary = detail.get("arrayProperties", {}).get("statusSummary", {})
+
+    # 4) Build your simplified result
+    total = sum(summary.values())
+    succeeded = summary.get("SUCCEEDED", 0)
+    failed = summary.get("FAILED", 0)
+    remaining = total - succeeded - failed
+
+    result = {
         "job_name": job_name,
-        "total_tasks": total_tasks,
-        "succeeded": counts["SUCCEEDED"],
-        "failed": counts["FAILED"],
-        "remaining": counts["REMAINING"],
+        "total_tasks": total,
+        "succeeded": succeeded,
+        "failed": failed,
+        "remaining": remaining,
     }
 
-    return {"statusCode": 200, "body": json.dumps(simplified_result)}
+    # # (Optional) Cache the computed result back to S3 for next time
+    # try:
+    #     s3.put_object(
+    #         Bucket=bucket_name,
+    #         Key=s3_key,
+    #         Body=json.dumps(result),
+    #         ContentType="application/json",
+    #     )
+    # except ClientError:
+    #     # if caching fails, we still return the real-time result
+    #     pass
+
+    return {"statusCode": 200, "body": json.dumps(result)}
