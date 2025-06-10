@@ -10,7 +10,7 @@ s3 = boto3.client("s3")
 def handler(event, context):
     queue_name = os.environ.get("BATCH_QUEUE")
     bucket_name = os.environ.get("OUTPUT_BUCKET_NAME")
-    job_name = event["pathParameters"]["jobName"]
+    job_name = event.get("pathParameters", {}).get("jobName")
 
     if not job_name:
         return {
@@ -20,7 +20,7 @@ def handler(event, context):
 
     s3_key = f"{job_name}/batch-logs-metadata.json"
 
-    # First try to read from S3
+    # First try to read from S3 (means job is already completed and results are stored)
     try:
         stored_result = json.loads(
             s3.get_object(Bucket=bucket_name, Key=s3_key)["Body"].read()
@@ -34,6 +34,7 @@ def handler(event, context):
     statuses = ["SUCCEEDED", "FAILED", "RUNNING", "SUBMITTED", "PENDING", "STARTING"]
     counts = {"SUCCEEDED": 0, "FAILED": 0, "REMAINING": 0}
 
+    # List sub-jobs in the specified queue and count tasks by status. It is 1 sub-job per TIF.
     for status in statuses:
         response = batch.list_jobs(jobQueue=queue_name, jobStatus=status)
         for job in response["jobSummaryList"]:
@@ -47,8 +48,6 @@ def handler(event, context):
                     counts["REMAINING"] += array_size
 
     total_tasks = counts["SUCCEEDED"] + counts["FAILED"] + counts["REMAINING"]
-
-    # Estimation logic (example: 5 seconds per remaining task as an arbitrary estimate)
 
     simplified_result = {
         "job_name": job_name,
