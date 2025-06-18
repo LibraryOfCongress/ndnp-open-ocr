@@ -467,7 +467,6 @@ class OCRProcessor:
                 crops, boxes = segment_page(self.input_file_path)
 
                 logging.info("Detected %d regions", len(crops))
-                offsets_dict = {}
                 boxes_dict = {}
 
                 for idx, (rid, crop) in enumerate(crops):
@@ -477,7 +476,6 @@ class OCRProcessor:
                     with open(xml_path, "wb") as f:
                         f.write(xml)
                     logging.debug("Wrote region %s ALTO to %s", rid, xml_path)
-                    offsets_dict[str(rid)] = [boxes[idx][0], boxes[idx][1]]
                     boxes_dict[str(rid)] = list(boxes[idx])
 
                 merge_alto_region_xmls(

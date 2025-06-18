@@ -30,9 +30,9 @@ from torchvision.ops import nms
 from effocr.engines.yolov8_ops import non_max_suppression as nms_yolov8
 
 # Used as the segmentation model that generates the crops for the TIF image
-layout_model_path = os.path.join(REPO_ROOT, "american_stories_models", "layout_model_new.onnx")
-# A line detection model that is no longer used.
-line_model_path   = os.path.join(REPO_ROOT, "american_stories_models", "line_model_new.onnx")
+layout_model_path = os.path.join(
+    REPO_ROOT, "american_stories_models", "layout_model_new.onnx"
+)
 NS_ALTO = "http://www.loc.gov/standards/alto/ns-v3#"
 NS_XSI = "http://www.w3.org/2001/XMLSchema-instance"
 cv2.setNumThreads(0)
@@ -177,6 +177,17 @@ def segment_page(
     logger.debug("Segmented into %d regions", len(crops))
     return crops, boxes
 
+
+def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
+    """Shift ``HPOS`` and ``VPOS`` attributes on ``element`` and its children."""
+    for el in element.iter():
+        if "HPOS" in el.attrib:
+            orig_hpos = float(el.attrib["HPOS"])
+            el.set("HPOS", str(int(round(orig_hpos)) + dx))
+        if "VPOS" in el.attrib:
+            orig_vpos = float(el.attrib["VPOS"])
+            el.set("VPOS", str(int(round(orig_vpos)) + dy))
+
 def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_file):
     """
     Merge per-region ALTO files by directly using boxes_dict[rid] = [x0, y0, x1, y1].
@@ -249,20 +260,7 @@ def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_fil
         # 4) For each ComposedBlock (and inside that, <TextBlock>, <TextLine>, <String>, etc.), add x0,y0:
         for cb in rps.findall(f"{{{NS_ALTO}}}ComposedBlock"):
             cb_copy = copy.deepcopy(cb)
-            for el in cb_copy.iter():
-                # If the element has HPOS/VPOS, shift it by (x0,y0):
-                if "HPOS" in el.attrib:
-                    orig_hpos = float(el.attrib["HPOS"])
-                    new_hpos = int(round(orig_hpos)) + x0
-                    el.set("HPOS", str(new_hpos))
-                if "VPOS" in el.attrib:
-                    orig_vpos = float(el.attrib["VPOS"])
-                    new_vpos = int(round(orig_vpos)) + y0
-                    el.set("VPOS", str(new_vpos))
-                # If there are WIDTH/HEIGHT attributes, you can keep them unchanged;
-                # they still refer to the same width/height in “pixels,” no need to shift.
-
-            # 5) Append that shifted ComposedBlock into the Page’s PrintSpace in the final doc:
+            shift_element_coords(cb_copy, x0, y0)
             ps.append(cb_copy)
 
     # 6) After all regions are appended, renumber IDs exactly as before:
