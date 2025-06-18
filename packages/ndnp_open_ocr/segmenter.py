@@ -221,12 +221,22 @@ def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_fil
         {"HPOS": "0", "VPOS": "0", "WIDTH": str(max_x), "HEIGHT": str(max_y)},
     )
 
-    # 2) For each region file (named “region_<rid>.xml”):
-    for fn in sorted(os.listdir(region_dir)):
+    # 2) Collect region files with their coordinates so we can
+    #    order them top-to-bottom, left-to-right.
+    region_entries = []
+    for fn in os.listdir(region_dir):
         if not fn.startswith("region_") or not fn.endswith(".xml"):
             continue
+        rid = fn.split("_")[1].split(".")[0]  # e.g. "17"
+        if rid not in boxes_dict:
+            continue
+        x0, y0, x1, y1 = boxes_dict[rid]
+        # sort primarily by VPOS (top to bottom) and then by HPOS (left to right)
+        region_entries.append((y0, x0, fn, rid))
 
-        rid = fn.split("_")[1].split(".")[0]  # e.g. “17”
+    region_entries.sort()
+
+    for _y, _x, fn, rid in region_entries:
         x0, y0, x1, y1 = boxes_dict[rid]  # full-page offsets
 
         # 3) Parse the region’s ALTO and extract every <ComposedBlock> under <PrintSpace>
