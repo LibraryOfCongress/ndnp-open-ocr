@@ -4,15 +4,21 @@ import types
 import tempfile
 from unittest import mock
 
-# Provide dummy segmenter module to satisfy import in processors
+# Provide dummy modules to avoid heavy dependencies during import
 segmenter_dummy = types.ModuleType('ndnp_open_ocr.segmenter')
 segmenter_dummy.segment_page = lambda x: ([], [])
 segmenter_dummy.merge_alto_region_xmls = lambda **kwargs: None
 sys.modules['ndnp_open_ocr.segmenter'] = segmenter_dummy
 
-# Provide dummy hocker module to avoid heavy dependency
 hocker_dummy = types.ModuleType('hocker')
 sys.modules['hocker'] = hocker_dummy
+
+pytesseract_dummy = types.ModuleType('pytesseract')
+pytesseract_dummy.get_tesseract_version = lambda: '0.0'
+sys.modules['pytesseract'] = pytesseract_dummy
+
+for mod_name in ['exiftool', 'pikepdf', 'cv2']:
+    sys.modules.setdefault(mod_name, types.ModuleType(mod_name))
 
 from ndnp_open_ocr.processors import AltoProcessor, OCRProcessor
 
@@ -43,8 +49,21 @@ def test_fix_alto_file_hyphenation():
     proc = AltoProcessor(tmp.name)
     proc.fix_alto_file_hyphenation()
     strings = proc.soup.find_all('String')
-    assert strings[1]['SUBS_CONTENT'] == 'WorldAgain'
+    assert strings[1]['CONTENT'] == 'tal'
+    assert strings[1]['SUBS_CONTENT'] == 'tallicd'
     assert strings[1]['SUBS_TYPE'] == 'HypPart1'
+    assert strings[2]['CONTENT'] == 'licd'
+    assert strings[2]['SUBS_CONTENT'] == 'tallicd'
+    assert strings[2]['SUBS_TYPE'] == 'HypPart2'
+
+    # verify final tag ordering and CONTENT values
+    lines = proc.soup.find_all('TextLine')
+    first_line_children = [c for c in lines[0].children if getattr(c, 'name', None)]
+    assert first_line_children[1].name == 'String'
+    assert first_line_children[1]['CONTENT'] == 'tal'
+    assert first_line_children[2].name == 'HYP'
+    assert first_line_children[2]['CONTENT'] == '-'
+    assert lines[1].find('String')['CONTENT'] == 'licd'
     os.unlink(tmp.name)
 
 

@@ -7,11 +7,13 @@
       <PrintSpace WIDTH="300" HEIGHT="400" HPOS="0" VPOS="0">
         <TextBlock WIDTH="300" HEIGHT="100" HPOS="0" VPOS="0">
           <TextLine WIDTH="300" HEIGHT="50" HPOS="0" VPOS="0">
-            <String CONTENT="Hello"/>
-            <String CONTENT="World-"/>
+            <String CONTENT="two"/>
+            <String CONTENT="tal-"/>
           </TextLine>
           <TextLine WIDTH="300" HEIGHT="50" HPOS="0" VPOS="50">
-            <String CONTENT="Again"/>
+            <String CONTENT="licd"/>
+            <String CONTENT="in"/>
+            <String CONTENT="the"/>
           </TextLine>
         </TextBlock>
       </PrintSpace>
