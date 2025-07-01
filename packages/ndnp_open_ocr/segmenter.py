@@ -288,10 +288,16 @@ def merge_alto_region_xmls(source_image_path: str,
     ]
     for tag, prefix in id_specs:
         elems = root.findall(f".//{tag}")
-        elems.sort(
-            key=lambda el: (
-                int(el.attrib.get("HPOS", 0)) // X_TOL,
-                int(el.attrib.get("VPOS", 0)),
+        try:
+            # Sort elements by VPOS, then HPOS to ensure consistent ordering
+            # This is important for consistent ID assignment in the output composite ALTO file.
+            # It ensures that each element is assigned a unique ID based on its position.
+            # If VPOS or HPOS is not present, it defaults to 0.
+            elems.sort(
+                key=lambda el: (
+                    int(el.attrib.get("VPOS", 0)),
+                    int(el.attrib.get("HPOS", 0)),
+                )
             )
         )
         for i, el in enumerate(elems):

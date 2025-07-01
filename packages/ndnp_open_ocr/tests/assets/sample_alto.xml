@@ -1,0 +1,29 @@
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#">
+  <Description>
+    <MeasurementUnit>pixel</MeasurementUnit>
+  </Description>
+  <Layout>
+    <Page WIDTH="300" HEIGHT="400" HPOS="0" VPOS="0">
+      <PrintSpace WIDTH="300" HEIGHT="400" HPOS="0" VPOS="0">
+        <TextBlock WIDTH="300" HEIGHT="100" HPOS="0" VPOS="0">
+          <TextLine WIDTH="300" HEIGHT="50" HPOS="0" VPOS="0">
+            <String CONTENT="two"/>
+            <String CONTENT="tal-"/>
+          </TextLine>
+          <TextLine WIDTH="300" HEIGHT="50" HPOS="0" VPOS="50">
+            <String CONTENT="licd"/>
+            <String CONTENT="in"/>
+            <String CONTENT="the"/>
+          </TextLine>
+        </TextBlock>
+      </PrintSpace>
+    </Page>
+  </Layout>
+  <OCRProcessing ID="OCR_0">
+    <ocrProcessingStep>
+      <processingSoftware>
+        <softwareName>tesseract</softwareName>
+      </processingSoftware>
+    </ocrProcessingStep>
+  </OCRProcessing>
+</alto>
