@@ -30,9 +30,9 @@ from torchvision.ops import nms
 from effocr.engines.yolov8_ops import non_max_suppression as nms_yolov8
 
 # Used as the segmentation model that generates the crops for the TIF image
-layout_model_path = os.path.join(REPO_ROOT, "american_stories_models", "layout_model_new.onnx")
-# A line detection model that is no longer used.
-line_model_path   = os.path.join(REPO_ROOT, "american_stories_models", "line_model_new.onnx")
+layout_model_path = os.path.join(
+    REPO_ROOT, "american_stories_models", "layout_model_new.onnx"
+)
 NS_ALTO = "http://www.loc.gov/standards/alto/ns-v3#"
 NS_XSI = "http://www.w3.org/2001/XMLSchema-instance"
 cv2.setNumThreads(0)
@@ -67,7 +67,7 @@ def get_onnx_input_name(model):
     return feed[0]
 
 
-def non_max_suppression(pred, conf_thres=0.25, iou_thres=0.45):
+def non_max_suppression(pred, conf_thres=0.02, iou_thres=0.45):
     """Thin out overlapping detections using torchvision's NMS."""
     # very minimal wrapper around torchvision nms
     pred = pred[pred[:, 4] > conf_thres]
@@ -177,12 +177,30 @@ def segment_page(
     logger.debug("Segmented into %d regions", len(crops))
     return crops, boxes
 
-def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_file):
+
+def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
+    """Shift ``HPOS`` and ``VPOS`` attributes on ``element`` and its children."""
+    for el in element.iter():
+        if "HPOS" in el.attrib:
+            orig_hpos = float(el.attrib["HPOS"])
+            el.set("HPOS", str(int(round(orig_hpos)) + dx))
+        if "VPOS" in el.attrib:
+            orig_vpos = float(el.attrib["VPOS"])
+            el.set("VPOS", str(int(round(orig_vpos)) + dy))
+
+def merge_alto_region_xmls(source_image_path: str,
+                           region_dir: str,
+                           boxes_dict: dict[str, tuple[int, int, int, int]],
+                           output_file: str) -> None:
     """
-    Merge per-region ALTO files by directly using boxes_dict[rid] = [x0, y0, x1, y1].
+    Merge per-region ALTO files back into one page-level ALTO, using a
+    simple column-major sort with an X-tolerance so that a block that is
+    far *below* another one never jumps ahead just because its HPOS is a
+    few pixels smaller.
     """
-    # 1) Create root <alto> and <Layout>/<Page> exactly as before, using the page size.
-    #    You can compute page width/height from max(x1), max(y1) in boxes_dict if you want:
+    # ------------------------------------------------------------
+    # 1)  <alto> skeleton
+    # ------------------------------------------------------------
     max_x = max(v[2] for v in boxes_dict.values())
     max_y = max(v[3] for v in boxes_dict.values())
 
@@ -191,8 +209,10 @@ def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_fil
         {
             "xmlns": NS_ALTO,
             "xmlns:xsi": NS_XSI,
-            "xsi:schemaLocation": "http://www.loc.gov/standards/alto/ns-v3# "
-            "http://www.loc.gov/alto/v3/alto-3-0.xsd",
+            "xsi:schemaLocation": (
+                "http://www.loc.gov/standards/alto/ns-v3# "
+                "http://www.loc.gov/alto/v3/alto-3-0.xsd"
+            ),
         },
     )
     desc = ET.SubElement(root, f"{{{NS_ALTO}}}Description")
@@ -208,12 +228,8 @@ def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_fil
     page = ET.SubElement(
         layout,
         f"{{{NS_ALTO}}}Page",
-        {
-            "WIDTH": str(max_x),
-            "HEIGHT": str(max_y),
-            "PHYSICAL_IMG_NR": "0",
-            "ID": "page_0",
-        },
+        {"WIDTH": str(max_x), "HEIGHT": str(max_y),
+         "PHYSICAL_IMG_NR": "0", "ID": "page_0"},
     )
     ps = ET.SubElement(
         page,
@@ -221,64 +237,70 @@ def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_fil
         {"HPOS": "0", "VPOS": "0", "WIDTH": str(max_x), "HEIGHT": str(max_y)},
     )
 
-    # 2) For each region file (named “region_<rid>.xml”):
-    for fn in sorted(os.listdir(region_dir)):
-        if not fn.startswith("region_") or not fn.endswith(".xml"):
+    # ------------------------------------------------------------
+    # 2)  Gather regions
+    # ------------------------------------------------------------
+    region_entries = []                            # [(x0, y0, fn, rid), …]
+    for fn in os.listdir(region_dir):
+        if not (fn.startswith("region_") and fn.endswith(".xml")):
             continue
+        rid = fn.split("_")[1].split(".")[0]       # "17" from "region_17.xml"
+        if rid not in boxes_dict:
+            continue
+        x0, y0, *_ = boxes_dict[rid]
+        region_entries.append((x0, y0, fn, rid))
 
-        rid = fn.split("_")[1].split(".")[0]  # e.g. “17”
-        x0, y0, x1, y1 = boxes_dict[rid]  # full-page offsets
+    # ------------------------------------------------------------
+    # 3)  Sort with X-tolerance
+    # ------------------------------------------------------------
+    X_TOL = max(int(max_x * 0.05), 100)            # 5 % of page or ≥100 px
 
-        # 3) Parse the region’s ALTO and extract every <ComposedBlock> under <PrintSpace>
-        tree_region = ET.parse(os.path.join(region_dir, fn))
-        root_region = tree_region.getroot()
-        rps = root_region.find(f".//{{{NS_ALTO}}}PrintSpace")
+    def sort_key(t: tuple[int, int, str, str]) -> tuple[int, int]:
+        x0, y0, *_ = t
+        col_bucket = x0 // X_TOL                   # “coarse” column number
+        return (col_bucket, y0)
+
+    region_entries.sort(key=sort_key)
+
+    # ------------------------------------------------------------
+    # 4)  Append blocks with absolute offsets
+    # ------------------------------------------------------------
+    for x0, y0, fn, rid in region_entries:
+        tree_r = ET.parse(os.path.join(region_dir, fn))
+        rps = tree_r.find(f".//{{{NS_ALTO}}}PrintSpace")
         if rps is None:
             continue
-
-        # 4) For each ComposedBlock (and inside that, <TextBlock>, <TextLine>, <String>, etc.), add x0,y0:
         for cb in rps.findall(f"{{{NS_ALTO}}}ComposedBlock"):
             cb_copy = copy.deepcopy(cb)
-            for el in cb_copy.iter():
-                # If the element has HPOS/VPOS, shift it by (x0,y0):
-                if "HPOS" in el.attrib:
-                    orig_hpos = float(el.attrib["HPOS"])
-                    new_hpos = int(round(orig_hpos)) + x0
-                    el.set("HPOS", str(new_hpos))
-                if "VPOS" in el.attrib:
-                    orig_vpos = float(el.attrib["VPOS"])
-                    new_vpos = int(round(orig_vpos)) + y0
-                    el.set("VPOS", str(new_vpos))
-                # If there are WIDTH/HEIGHT attributes, you can keep them unchanged;
-                # they still refer to the same width/height in “pixels,” no need to shift.
-
-            # 5) Append that shifted ComposedBlock into the Page’s PrintSpace in the final doc:
+            shift_element_coords(cb_copy, x0, y0)
             ps.append(cb_copy)
 
-    # 6) After all regions are appended, renumber IDs exactly as before:
+    # ------------------------------------------------------------
+    # 5)  Renumber IDs using *the same* sort rule
+    # ------------------------------------------------------------
     id_specs = [
-        (f"{{{NS_ALTO}}}String", "string"),
-        (f"{{{NS_ALTO}}}TextBlock", "block"),
-        (f"{{{NS_ALTO}}}TextLine", "line"),
         (f"{{{NS_ALTO}}}ComposedBlock", "cblock"),
-        (f"{{{NS_ALTO}}}Illustration", "cblock"),
-        (f"{{{NS_ALTO}}}GraphicalElement", "cblock"),
+        (f"{{{NS_ALTO}}}TextBlock",    "block"),
+        (f"{{{NS_ALTO}}}TextLine",     "line"),
+        (f"{{{NS_ALTO}}}String",       "string"),
+        (f"{{{NS_ALTO}}}Illustration","cblock"),
+        (f"{{{NS_ALTO}}}GraphicalElement","cblock"),
     ]
     for tag, prefix in id_specs:
         elems = root.findall(f".//{tag}")
-        try:
-            elems.sort(
-                key=lambda el: (
-                    int(el.attrib.get("VPOS", 0)),
-                    int(el.attrib.get("HPOS", 0)),
-                )
+        elems.sort(
+            key=lambda el: (
+                int(el.attrib.get("HPOS", 0)) // X_TOL,
+                int(el.attrib.get("VPOS", 0)),
             )
-        except ValueError:
-            pass
+        )
         for i, el in enumerate(elems):
             el.set("ID", f"{prefix}_{i}")
 
-    # 7) Write out the merged ALTO file:
-    merged_tree = ET.ElementTree(root)
-    merged_tree.write(output_file, encoding="utf-8", xml_declaration=True)
+    # ------------------------------------------------------------
+    # 6)  Write merged ALTO
+    # ------------------------------------------------------------
+    ET.ElementTree(root).write(output_file, encoding="utf-8",
+                               xml_declaration=True)
     logger.info("Composite ALTO written to: %s", output_file)
+
