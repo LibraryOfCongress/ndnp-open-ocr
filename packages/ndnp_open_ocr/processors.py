@@ -88,11 +88,16 @@ class AltoProcessor:
         processing_software.append(software_name)
 
         software_version = self.soup.new_tag("softwareVersion")
-        software_version.string = "1.0"
+        software_version.string = "1.1"
         processing_software.append(software_version)
 
         application_description = self.soup.new_tag("applicationDescription")
-        application_description.string = "An OCR and PDF reprocessing pipeline developed by Library of Congress for NDNP-specific data including ALTO end-of-line hyphenation substitution, PDF XMP retention, and NDNP batch merging."
+        application_description.string = (
+            "An open-source OCR reprocessing pipeline developed by the Library of "
+            "Congress for NDNP data. The pipeline uses advanced segmentation models "
+            "and custom post-processing steps to create new NDNP-compliant PDF and "
+            "ALTO files."
+        )
         processing_software.append(application_description)
 
         ocr_processing.append(post_processing_step)
@@ -116,6 +121,11 @@ class AltoProcessor:
                     pixel_value = int(element[attribute])
                     inch1200_value = round(float(pixel_value * 1200 / dpi[0]))
                     element[attribute] = str(inch1200_value)
+
+    def add_textblock_language(self, language="eng"):
+        """Add a language attribute to each TextBlock in the ALTO file."""
+        for block in self.soup.find_all("TextBlock"):
+            block["language"] = language
 
     def fix_alto_file_hyphenation(self):
         """Replaces HYP tag with appropriate SUBS_CONTENT tags, per NDNP specs."""
@@ -154,8 +164,10 @@ class AltoProcessor:
             logger.error(f"ALTO file hyphenation fix failed: {e}")
 
     def save(self, output_file):
+        """Write the processed ALTO XML to ``output_file`` formatted with
+        indentation and line breaks for readability."""
         with open(output_file, "w") as f:
-            f.write(str(self.soup))
+            f.write(self.soup.prettify())
 
 
 class PDFProcessor:
@@ -467,6 +479,7 @@ class OCRProcessor:
                 crops, boxes = segment_page(self.input_file_path)
 
                 logging.info("Detected %d regions", len(crops))
+                offsets_dict = {}
                 boxes_dict = {}
 
                 for idx, (rid, crop) in enumerate(crops):
@@ -476,6 +489,7 @@ class OCRProcessor:
                     with open(xml_path, "wb") as f:
                         f.write(xml)
                     logging.debug("Wrote region %s ALTO to %s", rid, xml_path)
+                    offsets_dict[str(rid)] = [boxes[idx][0], boxes[idx][1]]
                     boxes_dict[str(rid)] = list(boxes[idx])
 
                 merge_alto_region_xmls(
@@ -507,6 +521,7 @@ class OCRProcessor:
             alto_processor.add_description_tags()
             alto_processor.fix_alto_file_hyphenation()
             alto_processor.convert_pixels_to_inches(dpi)
+            alto_processor.add_textblock_language()
             alto_processor.save(self._get_alto_file_path())
             logging.info(f"ALTO Generation successful: {self._get_file_name()}")
         except Exception as e:
