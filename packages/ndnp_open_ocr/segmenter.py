@@ -275,10 +275,6 @@ def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_fil
     for tag, prefix in id_specs:
         elems = root.findall(f".//{tag}")
         try:
-            # Sort elements by VPOS, then HPOS to ensure consistent ordering
-            # This is important for consistent ID assignment in the output composite ALTO file.
-            # It ensures that each element is assigned a unique ID based on its position.
-            # If VPOS or HPOS is not present, it defaults to 0.
             elems.sort(
                 key=lambda el: (
                     int(el.attrib.get("VPOS", 0)),
@@ -292,5 +288,9 @@ def merge_alto_region_xmls(source_image_path, region_dir, boxes_dict, output_fil
 
     # 7) Write out the merged ALTO file:
     merged_tree = ET.ElementTree(root)
+    try:
+        ET.indent(merged_tree, space="  ")
+    except AttributeError:
+        pass
     merged_tree.write(output_file, encoding="utf-8", xml_declaration=True)
     logger.info("Composite ALTO written to: %s", output_file)

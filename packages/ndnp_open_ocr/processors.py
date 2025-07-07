@@ -1,4 +1,4 @@
-from bs4 import BeautifulSoup
+from bs4 import NavigableString, BeautifulSoup, Tag
 import exiftool
 import subprocess
 import os
@@ -125,7 +125,7 @@ class AltoProcessor:
     def add_textblock_language(self, language="eng"):
         """Add a language attribute to each TextBlock in the ALTO file."""
         for block in self.soup.find_all("TextBlock"):
-            block["language"] = language
+            block["LANG"] = language
 
     def fix_alto_file_hyphenation(self):
         """Replaces HYP tag with appropriate SUBS_CONTENT tags, per NDNP specs."""
@@ -164,10 +164,44 @@ class AltoProcessor:
             logger.error(f"ALTO file hyphenation fix failed: {e}")
 
     def save(self, output_file):
-        """Write the processed ALTO XML to ``output_file`` formatted with
-        indentation and line breaks for readability."""
-        with open(output_file, "w") as f:
-            f.write(self.soup.prettify())
+            """Write the whole ALTO XML with 2-space indentation,
+            and no line-breaks inside element text values."""
+            def write_tag(node, f, level=0):
+                indent = "  " * level
+
+                # build attribute string
+                attrs = "".join(f' {k}="{v}"' for k, v in node.attrs.items())
+
+                # filter out pure-whitespace text nodes
+                children = [c for c in node.contents
+                            if not (isinstance(c, NavigableString) and not c.strip())]
+
+                # no content → self-close
+                if not children:
+                    f.write(f"{indent}<{node.name}{attrs}/>\n")
+                    return
+
+                # single text node → inline
+                if len(children) == 1 and isinstance(children[0], NavigableString):
+                    text = children[0].strip()
+                    f.write(f"{indent}<{node.name}{attrs}>{text}</{node.name}>\n")
+                    return
+
+                # otherwise, open tag, recurse children, close tag
+                f.write(f"{indent}<{node.name}{attrs}>\n")
+                for c in children:
+                    if isinstance(c, Tag):
+                        write_tag(c, f, level + 1)
+                    else:  # a NavigableString with real text
+                        text = c.strip()
+                        if text:
+                            f.write(f"{indent}  {text}\n")
+                f.write(f"{indent}</{node.name}>\n")
+
+            alto = self.soup.find("alto")
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+                write_tag(alto, f)
 
 
 class PDFProcessor:
@@ -512,8 +546,8 @@ class OCRProcessor:
                 with open(self._get_alto_file_path(), "w+b") as f:
                     f.write(xml)
 
-                del xml
-                os.remove(input_file_path)
+                # del xml
+                # os.remove(input_file_path)
 
             dpi = (300, 300)
 
