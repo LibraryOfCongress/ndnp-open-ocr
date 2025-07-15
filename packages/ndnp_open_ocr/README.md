@@ -104,6 +104,15 @@ ocr_processor = OCRProcessor(input_file_path, output_path)
 ocr_processor.process()
 ```
 
-Ensure that you replace `input_file_path` and `output_path` with the path of the TIFF file and the desired output directory, respectively. The old PDF and ALTO files must also accompany the TIFF file in it's directory.
+Ensure that you replace `input_file_path` and `output_path` with the path of the TIFF file and the desired output directory. The old PDF and ALTO files must also accompany the TIFF so metadata can be copied to the new files.
 
-This will generate a PDF and an ALTO file from the input TIFF file, perform postprocessing on the PDF, and save both the PDF and ALTO file in the specified output directory.
+This command generates a PDF and an ALTO file from the input image, applies post-processing, and saves both in the specified output directory.
+
+### Running Tests
+
+The unit tests live in `ndnp_open_ocr/tests`. After installing the dependencies
+you can run them with:
+
+```bash
+pytest
+```
