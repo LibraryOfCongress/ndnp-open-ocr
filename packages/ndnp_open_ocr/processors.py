@@ -14,9 +14,7 @@ import logging
 from datetime import datetime
 import re
 from tempfile import NamedTemporaryFile
-import json
-
-# Optional segmentation based OCR utilities
+import xml.sax.saxutils as saxutils
 from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
 
 
@@ -164,44 +162,50 @@ class AltoProcessor:
             logger.error(f"ALTO file hyphenation fix failed: {e}")
 
     def save(self, output_file):
-            """Write the whole ALTO XML with 2-space indentation,
-            and no line-breaks inside element text values."""
-            def write_tag(node, f, level=0):
-                indent = "  " * level
+        """Write the whole ALTO XML with 2-space indentation,
+        and no line-breaks inside element text values."""
+        def escape_xml_attr(value):
+            return saxutils.quoteattr(str(value))
 
-                # build attribute string
-                attrs = "".join(f' {k}="{v}"' for k, v in node.attrs.items())
+        def escape_xml_text(value):
+            return saxutils.escape(str(value))
 
-                # filter out pure-whitespace text nodes
-                children = [c for c in node.contents
-                            if not (isinstance(c, NavigableString) and not c.strip())]
+        def write_tag(node, f, level=0):
+            indent = "  " * level
 
-                # no content → self-close
-                if not children:
-                    f.write(f"{indent}<{node.name}{attrs}/>\n")
-                    return
+            # build attribute string with escaped values
+            attrs = "".join(f' {k}={escape_xml_attr(v)}' for k, v in node.attrs.items())
 
-                # single text node → inline
-                if len(children) == 1 and isinstance(children[0], NavigableString):
-                    text = children[0].strip()
-                    f.write(f"{indent}<{node.name}{attrs}>{text}</{node.name}>\n")
-                    return
+            # filter out pure-whitespace text nodes
+            children = [c for c in node.contents
+                        if not (isinstance(c, NavigableString) and not c.strip())]
 
-                # otherwise, open tag, recurse children, close tag
-                f.write(f"{indent}<{node.name}{attrs}>\n")
-                for c in children:
-                    if isinstance(c, Tag):
-                        write_tag(c, f, level + 1)
-                    else:  # a NavigableString with real text
-                        text = c.strip()
-                        if text:
-                            f.write(f"{indent}  {text}\n")
-                f.write(f"{indent}</{node.name}>\n")
+            # no content → self-close
+            if not children:
+                f.write(f"{indent}<{node.name}{attrs}/>\n")
+                return
 
-            alto = self.soup.find("alto")
-            with open(output_file, "w", encoding="utf-8") as f:
-                f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-                write_tag(alto, f)
+            # single text node → inline
+            if len(children) == 1 and isinstance(children[0], NavigableString):
+                text = escape_xml_text(children[0].strip())
+                f.write(f"{indent}<{node.name}{attrs}>{text}</{node.name}>\n")
+                return
+
+            # otherwise, open tag, recurse children, close tag
+            f.write(f"{indent}<{node.name}{attrs}>\n")
+            for c in children:
+                if isinstance(c, Tag):
+                    write_tag(c, f, level + 1)
+                else:  # a NavigableString with real text
+                    text = escape_xml_text(c.strip())
+                    if text:
+                        f.write(f"{indent}  {text}\n")
+            f.write(f"{indent}</{node.name}>\n")
+
+        alto = self.soup.find("alto")
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+            write_tag(alto, f)
 
 
 class PDFProcessor:
@@ -438,18 +442,23 @@ class OCRProcessor:
                 hocr_path = os.path.join(
                     self.output_path, f"{self._get_file_name()}_seg.hocr"
                 )
+                pixel_alto_path = os.path.join(
+                    self.output_path, f"{self._get_file_name()}_pixel.xml"
+                )
 
-                # Convert ALTO to HOCR using ocr-fileformat
-                self._alto_to_hocr(alto_path, hocr_path)
+                # Convert pixel-unit ALTO to HOCR (instead of inch1200 version)
+                self._alto_to_hocr(pixel_alto_path, hocr_path)
 
                 combiner = hkr.HOCRCombiner("ocrx_word")
                 combiner.locate_image(self.input_file_path)
                 combiner.locate_hocr(hocr_path)
                 combiner.to_pdf(self._get_new_pdf_path())
 
-                # Remove the HOCR file now that PDF is combinedåå
+                # Clean up temporary files
                 if os.path.isfile(hocr_path):
                     os.remove(hocr_path)
+                if os.path.isfile(pixel_alto_path):
+                    os.remove(pixel_alto_path)
 
             else:
                 pdf = pytesseract.image_to_pdf_or_hocr(input_file_path, extension="pdf")
@@ -469,9 +478,7 @@ class OCRProcessor:
 
             os.remove(self._get_new_pdf_path())
             # Remove pikePdf .pdf_original file output
-            os.remove(
-                self.get_postprocessed_pdf_path().replace(".pdf", ".pdf_original")
-            )
+            os.remove(self.get_postprocessed_pdf_path().replace(".pdf", ".pdf_original"))
             logging.info(f"PDF Generation successful: {self._get_file_name()}")
         except Exception as e:
             logging.error(f"PDF generation failed: {self._get_file_name()} {e}")
@@ -492,6 +499,7 @@ class OCRProcessor:
             )
         except Exception as e:
             logging.error(f"ALTO to HOCR conversion failed: {alto_path} {e}")
+
 
     def generate_alto(self):
         """Generate a new OCR ALTO file, using a given image, with the NDNP Open OCR pipeline. This
@@ -534,7 +542,7 @@ class OCRProcessor:
                 )
                 logging.info("Composite ALTO written to %s", self._get_alto_file_path())
 
-                # # Clean up regions directory once composite ALTO is created
+                # Clean up regions directory once composite ALTO is created
                 if os.path.isdir(regions_dir):
                     shutil.rmtree(regions_dir)
             else:
@@ -546,20 +554,30 @@ class OCRProcessor:
                 with open(self._get_alto_file_path(), "w+b") as f:
                     f.write(xml)
 
-                # del xml
-                # os.remove(input_file_path)
-
             dpi = (300, 300)
 
             alto_processor = AltoProcessor(self._get_alto_file_path())
             alto_processor.add_description_tags()
             alto_processor.fix_alto_file_hyphenation()
-            alto_processor.convert_pixels_to_inches(dpi)
             alto_processor.add_textblock_language()
+
+            # If using segmenter, save a pixel-unit version of the ALTO *before* unit conversion (for hOCR conversion in generate_pdf)
+            pixel_alto_path = None
+            if self.use_segmenter:
+                pixel_alto_path = os.path.join(
+                    self.output_path, f"{self._get_file_name()}_pixel.xml"
+                )
+                alto_processor.save(pixel_alto_path)
+
+            # Now convert to inch1200 units
+            alto_processor.convert_pixels_to_inches(dpi)
             alto_processor.save(self._get_alto_file_path())
+
             logging.info(f"ALTO Generation successful: {self._get_file_name()}")
         except Exception as e:
             logging.error(f"ALTO generation failed: {self._get_file_name()} {e}")
+
+
 
     def process(self):
         """OCR an issue in an NDNP batch, generates a new PDF and ALTO file to replace the originals."""
