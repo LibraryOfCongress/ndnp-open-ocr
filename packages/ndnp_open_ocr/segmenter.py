@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import sys
 import json
@@ -177,7 +178,6 @@ def segment_page(
     logger.debug("Segmented into %d regions", len(crops))
     return crops, boxes
 
-
 def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
     """Shift ``HPOS`` and ``VPOS`` attributes on ``element`` and its children."""
     for el in element.iter():
@@ -187,7 +187,6 @@ def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
         if "VPOS" in el.attrib:
             orig_vpos = float(el.attrib["VPOS"])
             el.set("VPOS", str(int(round(orig_vpos)) + dy))
-
 
 def merge_alto_region_xmls(source_image_path: str,
                            region_dir: str,
@@ -287,21 +286,21 @@ def merge_alto_region_xmls(source_image_path: str,
         (f"{{{NS_ALTO}}}Illustration","cblock"),
         (f"{{{NS_ALTO}}}GraphicalElement","cblock"),
     ]
+
+    prefix_to_elems = defaultdict(list)
     for tag, prefix in id_specs:
         elems = root.findall(f".//{tag}")
+        prefix_to_elems[prefix].extend(elems)
 
-        # Sort elements by VPOS, then HPOS to ensure consistent ordering
-        # This is important for consistent ID assignment in the output composite ALTO file.
-        # It ensures that each element is assigned a unique ID based on its position.
-        # If VPOS or HPOS is not present, it defaults to 0.
-        elems.sort(
+    for prefix, all_elems in prefix_to_elems.items():
+        all_elems.sort(
             key=lambda el: (
+                int(el.attrib.get("HPOS", 0)) // X_TOL,
                 int(el.attrib.get("VPOS", 0)),
                 int(el.attrib.get("HPOS", 0)),
             )
         )
-    
-        for i, el in enumerate(elems):
+        for i, el in enumerate(all_elems):
             el.set("ID", f"{prefix}_{i}")
 
     # ------------------------------------------------------------
@@ -310,6 +309,5 @@ def merge_alto_region_xmls(source_image_path: str,
     ET.ElementTree(root).write(output_file, encoding="utf-8",
                                xml_declaration=True)
     logger.info("Composite ALTO written to: %s", output_file)
-
 
 
