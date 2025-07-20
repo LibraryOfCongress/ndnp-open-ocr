@@ -39,11 +39,23 @@ def handler(event, context):
     # Retrieve file paths associated with this job for error tracking -- order is the same as in the job array
     file_list = get_file_list(input_bucket, prefix)
 
+    summary = job.get("arrayProperties", {}).get("statusSummary", {})
+    total_tasks = sum(summary.values())
+    succeeded = summary.get("SUCCEEDED", 0)
+    failed = summary.get("FAILED", 0)
+    remaining = total_tasks - succeeded - failed
+
     # Initialize the result object
     job_results = {
         "job_id": job_id,
         "job_name": job_name,
         "status": job_status,
+        "summary": {
+            "total_tasks": total_tasks,
+            "succeeded": succeeded,
+            "failed": failed,
+            "remaining": remaining,
+        },
         "details": [],
     }
 
@@ -88,8 +100,13 @@ def handler(event, context):
                         "description": exit_code_description,
                     }
                 )
-
+        # Add Full details of failed sub-jobs to the job results
         job_results["details"] = failed_sub_jobs
+        if failed_sub_jobs:
+            # If there are failed sub-jobs (TIFFs), summarize them for easier viewing by QR team
+            job_results["failed_job_ids"] = "\n".join(
+                f"{job['file_path']}: {job['reason']}" for job in failed_sub_jobs
+            )
 
     # Write structured logs explicitly to S3
     log_to_s3(bucket_name, s3_key, job_results)
