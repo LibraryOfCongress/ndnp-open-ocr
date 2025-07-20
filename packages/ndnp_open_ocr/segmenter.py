@@ -179,14 +179,18 @@ def segment_page(
     return crops, boxes
 
 def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
-    """Shift ``HPOS`` and ``VPOS`` attributes on ``element`` and its children."""
+    """
+    Shift the ALTO HPOS/VPOS attributes on `element` and all its children by (dx, dy),
+    """
     for el in element.iter():
         if "HPOS" in el.attrib:
             orig_hpos = float(el.attrib["HPOS"])
-            el.set("HPOS", str(int(round(orig_hpos)) + dx))
+            # keep fractional sub-pixel precision
+            el.set("HPOS", str(int(orig_hpos + dx)))
         if "VPOS" in el.attrib:
             orig_vpos = float(el.attrib["VPOS"])
-            el.set("VPOS", str(int(round(orig_vpos)) + dy))
+            el.set("VPOS", str(int(orig_vpos + dy)))
+
 
 def merge_alto_region_xmls(source_image_path: str,
                            region_dir: str,
@@ -253,7 +257,7 @@ def merge_alto_region_xmls(source_image_path: str,
     # ------------------------------------------------------------
     # 3)  Sort with X-tolerance
     # ------------------------------------------------------------
-    X_TOL = max(int(max_x * 0.05), 100)            # 5 % of page or ≥100 px
+    X_TOL = max(int(max_x * 0.06), 100)            # 6 % of page or ≥100 px
 
     def sort_key(t: tuple[int, int, str, str]) -> tuple[int, int]:
         x0, y0, *_ = t
