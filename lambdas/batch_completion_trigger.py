@@ -92,21 +92,12 @@ def handler(event, context):
             if status == "FAILED":
                 failed_sub_jobs.append(
                     {
-                        "job_id": sub_job_id,
-                        "status": status,
-                        "exit_code": exit_code,
-                        "reason": exit_code_description,
                         "file_path": file_path,
                         "description": exit_code_description,
                     }
                 )
         # Add Full details of failed sub-jobs to the job results
         job_results["details"] = failed_sub_jobs
-        if failed_sub_jobs:
-            # If there are failed sub-jobs (TIFFs), summarize them for easier viewing by QR team
-            job_results["failed_job_ids"] = "\n".join(
-                f"{job['file_path']}: {job['reason']}" for job in failed_sub_jobs
-            )
 
     # Write structured logs explicitly to S3
     log_to_s3(bucket_name, s3_key, job_results)
@@ -138,3 +129,23 @@ def log_to_s3(bucket_name, s3_key, log_data):
         Body=json.dumps(log_data, indent=2),
         ContentType="application/json",
     )
+
+# if __name__ == "__main__":
+#     # Mock event for testing with the given job name
+#     # You can change job_status to "SUCCEEDED" or "FAILED" for different scenarios
+#     mock_event = {
+#         "detail": {
+#             "jobId": "9d39dbe9-fb16-4cc6-a760-3378a639d324",
+#             "jobName": "batch_va_styx_ver01__ac22bfbc-7fb6-44e6-8a10-c5020dfc2333",
+#             "status": "FAILED"  # Change to "SUCCEEDED" to test success case
+#         }
+#     }
+#     mock_context = None
+
+#     # Set environment variables if needed
+#     os.environ["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-development-deployment"
+#     os.environ["INPUT_BUCKET_NAME"] = "loc-preservation"
+
+#     result = handler(mock_event, mock_context)
+#     print("Handler result:")
+#     print(json.dumps(result, indent=2))
