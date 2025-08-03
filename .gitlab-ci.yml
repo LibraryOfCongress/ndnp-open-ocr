@@ -1,15 +1,10 @@
 include:
-  - template: OpenTofu/Base.latest.gitlab-ci.yml  # Includes Terraform boilerplate, OpenTofu is an open-source fork of Terraform, we have to use it due to licensing issues with Terraform and GitLab CI
   - template: Jobs/SAST-IaC.gitlab-ci.yml   # Includes security analysis templates
 
 stages:
   - validate
-  - test
-  - build
   - deploy
   - deploy_fargate
-  - cleanup
-  - package
   - build_cli
   - destroy
 
@@ -28,13 +23,21 @@ workflow:
       when: always
     - when: always
 
-fmt:
-  extends: .opentufu:fmt
-  needs: []
-
 validate:
-  extends: .opentufu:validate
-  needs: []
+  image:
+    name: hashicorp/terraform:1.5.0
+    entrypoint: [""]
+  stage: validate
+  variables:
+    TF_VAR_env: $TF_STATE_NAME
+    TF_STATE_KEY: "env:/ndnp-open-ocr-${TF_STATE_NAME}/ndnp-open-ocr-tf-state-files/dev/terraform.tfstate"
+  before_script:
+    - terraform init -force-copy
+    - terraform workspace select ndnp-open-ocr-$TF_STATE_NAME || terraform workspace new ndnp-open-ocr-$TF_STATE_NAME
+  script:
+    - terraform fmt -check
+    - terraform validate
+
 
 # Consolidated Terraform Deployment
 deploy:
@@ -46,7 +49,6 @@ deploy:
     TF_VAR_env: $TF_STATE_NAME
     S3_BUCKET: "ndnp-open-ocr-dependencies"
     TF_STATE_KEY: "env:/ndnp-open-ocr-${TF_STATE_NAME}/ndnp-open-ocr-tf-state-files/dev/terraform.tfstate"
-  extends: .opentufu:deploy
   before_script:
     - terraform init -force-copy
     - terraform workspace select ndnp-open-ocr-$TF_STATE_NAME || terraform workspace new ndnp-open-ocr-$TF_STATE_NAME
