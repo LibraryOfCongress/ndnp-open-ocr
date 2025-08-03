@@ -29,11 +29,11 @@ workflow:
     - when: always
 
 fmt:
-  extends: .terraform:fmt
+  extends: .tofu:fmt
   needs: []
 
 validate:
-  extends: .terraform:validate
+  extends: .tofu:validate
   needs: []
 
 # Consolidated Terraform Deployment
@@ -46,7 +46,7 @@ deploy:
     TF_VAR_env: $TF_STATE_NAME
     S3_BUCKET: "ndnp-open-ocr-dependencies"
     TF_STATE_KEY: "env:/ndnp-open-ocr-${TF_STATE_NAME}/ndnp-open-ocr-tf-state-files/dev/terraform.tfstate"
-  extends: .terraform:deploy
+  extends: .tofu:deploy
   before_script:
     - terraform init -force-copy
     - terraform workspace select ndnp-open-ocr-$TF_STATE_NAME || terraform workspace new ndnp-open-ocr-$TF_STATE_NAME
