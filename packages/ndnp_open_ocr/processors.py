@@ -8,7 +8,6 @@ import pytesseract
 import datetime
 import cv2
 from enum import Enum
-import hocker as hkr
 from xml.etree import ElementTree as ET
 import logging
 from datetime import datetime
@@ -16,8 +15,8 @@ import re
 from tempfile import NamedTemporaryFile
 import xml.sax.saxutils as saxutils
 from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
-
-
+import tempfile
+from PIL import Image
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -102,22 +101,28 @@ class AltoProcessor:
 
     # Convert measurement units to inch1200 from pixels in the ALTO file.
     def convert_pixels_to_inches(self, dpi):
+        """
+        Update all HEIGHT, WIDTH, HPOS, VPOS attributes in the ALTO (via self.soup)
+        by scaling from pixel units at `dpi` to inch1200 units, rounding only once.
+        """
+        # switch the measurement type in the header
         measurement_unit = self.soup.find("MeasurementUnit")
         measurement_unit.string = "inch1200"
 
+        # these attributes need conversion
         attributes_to_convert = ["HEIGHT", "WIDTH", "HPOS", "VPOS"]
 
+        # helper to select only elements that actually have one of those attrs
         def has_required_attrs(element):
-            for attr in attributes_to_convert:
-                if element.has_attr(attr):
-                    return True
-            return False
+            return any(element.has_attr(attr) for attr in attributes_to_convert)
 
+        # walk every relevant tag…
         for element in self.soup.find_all(has_required_attrs):
             for attribute in attributes_to_convert:
                 if element.has_attr(attribute):
-                    pixel_value = int(element[attribute])
-                    inch1200_value = round(float(pixel_value * 1200 / dpi[0]))
+                    # read the raw float (e.g. "157.0"), scale, then round once
+                    pixel_value = float(element[attribute])
+                    inch1200_value = round(pixel_value * 1200.0 / dpi[0])
                     element[attribute] = str(inch1200_value)
 
     def add_textblock_language(self, language="eng"):
@@ -449,16 +454,35 @@ class OCRProcessor:
                 # Convert pixel-unit ALTO to HOCR (instead of inch1200 version)
                 self._alto_to_hocr(pixel_alto_path, hocr_path)
 
-                combiner = hkr.HOCRCombiner("ocrx_word")
-                combiner.locate_image(self.input_file_path)
-                combiner.locate_hocr(hocr_path)
-                combiner.to_pdf(self._get_new_pdf_path())
 
-                # Clean up temporary files
-                if os.path.isfile(hocr_path):
-                    os.remove(hocr_path)
-                if os.path.isfile(pixel_alto_path):
-                    os.remove(pixel_alto_path)
+                # Generate the PDF from the HOCR file
+                # FIXME: Currently uses hocr-pdf to get good coordinates; however, it sacrifices resolution
+                # and quality of the image. This should be replaced with a better solution in the future.
+                file_name = self._get_file_name()
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    temp_hocr_path = os.path.join(temp_dir, f"{file_name}.hocr")
+                    shutil.copyfile(hocr_path, temp_hocr_path)
+
+                    temp_image_path = os.path.join(temp_dir, f"{file_name}.jpg")
+                    with Image.open(self.input_file_path) as img:
+                        img.convert("RGB").save(
+                            temp_image_path,
+                            format="JPEG",
+                            quality=100,
+                            subsampling=0,
+                        )
+
+                    subprocess.run(
+                        [
+                            "hocr-pdf",
+                            "--savefile",
+                            self._get_new_pdf_path(),
+                            temp_dir,
+                        ],
+                        check=True,
+                    )
+                os.remove(pixel_alto_path)
+                os.remove(hocr_path)
 
             else:
                 pdf = pytesseract.image_to_pdf_or_hocr(input_file_path, extension="pdf")
@@ -521,7 +545,6 @@ class OCRProcessor:
                 crops, boxes = segment_page(self.input_file_path)
 
                 logging.info("Detected %d regions", len(crops))
-                offsets_dict = {}
                 boxes_dict = {}
 
                 for idx, (rid, crop) in enumerate(crops):
@@ -531,7 +554,6 @@ class OCRProcessor:
                     with open(xml_path, "wb") as f:
                         f.write(xml)
                     logging.debug("Wrote region %s ALTO to %s", rid, xml_path)
-                    offsets_dict[str(rid)] = [boxes[idx][0], boxes[idx][1]]
                     boxes_dict[str(rid)] = list(boxes[idx])
 
                 merge_alto_region_xmls(
@@ -560,6 +582,7 @@ class OCRProcessor:
             alto_processor.add_description_tags()
             alto_processor.fix_alto_file_hyphenation()
             alto_processor.add_textblock_language()
+
 
             # If using segmenter, save a pixel-unit version of the ALTO *before* unit conversion (for hOCR conversion in generate_pdf)
             pixel_alto_path = None

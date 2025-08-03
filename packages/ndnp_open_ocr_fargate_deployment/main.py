@@ -7,6 +7,7 @@ import datetime
 import shutil
 from PyPDF2 import PdfReader
 from PIL import Image
+import pytesseract
 from ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
 
 logging.basicConfig(
@@ -126,6 +127,17 @@ def clear_tmp_directory():
             logging.info(f"Failed to delete {file_path}. Reason: {e}")
 
 
+def record_tesseract_version(output_bucket_name, output_prefix):
+    """Write the tesseract version used by the worker to S3."""
+    version = str(pytesseract.get_tesseract_version())
+    key = os.path.join(output_prefix, "tesseract_version.txt")
+    try:
+        s3.put_object(Bucket=output_bucket_name, Key=key, Body=version)
+        logging.info(f"Recorded tesseract version {version} at {key}")
+    except Exception as e:
+        logging.error(f"Failed to record tesseract version: {e}")
+
+
 def process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefix):
     with tempfile.TemporaryDirectory() as temp_dir:
         input_file_path = download_files_from_s3(bucket_name, file_key, temp_dir)
@@ -184,6 +196,10 @@ if __name__ == "__main__":
     array_index = int(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX", "0"))
 
     logging.info("Segmentation mode: %s", USE_SEGMENTATION)
+
+    # Record the tesseract version once for the batch. on the first array index
+    if array_index == 0:
+        record_tesseract_version(output_bucket_name, output_prefix)
 
     # Grab the files from the original prefix
     file_list = get_file_list(bucket_name, prefix)

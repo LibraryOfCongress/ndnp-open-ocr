@@ -99,13 +99,13 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
 
     # 4) NMS
     if backend == "yolo":
-        det = non_max_suppression(preds, conf_thres=0.05, iou_thres=0.65)
+        det = non_max_suppression(preds, conf_thres=0.01, iou_thres=0.70)
     elif backend == "yolov8":
         # v8 NMS expects (bs, boxes, 6) → list of 1 tensor
         out = nms_yolov8(
             preds.unsqueeze(0),
-            conf_thres=0.05,
-            iou_thres=0.65,
+            conf_thres=0.01,
+            iou_thres=0.70,
             max_det=1000,
             agnostic=True,
         )

@@ -1,6 +1,8 @@
 import json
 import boto3
 import os
+from datetime import datetime
+from botocore.exceptions import ClientError
 
 # Initialize AWS clients
 batch = boto3.client("batch")
@@ -24,7 +26,17 @@ def handler(event, context):
         return {"statusCode": 200, "body": "Intermediate update ignored."}
 
     bucket_name = os.environ.get("OUTPUT_BUCKET_NAME")
-    s3_key = f"{job_name}/batch-logs-metadata.json"
+    batch_name = job_name.split("__")[0]
+    current_date = datetime.utcnow().strftime("%Y-%m-%d")
+    s3_key = f"{job_name}/log_{batch_name}_{current_date}.json"
+
+    # Try to read the tesseract version written by the workers
+    tesseract_version = "unknown"
+    try:
+        obj = s3.get_object(Bucket=bucket_name, Key=f"{job_name}/tesseract_version.txt")
+        tesseract_version = obj["Body"].read().decode().strip()
+    except ClientError:
+        pass
 
     # Describe the parent job to extract original input bucket and prefix.
     job_description = batch.describe_jobs(jobs=[job_id])
@@ -49,6 +61,10 @@ def handler(event, context):
     job_results = {
         "job_id": job_id,
         "job_name": job_name,
+        "batch_name": batch_name,
+        "created": current_date,
+        "ndnp_open_ocr_version": "1.1",
+        "tesseract_version": tesseract_version,
         "status": job_status,
         "summary": {
             "total_tasks": total_tasks,
@@ -129,6 +145,7 @@ def log_to_s3(bucket_name, s3_key, log_data):
         Body=json.dumps(log_data, indent=2),
         ContentType="application/json",
     )
+
 
 # if __name__ == "__main__":
 #     # Mock event for testing with the given job name

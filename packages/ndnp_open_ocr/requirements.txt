@@ -11,6 +11,7 @@ Deprecated==1.2.14
 deprecation==2.1.0
 ghostscript==0.7
 hocker==1.0.4
+hocr-tools-lib==1.2.0
 jmespath==1.0.1
 lxml==5.2.1
 numpy==1.26.4
