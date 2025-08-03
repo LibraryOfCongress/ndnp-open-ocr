@@ -68,7 +68,7 @@ def get_onnx_input_name(model):
     return feed[0]
 
 
-def non_max_suppression(pred, conf_thres=0.25, iou_thres=0.45):
+def non_max_suppression(pred, conf_thres=0.02, iou_thres=0.45):
     """Thin out overlapping detections using torchvision's NMS."""
     # very minimal wrapper around torchvision nms
     pred = pred[pred[:, 4] > conf_thres]
@@ -191,7 +191,6 @@ def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
             orig_vpos = float(el.attrib["VPOS"])
             el.set("VPOS", str(int(orig_vpos + dy)))
 
-
 def merge_alto_region_xmls(source_image_path: str,
                            region_dir: str,
                            boxes_dict: dict[str, tuple[int, int, int, int]],
@@ -313,5 +312,4 @@ def merge_alto_region_xmls(source_image_path: str,
     ET.ElementTree(root).write(output_file, encoding="utf-8",
                                xml_declaration=True)
     logger.info("Composite ALTO written to: %s", output_file)
-
 
