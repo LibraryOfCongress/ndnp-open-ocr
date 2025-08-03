@@ -146,23 +146,3 @@ def log_to_s3(bucket_name, s3_key, log_data):
         ContentType="application/json",
     )
 
-
-# if __name__ == "__main__":
-#     # Mock event for testing with the given job name
-#     # You can change job_status to "SUCCEEDED" or "FAILED" for different scenarios
-#     mock_event = {
-#         "detail": {
-#             "jobId": "9d39dbe9-fb16-4cc6-a760-3378a639d324",
-#             "jobName": "batch_va_styx_ver01__ac22bfbc-7fb6-44e6-8a10-c5020dfc2333",
-#             "status": "FAILED"  # Change to "SUCCEEDED" to test success case
-#         }
-#     }
-#     mock_context = None
-
-#     # Set environment variables if needed
-#     os.environ["OUTPUT_BUCKET_NAME"] = "ndnp-open-ocr-output-bucket-development-deployment"
-#     os.environ["INPUT_BUCKET_NAME"] = "loc-preservation"
-
-#     result = handler(mock_event, mock_context)
-#     print("Handler result:")
-#     print(json.dumps(result, indent=2))

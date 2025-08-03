@@ -168,7 +168,11 @@ class AltoProcessor:
 
     def save(self, output_file):
         """Write the whole ALTO XML with 2-space indentation,
-        and no line-breaks inside element text values."""
+        and no line-breaks inside element text values. This is essential for 2 primary reasons: 
+        1. XML validation tools will fail if there are special charactersin the text values.
+        2. We need the formatting to be consistent with ALTO specifications, which format the headers and body differently.
+        """
+        
         def escape_xml_attr(value):
             return saxutils.quoteattr(str(value))
 
@@ -585,6 +589,7 @@ class OCRProcessor:
 
 
             # If using segmenter, save a pixel-unit version of the ALTO *before* unit conversion (for hOCR conversion in generate_pdf)
+            # FIXME: This is working right now but can likely be removed later once the translation/PDF issues are resolved
             pixel_alto_path = None
             if self.use_segmenter:
                 pixel_alto_path = os.path.join(
