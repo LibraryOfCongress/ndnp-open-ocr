@@ -1,5 +1,5 @@
 include:
-  - template: Terraform/Base.gitlab-ci.yml  # Includes Terraform boilerplate
+  - template: OpenTofu/Base.latest.gitlab-ci.yml  # Includes Terraform boilerplate, OpenTofu is an open-source fork of Terraform, we have to use it due to licensing issues with Terraform and GitLab CI
   - template: Jobs/SAST-IaC.gitlab-ci.yml   # Includes security analysis templates
 
 stages:
@@ -26,7 +26,7 @@ workflow:
       variables:
         TF_STATE_NAME: "production-deployment"
       when: always
-    - when: never
+    - when: always
 
 fmt:
   extends: .terraform:fmt
