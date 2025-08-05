@@ -15,8 +15,10 @@ import re
 from tempfile import NamedTemporaryFile
 import xml.sax.saxutils as saxutils
 from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
-import tempfile
 from PIL import Image
+from reportlab.pdfgen import canvas
+
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -109,20 +111,20 @@ class AltoProcessor:
         measurement_unit = self.soup.find("MeasurementUnit")
         measurement_unit.string = "inch1200"
 
-        # these attributes need conversion
         attributes_to_convert = ["HEIGHT", "WIDTH", "HPOS", "VPOS"]
 
-        # helper to select only elements that actually have one of those attrs
         def has_required_attrs(element):
-            return any(element.has_attr(attr) for attr in attributes_to_convert)
+            for attr in attributes_to_convert:
+                if element.has_attr(attr):
+                    return True
+            return False
 
         # walk every relevant tag…
         for element in self.soup.find_all(has_required_attrs):
             for attribute in attributes_to_convert:
                 if element.has_attr(attribute):
-                    # read the raw float (e.g. "157.0"), scale, then round once
-                    pixel_value = float(element[attribute])
-                    inch1200_value = round(pixel_value * 1200.0 / dpi[0])
+                    pixel_value = int(element[attribute])
+                    inch1200_value = round(float(pixel_value * 1200 / dpi[0]))
                     element[attribute] = str(inch1200_value)
 
     def add_textblock_language(self, language="eng"):
@@ -172,7 +174,6 @@ class AltoProcessor:
         1. XML validation tools will fail if there are special charactersin the text values.
         2. We need the formatting to be consistent with ALTO specifications, which format the headers and body differently.
         """
-        
         def escape_xml_attr(value):
             return saxutils.quoteattr(str(value))
 
@@ -377,11 +378,6 @@ class OCRProcessor:
         """The PDF that is outputted by Tesseract (for files that don't require further preprocessing)"""
         return os.path.join(self.output_path, f"{self._get_file_name()}_new.pdf")
 
-    def _get_new_hocr_path(self):
-        """For files that require preprocessing to run, this is the path for the HOCR output from
-        Tesseract, which is used to create a PDF with the original TIFF image."""
-        return os.path.join(self.output_path, f"{self._get_file_name()}_new.hocr")
-
     def get_postprocessed_pdf_path(self):
         """Path to final NDNP Open OCR output PDF"""
         return os.path.join(self.output_path, f"{self._get_file_name()}.pdf")
@@ -443,53 +439,23 @@ class OCRProcessor:
         try:
             logging.info("Generating PDF file")
 
-            input_file_path = self._preprocess_image()
-
             if self.use_segmenter:
                 logging.info("Generating segmented PDF file")
-                alto_path = self._get_alto_file_path()
-                hocr_path = os.path.join(
-                    self.output_path, f"{self._get_file_name()}_seg.hocr"
-                )
                 pixel_alto_path = os.path.join(
                     self.output_path, f"{self._get_file_name()}_pixel.xml"
                 )
+                self._build_pdf_from_alto(
+                    self.input_file_path, pixel_alto_path, self._get_new_pdf_path()
+                )
 
-                # Convert pixel-unit ALTO to HOCR (instead of inch1200 version)
-                self._alto_to_hocr(pixel_alto_path, hocr_path)
-
-
-                # Generate the PDF from the HOCR file
-                # FIXME: Currently uses hocr-pdf to get good coordinates; however, it sacrifices resolution
-                # and quality of the image. This should be replaced with a better solution in the future.
-                file_name = self._get_file_name()
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    temp_hocr_path = os.path.join(temp_dir, f"{file_name}.hocr")
-                    shutil.copyfile(hocr_path, temp_hocr_path)
-
-                    temp_image_path = os.path.join(temp_dir, f"{file_name}.jpg")
-                    with Image.open(self.input_file_path) as img:
-                        img.convert("RGB").save(
-                            temp_image_path,
-                            format="JPEG",
-                            quality=100,
-                            subsampling=0,
-                        )
-
-                    subprocess.run(
-                        [
-                            "hocr-pdf",
-                            "--savefile",
-                            self._get_new_pdf_path(),
-                            temp_dir,
-                        ],
-                        check=True,
-                    )
-                os.remove(pixel_alto_path)
-                os.remove(hocr_path)
+                if os.path.isfile(pixel_alto_path):
+                    os.remove(pixel_alto_path)
 
             else:
-                pdf = pytesseract.image_to_pdf_or_hocr(input_file_path, extension="pdf")
+                input_file_path = self._preprocess_image()
+                pdf = pytesseract.image_to_pdf_or_hocr(
+                    input_file_path, extension="pdf"
+                )
                 with open(self._get_new_pdf_path(), "w+b") as f:
                     f.write(pdf)
                 del pdf
@@ -511,22 +477,67 @@ class OCRProcessor:
         except Exception as e:
             logging.error(f"PDF generation failed: {self._get_file_name()} {e}")
 
-    def _alto_to_hocr(self, alto_path, hocr_path):
-        """Convert an ALTO file to HOCR using the ocr-fileformat library."""
-        try:
-            # Use the ocr-fileformat CLI to perform the conversion
-            subprocess.run(
-                [
-                    "ocr-transform",
-                    "alto",
-                    "hocr",
-                    alto_path,
-                    hocr_path,
-                ],
-                check=True,
-            )
-        except Exception as e:
-            logging.error(f"ALTO to HOCR conversion failed: {alto_path} {e}")
+    def _build_pdf_from_alto(
+        self, tif_path: str, alto_path: str, out_pdf_path: str
+    ) -> None:
+        """
+        Paint the TIFF on a PDF page and overlay invisible text taken
+        directly from the ALTO <String> elements so the file is searchable.
+        Works with pixel or inch1200 ALTO coordinates.
+        """
+        # -- open image and derive geometry --------------------------------
+        im = Image.open(tif_path)
+        w_px, h_px = im.size
+        dpi_x, dpi_y = im.info.get("dpi", (300, 300))
+        px2pt = 72.0 / dpi_x  # points per pixel
+        w_pt = w_px * px2pt
+        h_pt = h_px * px2pt
+
+        # -- prepare PDF canvas --------------------------------------------
+        c = canvas.Canvas(out_pdf_path, pagesize=(w_pt, h_pt))
+        c.drawInlineImage(im, 0, 0, w_pt, h_pt)
+
+        # -- parse ALTO -----------------------------------------------------
+        ns = {"a": "http://www.loc.gov/standards/alto/ns-v3#"}
+        doc = ET.parse(alto_path)
+        mu_elem = doc.find(".//a:MeasurementUnit", ns)
+        mu = mu_elem.text.lower() if mu_elem is not None else "pixel"
+
+        # convert ALTO units to image pixels
+        def alto_to_px(val: float) -> float:
+            return val if mu == "pixel" else val * dpi_x / 1200.0
+
+        # overlay each <String> as invisible text
+        for s in doc.findall(".//a:String", ns):
+            txt = s.get("CONTENT", "")
+            if not txt:
+                continue
+
+            # get raw ALTO coords & size
+            raw_hpos = float(s.get("HPOS", 0))
+            raw_vpos = float(s.get("VPOS", 0))
+            raw_ht = float(s.get("HEIGHT", 0))
+
+            # convert to pixels
+            hpos_px = alto_to_px(raw_hpos)
+            vpos_px = alto_to_px(raw_vpos)
+            ht_px = alto_to_px(raw_ht)
+
+            # convert to PDF points
+            x_pt = hpos_px * px2pt
+            # flip Y-axis: PDF origin is bottom-left
+            y_pt = (h_px - vpos_px - ht_px) * px2pt
+            fs_pt = max(ht_px * px2pt * 0.9, 1)
+
+            tx = c.beginText()
+            tx.setTextRenderMode(3)  # 3 = invisible (no fill/stroke)
+            tx.setFont("Times-Roman", fs_pt)  # built-in base-14 font
+            tx.setTextOrigin(x_pt, y_pt)
+            tx.textLine(txt)
+            c.drawText(tx)
+
+        c.showPage()
+        c.save()
 
 
     def generate_alto(self):
@@ -587,9 +598,7 @@ class OCRProcessor:
             alto_processor.fix_alto_file_hyphenation()
             alto_processor.add_textblock_language()
 
-
-            # If using segmenter, save a pixel-unit version of the ALTO *before* unit conversion (for hOCR conversion in generate_pdf)
-            # FIXME: This is working right now but can likely be removed later once the translation/PDF issues are resolved
+            # If using segmenter, save a pixel-unit version of the ALTO *before* unit conversion (for PDF generation in generate_pdf)
             pixel_alto_path = None
             if self.use_segmenter:
                 pixel_alto_path = os.path.join(

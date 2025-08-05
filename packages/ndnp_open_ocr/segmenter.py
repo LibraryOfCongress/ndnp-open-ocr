@@ -191,6 +191,7 @@ def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
             orig_vpos = float(el.attrib["VPOS"])
             el.set("VPOS", str(int(orig_vpos + dy)))
 
+
 def merge_alto_region_xmls(source_image_path: str,
                            region_dir: str,
                            boxes_dict: dict[str, tuple[int, int, int, int]],
@@ -312,4 +313,5 @@ def merge_alto_region_xmls(source_image_path: str,
     ET.ElementTree(root).write(output_file, encoding="utf-8",
                                xml_declaration=True)
     logger.info("Composite ALTO written to: %s", output_file)
+
 
