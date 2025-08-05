@@ -1,8 +1,6 @@
 import json
 import boto3
 import os
-from datetime import datetime
-from botocore.exceptions import ClientError
 
 # Initialize AWS clients
 batch = boto3.client("batch")
@@ -77,7 +75,7 @@ def handler(event, context):
 
     if job_status == "SUCCEEDED":
         job_results["message"] = (
-            "Job completed successfully with all TIFs processed without error."
+            "Job completed successfully. Any JP2 fallbacks were processed successfully."
         )
 
     elif job_status == "FAILED":
@@ -101,8 +99,9 @@ def handler(event, context):
 
             exit_code_description = {
                 0: "Success",
-                1: "The TIF was corrupt. JP2 used instead",
+                1: "Array index out of range",
                 2: "OCR Failure: No text found in PDF",
+                3: "JP2 fallback: original TIF was corrupt",
             }.get(exit_code, "Unknown error")
 
             if status == "FAILED":
