@@ -83,7 +83,7 @@ resource "aws_cloudwatch_log_group" "log_group" {
   retention_in_days = 90
 
   lifecycle {
-    prevent_destroy = false  # Destroy log group on spin down.
+    prevent_destroy = false # Destroy log group on spin down.
     ignore_changes  = [name]
   }
 }
@@ -120,7 +120,7 @@ resource "aws_iam_policy" "ecs_cluster_management_policy" {
     Version = "2012-10-17",
     Statement = [
       {
-        Effect = "Allow",
+        Effect = "Allow", 
         Action = [
           "ecs:ListClusters",
           "ecs:DeleteCluster"
@@ -268,8 +268,11 @@ resource "aws_batch_job_definition" "batch_job_definition" {
       {
         type  = "MEMORY"
         value = "2048" # Adjust based on your job's memory needs
-      }
+      },
     ]
+    ephemeralStorage = {
+      sizeInGiB = 30 # Increase from default of 20 GiB due to size of model files and data
+    }
     environment = [
       {
         name  = "AWS_REGION",

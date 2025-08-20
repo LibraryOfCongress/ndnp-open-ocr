@@ -66,10 +66,11 @@ RUN rm -f /usr/lib/x86_64-linux-gnu/libprotobuf.a \
           /usr/lib/x86_64-linux-gnu/libprotoc.a
 
 RUN pip install --upgrade pip
-# RUN pip install -r vendor/AmericanStories/requirements.txt
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends default-jre-headless && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN apt-get install default-jre-headless -y
 
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/lib
 ENV TESSDATA_PREFIX /usr/local/share/tessdata

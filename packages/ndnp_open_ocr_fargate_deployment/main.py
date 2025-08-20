@@ -7,6 +7,7 @@ import datetime
 import shutil
 from PyPDF2 import PdfReader
 from PIL import Image
+import pytesseract
 from ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
 
 logging.basicConfig(
@@ -16,6 +17,12 @@ logging.basicConfig(
 )
 
 s3 = boto3.client("s3")
+
+# Exit codes
+EXIT_CODE_SUCCESS = 0
+EXIT_CODE_ARRAY_INDEX_ERROR = 1
+EXIT_CODE_OCR_FAILURE = 2
+EXIT_CODE_JP2_FALLBACK = 3
 
 # Determine if segmentation should be used based on environment variable
 USE_SEGMENTATION = os.getenv("USE_SEGMENTATION", "false").lower() == "true"
@@ -125,6 +132,16 @@ def clear_tmp_directory():
         except Exception as e:
             logging.info(f"Failed to delete {file_path}. Reason: {e}")
 
+def record_tesseract_version(output_bucket_name, output_prefix):
+    """Write the tesseract version used by the worker to S3."""
+    version = str(pytesseract.get_tesseract_version())
+    key = os.path.join(output_prefix, "tesseract_version.txt")
+    try:
+        s3.put_object(Bucket=output_bucket_name, Key=key, Body=version)
+        logging.info(f"Recorded tesseract version {version} at {key}")
+    except Exception as e:
+        logging.error(f"Failed to record tesseract version: {e}")
+
 
 def process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefix):
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -156,7 +173,7 @@ def process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefi
         # Track text presence and JP2 usage
         if not text_found:
             logging.error(f"No text found in the generated PDF for {file_key}.")
-            sys.exit(2)  # "No Text" error
+            sys.exit(EXIT_CODE_OCR_FAILURE)  # "No Text" error
 
         # Upload everything (PDF, ALTO, etc.) to S3, preserving folder structure
         upload_files_to_s3(
@@ -165,10 +182,11 @@ def process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefi
 
         if jp2_used:
             logging.info(f"JP2 was used instead of TIF for {file_key}.")
-            sys.exit(1)  # "JP2 used" condition
+            sys.exit(EXIT_CODE_JP2_FALLBACK)  # "JP2 used" condition
+
         else:
             logging.info(f"File processed successfully: {file_key}")
-            sys.exit(0)
+            sys.exit(EXIT_CODE_SUCCESS)
 
 
 if __name__ == "__main__":
@@ -185,11 +203,16 @@ if __name__ == "__main__":
 
     logging.info("Segmentation mode: %s", USE_SEGMENTATION)
 
+        # Record the tesseract version once for the batch. on the first array index
+    if array_index == 0:
+        record_tesseract_version(output_bucket_name, output_prefix)
+
     # Grab the files from the original prefix
     file_list = get_file_list(bucket_name, prefix)
     if array_index >= len(file_list):
         logging.error(f"Array index {array_index} out of range.")
-        sys.exit(1)
+        sys.exit(EXIT_CODE_ARRAY_INDEX_ERROR)
+
 
     file_key = file_list[array_index]
     logging.info(f"Processing file: {file_key}")

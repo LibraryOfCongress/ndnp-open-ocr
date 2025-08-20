@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import sys
 import json
@@ -98,13 +99,13 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
 
     # 4) NMS
     if backend == "yolo":
-        det = non_max_suppression(preds, conf_thres=0.15, iou_thres=0.45)
+        det = non_max_suppression(preds, conf_thres=0.01, iou_thres=0.70)
     elif backend == "yolov8":
         # v8 NMS expects (bs, boxes, 6) → list of 1 tensor
         out = nms_yolov8(
             preds.unsqueeze(0),
-            conf_thres=0.005,
-            iou_thres=0.06,
+            conf_thres=0.01,
+            iou_thres=0.70,
             max_det=1000,
             agnostic=True,
         )
@@ -177,16 +178,19 @@ def segment_page(
     logger.debug("Segmented into %d regions", len(crops))
     return crops, boxes
 
-
 def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
-    """Shift ``HPOS`` and ``VPOS`` attributes on ``element`` and its children."""
+    """
+    Shift the ALTO HPOS/VPOS attributes on `element` and all its children by (dx, dy),
+    """
     for el in element.iter():
         if "HPOS" in el.attrib:
             orig_hpos = float(el.attrib["HPOS"])
-            el.set("HPOS", str(int(round(orig_hpos)) + dx))
+            # keep fractional sub-pixel precision
+            el.set("HPOS", str(int(orig_hpos + dx)))
         if "VPOS" in el.attrib:
             orig_vpos = float(el.attrib["VPOS"])
-            el.set("VPOS", str(int(round(orig_vpos)) + dy))
+            el.set("VPOS", str(int(orig_vpos + dy)))
+
 
 def merge_alto_region_xmls(source_image_path: str,
                            region_dir: str,
@@ -253,7 +257,7 @@ def merge_alto_region_xmls(source_image_path: str,
     # ------------------------------------------------------------
     # 3)  Sort with X-tolerance
     # ------------------------------------------------------------
-    X_TOL = max(int(max_x * 0.05), 100)            # 5 % of page or ≥100 px
+    X_TOL = max(int(max_x * 0.06), 100)            # 6 % of page or ≥100 px
 
     def sort_key(t: tuple[int, int, str, str]) -> tuple[int, int]:
         x0, y0, *_ = t
@@ -286,21 +290,21 @@ def merge_alto_region_xmls(source_image_path: str,
         (f"{{{NS_ALTO}}}Illustration","cblock"),
         (f"{{{NS_ALTO}}}GraphicalElement","cblock"),
     ]
+
+    prefix_to_elems = defaultdict(list)
     for tag, prefix in id_specs:
         elems = root.findall(f".//{tag}")
-        try:
-            # Sort elements by VPOS, then HPOS to ensure consistent ordering
-            # This is important for consistent ID assignment in the output composite ALTO file.
-            # It ensures that each element is assigned a unique ID based on its position.
-            # If VPOS or HPOS is not present, it defaults to 0.
-            elems.sort(
-                key=lambda el: (
-                    int(el.attrib.get("VPOS", 0)),
-                    int(el.attrib.get("HPOS", 0)),
-                )
+        prefix_to_elems[prefix].extend(elems)
+
+    for prefix, all_elems in prefix_to_elems.items():
+        all_elems.sort(
+            key=lambda el: (
+                int(el.attrib.get("HPOS", 0)) // X_TOL,
+                int(el.attrib.get("VPOS", 0)),
+                int(el.attrib.get("HPOS", 0)),
             )
         )
-        for i, el in enumerate(elems):
+        for i, el in enumerate(all_elems):
             el.set("ID", f"{prefix}_{i}")
 
     # ------------------------------------------------------------
@@ -309,4 +313,5 @@ def merge_alto_region_xmls(source_image_path: str,
     ET.ElementTree(root).write(output_file, encoding="utf-8",
                                xml_declaration=True)
     logger.info("Composite ALTO written to: %s", output_file)
+
 

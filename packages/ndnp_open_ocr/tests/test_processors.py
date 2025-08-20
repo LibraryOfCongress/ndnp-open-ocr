@@ -9,10 +9,6 @@ segmenter_dummy = types.ModuleType('ndnp_open_ocr.segmenter')
 segmenter_dummy.segment_page = lambda x: ([], [])
 segmenter_dummy.merge_alto_region_xmls = lambda **kwargs: None
 sys.modules['ndnp_open_ocr.segmenter'] = segmenter_dummy
-
-hocker_dummy = types.ModuleType('hocker')
-sys.modules['hocker'] = hocker_dummy
-
 pytesseract_dummy = types.ModuleType('pytesseract')
 pytesseract_dummy.get_tesseract_version = lambda: '0.0'
 sys.modules['pytesseract'] = pytesseract_dummy

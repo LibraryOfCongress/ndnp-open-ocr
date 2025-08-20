@@ -19,13 +19,19 @@ def handler(event, context):
             "body": json.dumps("Missing required parameter: jobName"),
         }
 
-    s3_key = f"{job_name}/batch-logs-metadata.json"
+    prefix = f"{job_name}/log_"
 
-    # 1) Try cached result in S3
+    # 1) Try cached result in S3 by locating the log file
     try:
-        obj = s3.get_object(Bucket=bucket_name, Key=s3_key)
-        stored = json.loads(obj["Body"].read())
-        return {"statusCode": 200, "body": json.dumps(stored)}
+        resp = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+        if resp.get("Contents"):
+            # Sort by LastModified to get the latest log file
+            latest = sorted(resp["Contents"], key=lambda x: x["LastModified"])[-1][
+                "Key"
+            ]
+            obj = s3.get_object(Bucket=bucket_name, Key=latest)
+            stored = json.loads(obj["Body"].read())
+            return {"statusCode": 200, "body": json.dumps(stored)}
     except ClientError as e:
         if e.response["Error"]["Code"] != "NoSuchKey":
             # unexpected error reading the cache
@@ -33,8 +39,13 @@ def handler(event, context):
 
     # 2) Find the parent array-job ID by scanning statuses (including RUNNABLE)
     statuses = [
-        "SUBMITTED", "PENDING", "RUNNABLE",
-        "STARTING", "RUNNING", "SUCCEEDED", "FAILED",
+        "SUBMITTED",
+        "PENDING",
+        "RUNNABLE",
+        "STARTING",
+        "RUNNING",
+        "SUCCEEDED",
+        "FAILED",
     ]
     parent_job_id = None
 

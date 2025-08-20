@@ -1,4 +1,4 @@
-from bs4 import BeautifulSoup
+from bs4 import NavigableString, BeautifulSoup, Tag
 import exiftool
 import subprocess
 import os
@@ -8,17 +8,16 @@ import pytesseract
 import datetime
 import cv2
 from enum import Enum
-import hocker as hkr
 from xml.etree import ElementTree as ET
 import logging
 from datetime import datetime
 import re
 from tempfile import NamedTemporaryFile
-import json
-
-# Optional segmentation based OCR utilities
+import xml.sax.saxutils as saxutils
 from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
-
+from PIL import Image
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase.pdfmetrics import stringWidth, getFont
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -88,17 +87,27 @@ class AltoProcessor:
         processing_software.append(software_name)
 
         software_version = self.soup.new_tag("softwareVersion")
-        software_version.string = "1.0"
+        software_version.string = "1.1"
         processing_software.append(software_version)
 
         application_description = self.soup.new_tag("applicationDescription")
-        application_description.string = "An OCR and PDF reprocessing pipeline developed by Library of Congress for NDNP-specific data including ALTO end-of-line hyphenation substitution, PDF XMP retention, and NDNP batch merging."
+        application_description.string = (
+            "An open-source OCR reprocessing pipeline developed by the Library of "
+            "Congress for NDNP data. The pipeline uses advanced segmentation models "
+            "and custom post-processing steps to create new NDNP-compliant PDF and "
+            "ALTO files."
+        )
         processing_software.append(application_description)
 
         ocr_processing.append(post_processing_step)
 
     # Convert measurement units to inch1200 from pixels in the ALTO file.
     def convert_pixels_to_inches(self, dpi):
+        """
+        Update all HEIGHT, WIDTH, HPOS, VPOS attributes in the ALTO (via self.soup)
+        by scaling from pixel units at `dpi` to inch1200 units, rounding only once.
+        """
+        # switch the measurement type in the header
         measurement_unit = self.soup.find("MeasurementUnit")
         measurement_unit.string = "inch1200"
 
@@ -110,12 +119,18 @@ class AltoProcessor:
                     return True
             return False
 
+        # walk every relevant tag…
         for element in self.soup.find_all(has_required_attrs):
             for attribute in attributes_to_convert:
                 if element.has_attr(attribute):
                     pixel_value = int(element[attribute])
                     inch1200_value = round(float(pixel_value * 1200 / dpi[0]))
                     element[attribute] = str(inch1200_value)
+
+    def add_textblock_language(self, language="eng"):
+        """Add a language attribute to each TextBlock in the ALTO file."""
+        for block in self.soup.find_all("TextBlock"):
+            block["LANG"] = language
 
     def fix_alto_file_hyphenation(self):
         """Replaces HYP tag with appropriate SUBS_CONTENT tags, per NDNP specs."""
@@ -154,8 +169,53 @@ class AltoProcessor:
             logger.error(f"ALTO file hyphenation fix failed: {e}")
 
     def save(self, output_file):
-        with open(output_file, "w") as f:
-            f.write(str(self.soup))
+        """Write the whole ALTO XML with 2-space indentation,
+        and no line-breaks inside element text values. This is essential for 2 primary reasons: 
+        1. XML validation tools will fail if there are special charactersin the text values.
+        2. We need the formatting to be consistent with ALTO specifications, which format the headers and body differently.
+        """
+        def escape_xml_attr(value):
+            return saxutils.quoteattr(str(value))
+
+        def escape_xml_text(value):
+            return saxutils.escape(str(value))
+
+        def write_tag(node, f, level=0):
+            indent = "  " * level
+
+            # build attribute string with escaped values
+            attrs = "".join(f' {k}={escape_xml_attr(v)}' for k, v in node.attrs.items())
+
+            # filter out pure-whitespace text nodes
+            children = [c for c in node.contents
+                        if not (isinstance(c, NavigableString) and not c.strip())]
+
+            # no content → self-close
+            if not children:
+                f.write(f"{indent}<{node.name}{attrs}/>\n")
+                return
+
+            # single text node → inline
+            if len(children) == 1 and isinstance(children[0], NavigableString):
+                text = escape_xml_text(children[0].strip())
+                f.write(f"{indent}<{node.name}{attrs}>{text}</{node.name}>\n")
+                return
+
+            # otherwise, open tag, recurse children, close tag
+            f.write(f"{indent}<{node.name}{attrs}>\n")
+            for c in children:
+                if isinstance(c, Tag):
+                    write_tag(c, f, level + 1)
+                else:  # a NavigableString with real text
+                    text = escape_xml_text(c.strip())
+                    if text:
+                        f.write(f"{indent}  {text}\n")
+            f.write(f"{indent}</{node.name}>\n")
+
+        alto = self.soup.find("alto")
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+            write_tag(alto, f)
 
 
 class PDFProcessor:
@@ -301,6 +361,7 @@ class OCRProcessor:
         use_segmenter=False,
         layout_model=None,
         line_model=None,
+        visualize_segmentation: bool = False,  # New flag, default False
     ):
         self.input_file_path = input_file_path
         self.input_dir = os.path.dirname(self.input_file_path)
@@ -310,6 +371,7 @@ class OCRProcessor:
         self.use_segmenter = use_segmenter
         self.layout_model = layout_model
         self.line_model = line_model
+        self.visualize_segmentation = visualize_segmentation  # Store the flag
 
     def _get_file_name(self):
         return os.path.splitext(os.path.basename(self.input_file_path))[0]
@@ -317,11 +379,6 @@ class OCRProcessor:
     def _get_new_pdf_path(self):
         """The PDF that is outputted by Tesseract (for files that don't require further preprocessing)"""
         return os.path.join(self.output_path, f"{self._get_file_name()}_new.pdf")
-
-    def _get_new_hocr_path(self):
-        """For files that require preprocessing to run, this is the path for the HOCR output from
-        Tesseract, which is used to create a PDF with the original TIFF image."""
-        return os.path.join(self.output_path, f"{self._get_file_name()}_new.hocr")
 
     def get_postprocessed_pdf_path(self):
         """Path to final NDNP Open OCR output PDF"""
@@ -384,29 +441,23 @@ class OCRProcessor:
         try:
             logging.info("Generating PDF file")
 
-            input_file_path = self._preprocess_image()
-
             if self.use_segmenter:
                 logging.info("Generating segmented PDF file")
-                alto_path = self._get_alto_file_path()
-                hocr_path = os.path.join(
-                    self.output_path, f"{self._get_file_name()}_seg.hocr"
+                pixel_alto_path = os.path.join(
+                    self.output_path, f"{self._get_file_name()}_pixel.xml"
+                )
+                self._build_pdf_from_alto(
+                    self.input_file_path, pixel_alto_path, self._get_new_pdf_path()
                 )
 
-                # Convert ALTO to HOCR using ocr-fileformat
-                self._alto_to_hocr(alto_path, hocr_path)
-
-                combiner = hkr.HOCRCombiner("ocrx_word")
-                combiner.locate_image(self.input_file_path)
-                combiner.locate_hocr(hocr_path)
-                combiner.to_pdf(self._get_new_pdf_path())
-
-                # Remove the HOCR file now that PDF is combinedåå
-                if os.path.isfile(hocr_path):
-                    os.remove(hocr_path)
+                if os.path.isfile(pixel_alto_path):
+                    os.remove(pixel_alto_path)
 
             else:
-                pdf = pytesseract.image_to_pdf_or_hocr(input_file_path, extension="pdf")
+                input_file_path = self._preprocess_image()
+                pdf = pytesseract.image_to_pdf_or_hocr(
+                    input_file_path, extension="pdf"
+                )
                 with open(self._get_new_pdf_path(), "w+b") as f:
                     f.write(pdf)
                 del pdf
@@ -423,29 +474,106 @@ class OCRProcessor:
 
             os.remove(self._get_new_pdf_path())
             # Remove pikePdf .pdf_original file output
-            os.remove(
-                self.get_postprocessed_pdf_path().replace(".pdf", ".pdf_original")
-            )
+            os.remove(self.get_postprocessed_pdf_path().replace(".pdf", ".pdf_original"))
             logging.info(f"PDF Generation successful: {self._get_file_name()}")
         except Exception as e:
             logging.error(f"PDF generation failed: {self._get_file_name()} {e}")
 
-    def _alto_to_hocr(self, alto_path, hocr_path):
-        """Convert an ALTO file to HOCR using the ocr-fileformat library."""
-        try:
-            # Use the ocr-fileformat CLI to perform the conversion
-            subprocess.run(
-                [
-                    "ocr-transform",
-                    "alto",
-                    "hocr",
-                    alto_path,
-                    hocr_path,
-                ],
-                check=True,
-            )
-        except Exception as e:
-            logging.error(f"ALTO to HOCR conversion failed: {alto_path} {e}")
+    def _build_pdf_from_alto(
+        self, tif_path: str, alto_path: str, out_pdf_path: str
+    ) -> None:
+        """
+        Paint the TIFF on a PDF page and overlay invisible text taken
+        directly from the ALTO <String> elements so the file is searchable.
+        Works with pixel or inch1200 ALTO coordinates.
+        """
+        # -- open image and derive geometry --------------------------------
+        im = Image.open(tif_path)
+        w_px, h_px = im.size
+        dpi_x, dpi_y = im.info.get("dpi", (300, 300))
+        px2pt = 72.0 / dpi_x  # points per pixel
+        w_pt = w_px * px2pt
+        h_pt = h_px * px2pt
+
+        # -- prepare PDF canvas --------------------------------------------
+        c = canvas.Canvas(out_pdf_path, pagesize=(w_pt, h_pt))
+        c.drawInlineImage(im, 0, 0, w_pt, h_pt)
+
+        # -- parse ALTO -----------------------------------------------------
+        ns = {"a": "http://www.loc.gov/standards/alto/ns-v3#"}
+        doc = ET.parse(alto_path)
+        mu_elem = doc.find(".//a:MeasurementUnit", ns)
+        mu = mu_elem.text.lower() if mu_elem is not None else "pixel"
+
+        # convert ALTO units to image pixels
+        def alto_to_px(val: float) -> float:
+            return val if mu == "pixel" else val * dpi_x / 1200.0
+
+        font = getFont('Times-Roman')
+        ascent = font.face.ascent / 1000.0   # e.g., ~0.716
+        descent = font.face.descent / 1000.0  # e.g., ~-0.237 (negative)
+        em_span = ascent - descent  # Full height span
+
+        for s in doc.findall(".//a:String", ns):
+            txt = s.get("CONTENT", "")
+            if not txt:
+                continue
+
+            # Get raw ALTO coords & size
+            raw_hpos = float(s.get("HPOS", 0))
+            raw_vpos = float(s.get("VPOS", 0))
+            raw_width = float(s.get("WIDTH", 0))
+            raw_ht = float(s.get("HEIGHT", 0))
+
+            # Convert to pixels
+            hpos_px = alto_to_px(raw_hpos)
+            vpos_px = alto_to_px(raw_vpos)
+            width_px = alto_to_px(raw_width)
+            ht_px = alto_to_px(raw_ht)
+
+            # Convert to PDF points (use separate px2pt_x/y if DPI non-square)
+            px2pt_x = 72.0 / dpi_x
+            px2pt_y = 72.0 / dpi_y
+            x_pt = hpos_px * px2pt_x
+            box_bottom_pt = (h_px - vpos_px - ht_px) * px2pt_y
+            width_pt = width_px * px2pt_x
+            ht_pt = ht_px * px2pt_y
+
+            # Set font size to fit height exactly
+            fs_pt = max(ht_pt / em_span, 1)
+
+            # Compute baseline for vertical alignment (rendered bottom aligns with box bottom)
+            descent_pt = descent * fs_pt  # Negative
+            y_baseline = box_bottom_pt - descent_pt
+
+            # Split into chars and compute natural widths
+            chars = list(txt)
+            if not chars:
+                continue
+            char_widths = [stringWidth(c, 'Times-Roman', fs_pt) for c in chars]
+            total_natural = sum(char_widths)
+            if total_natural <= 0:
+                continue  # Skip degenerate cases
+
+            # Start text object
+            tx = c.beginText()
+            tx.setTextRenderMode(3)  # Invisible
+            tx.setFont('Times-Roman', fs_pt)
+
+            # Position each char proportionally
+            cumulative_pt = 0
+            scale_factor = width_pt / total_natural
+            for char, nat_width in zip(chars, char_widths):
+                char_pt = nat_width * scale_factor
+                tx.setTextOrigin(x_pt + cumulative_pt, y_baseline)
+                tx.textOut(char)
+                cumulative_pt += char_pt
+
+            c.drawText(tx)
+
+        c.showPage()
+        c.save()
+
 
     def generate_alto(self):
         """Generate a new OCR ALTO file, using a given image, with the NDNP Open OCR pipeline. This
@@ -464,7 +592,9 @@ class OCRProcessor:
                 os.makedirs(regions_dir, exist_ok=True)
                 logger.debug("Regions directory created: %s", regions_dir)
 
-                crops, boxes = segment_page(self.input_file_path)
+                crops, boxes = segment_page(
+                    self.input_file_path
+                )
 
                 logging.info("Detected %d regions", len(crops))
                 boxes_dict = {}
@@ -486,7 +616,7 @@ class OCRProcessor:
                 )
                 logging.info("Composite ALTO written to %s", self._get_alto_file_path())
 
-                # # Clean up regions directory once composite ALTO is created
+                # Clean up regions directory once composite ALTO is created
                 if os.path.isdir(regions_dir):
                     shutil.rmtree(regions_dir)
             else:
@@ -498,19 +628,62 @@ class OCRProcessor:
                 with open(self._get_alto_file_path(), "w+b") as f:
                     f.write(xml)
 
-                del xml
-                os.remove(input_file_path)
-
             dpi = (300, 300)
 
             alto_processor = AltoProcessor(self._get_alto_file_path())
             alto_processor.add_description_tags()
             alto_processor.fix_alto_file_hyphenation()
+            alto_processor.add_textblock_language()
+
+            # If using segmenter, save a pixel-unit version of the ALTO *before* unit conversion (for PDF generation in generate_pdf)
+            pixel_alto_path = None
+            if self.use_segmenter:
+                pixel_alto_path = os.path.join(
+                    self.output_path, f"{self._get_file_name()}_pixel.xml"
+                )
+                alto_processor.save(pixel_alto_path)
+
+            # Now convert to inch1200 units
             alto_processor.convert_pixels_to_inches(dpi)
             alto_processor.save(self._get_alto_file_path())
+
+            # New: Visualize segmentation if flag is True (and segmenter used, since ALTO boxes come from there)
+            if self.visualize_segmentation and self.use_segmenter and pixel_alto_path:
+                self._visualize_alto_boxes(pixel_alto_path)
+
             logging.info(f"ALTO Generation successful: {self._get_file_name()}")
         except Exception as e:
             logging.error(f"ALTO generation failed: {self._get_file_name()} {e}")
+
+    def _visualize_alto_boxes(self, pixel_alto_path: str) -> None:
+        """Overlay ALTO bounding boxes on the original TIFF and save as PNG for segmentation visualization."""
+        try:
+            # Load original image
+            img = cv2.imread(self.input_file_path)
+            if img is None:
+                raise FileNotFoundError(f"Cannot load image: {self.input_file_path}")
+
+            # Parse pixel-unit ALTO
+            ns = {"a": "http://www.loc.gov/standards/alto/ns-v3#"}
+            doc = ET.parse(pixel_alto_path)
+
+            # Draw boxes for TextBlocks (or adjust to other elements like ComposedBlock/TextLine if needed)
+            for block in doc.findall(".//a:TextBlock", ns):
+                hpos = int(float(block.get("HPOS", 0)))
+                vpos = int(float(block.get("VPOS", 0)))
+                width = int(float(block.get("WIDTH", 0)))
+                height = int(float(block.get("HEIGHT", 0)))
+                cv2.rectangle(img, (hpos, vpos), (hpos + width, vpos + height), (0, 255, 0), 2)  # Green boxes
+
+            # Save visualization
+            vis_path = os.path.join(self.output_path, f"{self._get_file_name()}_segmentation_vis.png")
+            cv2.imwrite(vis_path, img)
+            logging.info(f"Segmentation visualization saved to: {vis_path}")
+
+        except Exception as e:
+            logging.error(f"Segmentation visualization failed: {e}")
+
+
 
     def process(self):
         """OCR an issue in an NDNP batch, generates a new PDF and ALTO file to replace the originals."""

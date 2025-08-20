@@ -3,6 +3,7 @@ import click
 import requests
 from .helpers import sync_s3_batch
 from rich import print
+from rich.console import Console
 import json
 import time
 import logging
@@ -157,6 +158,7 @@ def get(ctx, job: str):
 
     # Setup AWS Lambda client
     lambda_client = boto3.client("lambda", region_name=REGION)
+    console = Console()
     print("JOB ID: ", job)
     payload = {"pathParameters": {"jobName": job}}
 
@@ -168,7 +170,8 @@ def get(ctx, job: str):
             Payload=json.dumps(payload).encode("utf-8"),
         )
         response_payload = json.loads(response["Payload"].read())
-        print(response_payload)
+        body = json.loads(response_payload.get("body", "{}"))
+        console.print_json(json.dumps(body, indent=2))
 
     except Exception as e:
         print(f"[red]Failed to trigger Lambda function: {e}")

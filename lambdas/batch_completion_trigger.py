@@ -1,6 +1,8 @@
 import json
 import boto3
 import os
+from botocore.exceptions import ClientError
+from datetime import datetime
 
 # Initialize AWS clients
 batch = boto3.client("batch")
@@ -24,7 +26,17 @@ def handler(event, context):
         return {"statusCode": 200, "body": "Intermediate update ignored."}
 
     bucket_name = os.environ.get("OUTPUT_BUCKET_NAME")
-    s3_key = f"{job_name}/batch-logs-metadata.json"
+    batch_name = job_name.split("__")[0]
+    current_date = datetime.utcnow().strftime("%Y-%m-%d")
+    s3_key = f"{job_name}/log_{batch_name}_{current_date}.json"
+
+    # Try to read the tesseract version written by the workers
+    tesseract_version = "unknown"
+    try:
+        obj = s3.get_object(Bucket=bucket_name, Key=f"{job_name}/tesseract_version.txt")
+        tesseract_version = obj["Body"].read().decode().strip()
+    except ClientError:
+        pass
 
     # Describe the parent job to extract original input bucket and prefix.
     job_description = batch.describe_jobs(jobs=[job_id])
@@ -39,17 +51,36 @@ def handler(event, context):
     # Retrieve file paths associated with this job for error tracking -- order is the same as in the job array
     file_list = get_file_list(input_bucket, prefix)
 
+    summary = job.get("arrayProperties", {}).get("statusSummary", {})
+    total_tasks = sum(summary.values())
+    succeeded = summary.get("SUCCEEDED", 0)
+    failed = summary.get("FAILED", 0)
+    remaining = total_tasks - succeeded - failed
+
+    status_value = (
+        "COMPLETED WITH ERRORS" if job_status == "FAILED" else job_status
+    )
     # Initialize the result object
     job_results = {
         "job_id": job_id,
         "job_name": job_name,
-        "status": job_status,
+        "batch_name": batch_name,
+        "created": current_date,
+        "ndnp_open_ocr_version": "1.1",
+        "tesseract_version": tesseract_version,
+        "status": status_value,
+        "summary": {
+            "total_tasks": total_tasks,
+            "succeeded": succeeded,
+            "failed": failed,
+            "remaining": remaining,
+        },
         "details": [],
     }
 
     if job_status == "SUCCEEDED":
         job_results["message"] = (
-            "Job completed successfully with all TIFs processed without error."
+            "Job completed successfully. Any JP2 fallbacks were processed successfully."
         )
 
     elif job_status == "FAILED":
@@ -73,22 +104,19 @@ def handler(event, context):
 
             exit_code_description = {
                 0: "Success",
-                1: "The TIF was corrupt. JP2 used instead",
+                1: "Array index out of range",
                 2: "OCR Failure: No text found in PDF",
+                3: "JP2 fallback: original TIF was corrupt",
             }.get(exit_code, "Unknown error")
 
             if status == "FAILED":
                 failed_sub_jobs.append(
                     {
-                        "job_id": sub_job_id,
-                        "status": status,
-                        "exit_code": exit_code,
-                        "reason": exit_code_description,
                         "file_path": file_path,
                         "description": exit_code_description,
                     }
                 )
-
+        # Add Full details of failed sub-jobs to the job results
         job_results["details"] = failed_sub_jobs
 
     # Write structured logs explicitly to S3
@@ -121,3 +149,4 @@ def log_to_s3(bucket_name, s3_key, log_data):
         Body=json.dumps(log_data, indent=2),
         ContentType="application/json",
     )
+
