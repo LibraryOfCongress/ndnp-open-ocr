@@ -17,7 +17,7 @@ import xml.sax.saxutils as saxutils
 from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
 from PIL import Image
 from reportlab.pdfgen import canvas
-
+from reportlab.pdfbase.pdfmetrics import stringWidth, getFont
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -361,6 +361,7 @@ class OCRProcessor:
         use_segmenter=False,
         layout_model=None,
         line_model=None,
+        visualize_segmentation: bool = False,  # New flag, default False
     ):
         self.input_file_path = input_file_path
         self.input_dir = os.path.dirname(self.input_file_path)
@@ -370,6 +371,7 @@ class OCRProcessor:
         self.use_segmenter = use_segmenter
         self.layout_model = layout_model
         self.line_model = line_model
+        self.visualize_segmentation = visualize_segmentation  # Store the flag
 
     def _get_file_name(self):
         return os.path.splitext(os.path.basename(self.input_file_path))[0]
@@ -507,33 +509,66 @@ class OCRProcessor:
         def alto_to_px(val: float) -> float:
             return val if mu == "pixel" else val * dpi_x / 1200.0
 
-        # overlay each <String> as invisible text
+        font = getFont('Times-Roman')
+        ascent = font.face.ascent / 1000.0   # e.g., ~0.716
+        descent = font.face.descent / 1000.0  # e.g., ~-0.237 (negative)
+        em_span = ascent - descent  # Full height span
+
         for s in doc.findall(".//a:String", ns):
             txt = s.get("CONTENT", "")
             if not txt:
                 continue
 
-            # get raw ALTO coords & size
+            # Get raw ALTO coords & size
             raw_hpos = float(s.get("HPOS", 0))
             raw_vpos = float(s.get("VPOS", 0))
+            raw_width = float(s.get("WIDTH", 0))
             raw_ht = float(s.get("HEIGHT", 0))
 
-            # convert to pixels
+            # Convert to pixels
             hpos_px = alto_to_px(raw_hpos)
             vpos_px = alto_to_px(raw_vpos)
+            width_px = alto_to_px(raw_width)
             ht_px = alto_to_px(raw_ht)
 
-            # convert to PDF points
-            x_pt = hpos_px * px2pt
-            # flip Y-axis: PDF origin is bottom-left
-            y_pt = (h_px - vpos_px - ht_px) * px2pt
-            fs_pt = max(ht_px * px2pt * 0.9, 1)
+            # Convert to PDF points (use separate px2pt_x/y if DPI non-square)
+            px2pt_x = 72.0 / dpi_x
+            px2pt_y = 72.0 / dpi_y
+            x_pt = hpos_px * px2pt_x
+            box_bottom_pt = (h_px - vpos_px - ht_px) * px2pt_y
+            width_pt = width_px * px2pt_x
+            ht_pt = ht_px * px2pt_y
 
+            # Set font size to fit height exactly
+            fs_pt = max(ht_pt / em_span, 1)
+
+            # Compute baseline for vertical alignment (rendered bottom aligns with box bottom)
+            descent_pt = descent * fs_pt  # Negative
+            y_baseline = box_bottom_pt - descent_pt
+
+            # Split into chars and compute natural widths
+            chars = list(txt)
+            if not chars:
+                continue
+            char_widths = [stringWidth(c, 'Times-Roman', fs_pt) for c in chars]
+            total_natural = sum(char_widths)
+            if total_natural <= 0:
+                continue  # Skip degenerate cases
+
+            # Start text object
             tx = c.beginText()
-            tx.setTextRenderMode(3)  # 3 = invisible (no fill/stroke)
-            tx.setFont("Times-Roman", fs_pt)  # built-in base-14 font
-            tx.setTextOrigin(x_pt, y_pt)
-            tx.textLine(txt)
+            tx.setTextRenderMode(3)  # Invisible
+            tx.setFont('Times-Roman', fs_pt)
+
+            # Position each char proportionally
+            cumulative_pt = 0
+            scale_factor = width_pt / total_natural
+            for char, nat_width in zip(chars, char_widths):
+                char_pt = nat_width * scale_factor
+                tx.setTextOrigin(x_pt + cumulative_pt, y_baseline)
+                tx.textOut(char)
+                cumulative_pt += char_pt
+
             c.drawText(tx)
 
         c.showPage()
@@ -557,7 +592,9 @@ class OCRProcessor:
                 os.makedirs(regions_dir, exist_ok=True)
                 logger.debug("Regions directory created: %s", regions_dir)
 
-                crops, boxes = segment_page(self.input_file_path)
+                crops, boxes = segment_page(
+                    self.input_file_path
+                )
 
                 logging.info("Detected %d regions", len(crops))
                 boxes_dict = {}
@@ -610,9 +647,41 @@ class OCRProcessor:
             alto_processor.convert_pixels_to_inches(dpi)
             alto_processor.save(self._get_alto_file_path())
 
+            # New: Visualize segmentation if flag is True (and segmenter used, since ALTO boxes come from there)
+            if self.visualize_segmentation and self.use_segmenter and pixel_alto_path:
+                self._visualize_alto_boxes(pixel_alto_path)
+
             logging.info(f"ALTO Generation successful: {self._get_file_name()}")
         except Exception as e:
             logging.error(f"ALTO generation failed: {self._get_file_name()} {e}")
+
+    def _visualize_alto_boxes(self, pixel_alto_path: str) -> None:
+        """Overlay ALTO bounding boxes on the original TIFF and save as PNG for segmentation visualization."""
+        try:
+            # Load original image
+            img = cv2.imread(self.input_file_path)
+            if img is None:
+                raise FileNotFoundError(f"Cannot load image: {self.input_file_path}")
+
+            # Parse pixel-unit ALTO
+            ns = {"a": "http://www.loc.gov/standards/alto/ns-v3#"}
+            doc = ET.parse(pixel_alto_path)
+
+            # Draw boxes for TextBlocks (or adjust to other elements like ComposedBlock/TextLine if needed)
+            for block in doc.findall(".//a:TextBlock", ns):
+                hpos = int(float(block.get("HPOS", 0)))
+                vpos = int(float(block.get("VPOS", 0)))
+                width = int(float(block.get("WIDTH", 0)))
+                height = int(float(block.get("HEIGHT", 0)))
+                cv2.rectangle(img, (hpos, vpos), (hpos + width, vpos + height), (0, 255, 0), 2)  # Green boxes
+
+            # Save visualization
+            vis_path = os.path.join(self.output_path, f"{self._get_file_name()}_segmentation_vis.png")
+            cv2.imwrite(vis_path, img)
+            logging.info(f"Segmentation visualization saved to: {vis_path}")
+
+        except Exception as e:
+            logging.error(f"Segmentation visualization failed: {e}")
 
 
 

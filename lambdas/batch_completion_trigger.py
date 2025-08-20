@@ -1,6 +1,8 @@
 import json
 import boto3
 import os
+from botocore.exceptions import ClientError
+from datetime import datetime
 
 # Initialize AWS clients
 batch = boto3.client("batch")
@@ -55,6 +57,9 @@ def handler(event, context):
     failed = summary.get("FAILED", 0)
     remaining = total_tasks - succeeded - failed
 
+    status_value = (
+        "COMPLETED WITH ERRORS" if job_status == "FAILED" else job_status
+    )
     # Initialize the result object
     job_results = {
         "job_id": job_id,
@@ -63,7 +68,7 @@ def handler(event, context):
         "created": current_date,
         "ndnp_open_ocr_version": "1.1",
         "tesseract_version": tesseract_version,
-        "status": job_status,
+        "status": status_value,
         "summary": {
             "total_tasks": total_tasks,
             "succeeded": succeeded,
