@@ -41,8 +41,6 @@ cv2.setNumThreads(0)
 # ----------------------------------------------------------------------
 # Utilities from the sample segmentation script
 # ----------------------------------------------------------------------
-
-
 def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=False):
     """Resize ``im`` to ``new_shape`` with padding to maintain aspect ratio for model input."""
     shape = im.shape[:2]
@@ -57,7 +55,7 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=False):
     im = cv2.copyMakeBorder(
         im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color
     )
-    return im, (r, r), (dw, dh)
+    return im, (r, r), (left, top)
 
 
 def get_onnx_input_name(model):
@@ -87,7 +85,7 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
       boxes: [(x0,y0,x1,y1), ...] in original image coords
     """
     # 1) letterbox
-    im, (r_x, r_y), (dw, dh) = letterbox(img, (1280, 1280), auto=False)
+    im, (r_x, r_y), (left, top) = letterbox(img, (1280, 1280), auto=False)
 
     # 2) prep for model: BGR→RGB, HWC→CHW, 0–1
     im_model = im[:, :, ::-1].transpose(2, 0, 1)[None].astype(np.float32) / 255.0
@@ -99,13 +97,13 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
 
     # 4) NMS
     if backend == "yolo":
-        det = non_max_suppression(preds, conf_thres=0.01, iou_thres=0.70)
+        det = non_max_suppression(preds, conf_thres=0.01, iou_thres=0.40)
     elif backend == "yolov8":
         # v8 NMS expects (bs, boxes, 6) → list of 1 tensor
         out = nms_yolov8(
             preds.unsqueeze(0),
             conf_thres=0.01,
-            iou_thres=0.70,
+            iou_thres=0.40,
             max_det=1000,
             agnostic=True,
         )
@@ -120,10 +118,10 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
     boxes, crops = [], []
     for i, d in enumerate(det):
         x0, y0, x1, y1 = d[:4]
-        ox0 = int((x0 - dw) / r_x)
-        oy0 = int((y0 - dh) / r_y)
-        ox1 = int((x1 - dw) / r_x)
-        oy1 = int((y1 - dh) / r_y)
+        ox0 = int((x0 - left) / r_x)
+        oy0 = int((y0 - top) / r_y)
+        ox1 = int((x1 - left) / r_x)
+        oy1 = int((y1 - top) / r_y)
         ox0, oy0 = max(0, ox0), max(0, oy0)
         ox1, oy1 = min(w, ox1), min(h, oy1)
         if ox1 > ox0 and oy1 > oy0:
@@ -147,11 +145,6 @@ def segment_page(
     ----------
     image_path: str
         Path to the image that should be segmented.
-    layout_model_path: str | None
-        Path to the layout segmentation model. If ``None`` segmentation is skipped
-        and the entire image is returned as a single region.
-    line_model_path: str | None
-        Unused currently but kept for future parity with the reference script.
     Returns
     -------
     crops : list[tuple[int, numpy.ndarray]]
@@ -165,19 +158,20 @@ def segment_page(
     if img is None:
         raise FileNotFoundError(image_path)
 
+    h, w = img.shape[:2]
+
     if layout_model_path:
         logger.debug("Using layout model %s", layout_model_path)
         layout_sess = ort.InferenceSession(layout_model_path)
         inp = get_onnx_input_name(onnx.load(layout_model_path))
         crops, boxes = get_layout_predictions(layout_sess, img, inp)
+
     else:  # fall back to whole image
-        h, w = img.shape[:2]
         crops = [(0, img)]
         boxes = [(0, 0, w, h)]
 
     logger.debug("Segmented into %d regions", len(crops))
-    return crops, boxes
-
+    return crops, boxes, w, h
 def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
     """
     Shift the ALTO HPOS/VPOS attributes on `element` and all its children by (dx, dy),
@@ -191,22 +185,23 @@ def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
             orig_vpos = float(el.attrib["VPOS"])
             el.set("VPOS", str(int(orig_vpos + dy)))
 
-
 def merge_alto_region_xmls(source_image_path: str,
                            region_dir: str,
                            boxes_dict: dict[str, tuple[int, int, int, int]],
-                           output_file: str) -> None:
+                           output_file: str,
+                           image_width: int,
+                           image_height: int) -> None:
     """
     Merge per-region ALTO files back into one page-level ALTO, using a
     simple column-major sort with an X-tolerance so that a block that is
     far *below* another one never jumps ahead just because its HPOS is a
-    few pixels smaller.
+    few pixels smaller. Uses subtraction method if full_alto_path is provided.
     """
     # ------------------------------------------------------------
     # 1)  <alto> skeleton
     # ------------------------------------------------------------
-    max_x = max(v[2] for v in boxes_dict.values())
-    max_y = max(v[3] for v in boxes_dict.values())
+    max_x = image_width
+    max_y = image_height
 
     root = ET.Element(
         f"{{{NS_ALTO}}}alto",
@@ -241,6 +236,7 @@ def merge_alto_region_xmls(source_image_path: str,
         {"HPOS": "0", "VPOS": "0", "WIDTH": str(max_x), "HEIGHT": str(max_y)},
     )
 
+
     # ------------------------------------------------------------
     # 2)  Gather regions
     # ------------------------------------------------------------
@@ -269,15 +265,18 @@ def merge_alto_region_xmls(source_image_path: str,
     # ------------------------------------------------------------
     # 4)  Append blocks with absolute offsets
     # ------------------------------------------------------------
+    supported_tags = {f"{{{NS_ALTO}}}{t}" for t in ["ComposedBlock", "TextBlock", "Illustration", "GraphicalElement"]}
     for x0, y0, fn, rid in region_entries:
         tree_r = ET.parse(os.path.join(region_dir, fn))
         rps = tree_r.find(f".//{{{NS_ALTO}}}PrintSpace")
         if rps is None:
             continue
-        for cb in rps.findall(f"{{{NS_ALTO}}}ComposedBlock"):
-            cb_copy = copy.deepcopy(cb)
-            shift_element_coords(cb_copy, x0, y0)
-            ps.append(cb_copy)
+        for child in list(rps):
+            if child.tag not in supported_tags:
+                continue
+            child_copy = copy.deepcopy(child)
+            shift_element_coords(child_copy, x0, y0)
+            ps.append(child_copy)
 
     # ------------------------------------------------------------
     # 5)  Renumber IDs using *the same* sort rule
@@ -308,10 +307,8 @@ def merge_alto_region_xmls(source_image_path: str,
             el.set("ID", f"{prefix}_{i}")
 
     # ------------------------------------------------------------
-    # 6)  Write merged ALTO
+    # 7)  Write merged ALTO
     # ------------------------------------------------------------
     ET.ElementTree(root).write(output_file, encoding="utf-8",
                                xml_declaration=True)
     logger.info("Composite ALTO written to: %s", output_file)
-
-

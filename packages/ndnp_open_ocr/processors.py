@@ -18,6 +18,8 @@ from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
 from PIL import Image
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth, getFont
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -509,71 +511,47 @@ class OCRProcessor:
         def alto_to_px(val: float) -> float:
             return val if mu == "pixel" else val * dpi_x / 1200.0
 
-        font = getFont('Times-Roman')
-        ascent = font.face.ascent / 1000.0   # e.g., ~0.716
-        descent = font.face.descent / 1000.0  # e.g., ~-0.237 (negative)
-        em_span = ascent - descent  # Full height span
-
+        # overlay each <String> as invisible text
         for s in doc.findall(".//a:String", ns):
             txt = s.get("CONTENT", "")
             if not txt:
                 continue
 
-            # Get raw ALTO coords & size
+            # get raw ALTO coords & size
             raw_hpos = float(s.get("HPOS", 0))
             raw_vpos = float(s.get("VPOS", 0))
-            raw_width = float(s.get("WIDTH", 0))
-            raw_ht = float(s.get("HEIGHT", 0))
+            raw_ht_s = float(s.get("HEIGHT", 0))
+            raw_w_s = float(s.get("WIDTH",0))
 
-            # Convert to pixels
+            # convert to pixels
             hpos_px = alto_to_px(raw_hpos)
             vpos_px = alto_to_px(raw_vpos)
-            width_px = alto_to_px(raw_width)
-            ht_px = alto_to_px(raw_ht)
+            ht_px_s = alto_to_px(raw_ht_s)
+            w_px_s = alto_to_px(raw_w_s)
 
-            # Convert to PDF points (use separate px2pt_x/y if DPI non-square)
-            px2pt_x = 72.0 / dpi_x
-            px2pt_y = 72.0 / dpi_y
-            x_pt = hpos_px * px2pt_x
-            box_bottom_pt = (h_px - vpos_px - ht_px) * px2pt_y
-            width_pt = width_px * px2pt_x
-            ht_pt = ht_px * px2pt_y
+            # convert to PDF points
+            h_pt_s = ht_px_s*px2pt
+            w_pt_s = w_px_s*px2pt
+            x_pt = hpos_px * px2pt
+            # flip Y-axis: PDF origin is bottom-left
+            y_pt = (h_px - vpos_px - ht_px_s) * px2pt
 
-            # Set font size to fit height exactly
-            fs_pt = max(ht_pt / em_span, 1)
-
-            # Compute baseline for vertical alignment (rendered bottom aligns with box bottom)
-            descent_pt = descent * fs_pt  # Negative
-            y_baseline = box_bottom_pt - descent_pt
-
-            # Split into chars and compute natural widths
-            chars = list(txt)
-            if not chars:
-                continue
-            char_widths = [stringWidth(c, 'Times-Roman', fs_pt) for c in chars]
-            total_natural = sum(char_widths)
-            if total_natural <= 0:
-                continue  # Skip degenerate cases
-
-            # Start text object
             tx = c.beginText()
-            tx.setTextRenderMode(3)  # Invisible
-            tx.setFont('Times-Roman', fs_pt)
+            tx.setTextRenderMode(3)  # 3 = invisible (no fill/stroke)
+            tx.setFont("Times-Roman", 1) 
+            tx.setLeading(0)
+            tx.setCharSpace(0)
+            tx.setWordSpace(0)
+            tx.setHorizScale(100)
 
-            # Position each char proportionally
-            cumulative_pt = 0
-            scale_factor = width_pt / total_natural
-            for char, nat_width in zip(chars, char_widths):
-                char_pt = nat_width * scale_factor
-                tx.setTextOrigin(x_pt + cumulative_pt, y_baseline)
-                tx.textOut(char)
-                cumulative_pt += char_pt
-
+            y_baseline = y_pt
+            adj_word_width = w_pt_s / pdfmetrics.stringWidth(txt, "Times-Roman", 1.0)
+            tx.setTextTransform(adj_word_width, 0, 0, h_pt_s, x_pt, y_baseline)
+            tx.textOut(txt) 
             c.drawText(tx)
 
         c.showPage()
         c.save()
-
 
     def generate_alto(self):
         """Generate a new OCR ALTO file, using a given image, with the NDNP Open OCR pipeline. This
