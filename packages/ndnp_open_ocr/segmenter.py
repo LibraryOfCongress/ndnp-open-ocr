@@ -1,13 +1,13 @@
 from collections import defaultdict
 import os
 import sys
-import json
 import logging
 import cv2
 import numpy as np
-from typing import List, Tuple
+ 
 import xml.etree.ElementTree as ET
 import copy
+ 
 
 
 logger = logging.getLogger(__name__)
@@ -136,6 +136,7 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
 # ----------------------------------------------------------------------
 
 
+
 def segment_page(
     image_path: str,
 ):
@@ -145,6 +146,7 @@ def segment_page(
     ----------
     image_path: str
         Path to the image that should be segmented.
+
     Returns
     -------
     crops : list[tuple[int, numpy.ndarray]]
@@ -185,6 +187,9 @@ def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
             orig_vpos = float(el.attrib["VPOS"])
             el.set("VPOS", str(int(orig_vpos + dy)))
 
+# Note: helper utilities for block bbox and intersections are no longer needed
+# in this build since we only merge segmented region ALTO without gap filling.
+
 def merge_alto_region_xmls(source_image_path: str,
                            region_dir: str,
                            boxes_dict: dict[str, tuple[int, int, int, int]],
@@ -195,7 +200,7 @@ def merge_alto_region_xmls(source_image_path: str,
     Merge per-region ALTO files back into one page-level ALTO, using a
     simple column-major sort with an X-tolerance so that a block that is
     far *below* another one never jumps ahead just because its HPOS is a
-    few pixels smaller. Uses subtraction method if full_alto_path is provided.
+    few pixels smaller.
     """
     # ------------------------------------------------------------
     # 1)  <alto> skeleton
@@ -236,9 +241,12 @@ def merge_alto_region_xmls(source_image_path: str,
         {"HPOS": "0", "VPOS": "0", "WIDTH": str(max_x), "HEIGHT": str(max_y)},
     )
 
+    # ------------------------------------------------------------
+    # 2) No gap collection in this build; proceed to regions only
+
 
     # ------------------------------------------------------------
-    # 2)  Gather regions
+    # 3)  Gather regions
     # ------------------------------------------------------------
     region_entries = []                            # [(x0, y0, fn, rid), …]
     for fn in os.listdir(region_dir):
@@ -251,19 +259,18 @@ def merge_alto_region_xmls(source_image_path: str,
         region_entries.append((x0, y0, fn, rid))
 
     # ------------------------------------------------------------
-    # 3)  Sort with X-tolerance
+    # 4)  Sort regions with X-tolerance
     # ------------------------------------------------------------
     X_TOL = max(int(max_x * 0.06), 100)            # 6 % of page or ≥100 px
 
-    def sort_key(t: tuple[int, int, str, str]) -> tuple[int, int]:
-        x0, y0, *_ = t
+    def sort_key(x0: int, y0: int) -> tuple[int, int]:
         col_bucket = x0 // X_TOL                   # “coarse” column number
         return (col_bucket, y0)
 
-    region_entries.sort(key=sort_key)
+    region_entries.sort(key=lambda t: sort_key(t[0], t[1]))
 
     # ------------------------------------------------------------
-    # 4)  Append blocks with absolute offsets
+    # 5)  Append in reading order
     # ------------------------------------------------------------
     supported_tags = {f"{{{NS_ALTO}}}{t}" for t in ["ComposedBlock", "TextBlock", "Illustration", "GraphicalElement"]}
     for x0, y0, fn, rid in region_entries:
@@ -279,7 +286,7 @@ def merge_alto_region_xmls(source_image_path: str,
             ps.append(child_copy)
 
     # ------------------------------------------------------------
-    # 5)  Renumber IDs using *the same* sort rule
+    # 6)  Renumber IDs using *the same* sort rule
     # ------------------------------------------------------------
     id_specs = [
         (f"{{{NS_ALTO}}}ComposedBlock", "cblock"),
