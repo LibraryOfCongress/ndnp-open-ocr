@@ -77,17 +77,6 @@ resource "aws_ecr_repository" "repo" {
   name = "ndnp-open-ocr-container-repo-${var.env}"
 }
 
-# CloudWatch Log Group for AWS Batch
-resource "aws_cloudwatch_log_group" "log_group" {
-  name              = "/aws/batch/ndnp-open-ocr-job-${var.env}"
-  retention_in_days = 90
-
-  lifecycle {
-    prevent_destroy = false # Destroy log group on spin down.
-    ignore_changes  = [name]
-  }
-}
-
 # AWS Batch Service Role
 resource "aws_iam_role" "batch_service_role" {
   name = "ndnp-open-ocr-batch-service-role-${var.env}"
@@ -223,7 +212,7 @@ resource "aws_batch_compute_environment" "batch_compute_environment" {
 
   compute_resources {
     type               = "FARGATE"
-    max_vcpus          = 500
+    max_vcpus          = 350
     subnets            = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
     security_group_ids = [aws_security_group.main_sg.id]
   }

@@ -537,14 +537,14 @@ class AltoProcessor:
                 hyp_tag = soup.new_tag("HYP", attrs={"CONTENT": "-"})
                 strings = line.find_all("String")
 
-                # If there are no strings in this line, then there are no hyphens to fix. Exit function in this case.
+                # If there are no strings in this line, then there are no hyphens to fix. Skip this line.
                 if len(strings) == 0:
-                    return
+                    continue
                 last_string = strings[-1]
                 content = last_string.get("CONTENT")
 
                 # Line-to-Line Hyphenation Check: If the last string ends with a hyphen, it means that there is a linebreak and the other portion of the hyphenation is in the next line
-                if content.endswith("-") and len(content) > 1:
+                if content.endswith("-") and len(content) > 1 and index + 1 < len(text_lines):
                     next_line = text_lines[index + 1]
                     next_line_string = next_line.find_all("String")[0]
 
@@ -987,6 +987,8 @@ class OCRProcessor:
         try:
             logging.info("Generating ALTO file")
             logger.info("Input file path: %s", self.input_file_path)
+            full_alto_path = None
+
             if self.use_segmenter:
                 logging.info("Segmentation mode enabled")
                 logger.debug("Segmenting page into regions")
@@ -996,13 +998,13 @@ class OCRProcessor:
                 os.makedirs(regions_dir, exist_ok=True)
                 logger.debug("Regions directory created: %s", regions_dir)
 
-                full_alto_path = None
                 if self.use_gap_filling:
                     full_alto_path = os.path.join(self.output_path, f"{self._get_file_name()}_full.xml")
                     xml = pytesseract.image_to_alto_xml(self.input_file_path)
                     with open(full_alto_path, "wb") as f:
                         f.write(xml)
 
+                # segment_page returns (crops, boxes, width, height)
                 crops, boxes, h, w = segment_page(self.input_file_path)
 
                 logging.info("Detected %d regions", len(crops))
@@ -1042,13 +1044,19 @@ class OCRProcessor:
             dpi = (300, 300)
 
             alto_processor = AltoProcessor(self._get_alto_file_path())
+            if self.use_gap_filling and full_alto_path:
+                alto_processor.fill_gaps(full_alto_path, self.input_file_path)
+            elif self.use_gap_filling:
+                logging.warning(
+                    "Gap filling requested but no full ALTO available; skipping."
+                )
+
+            if full_alto_path and os.path.isfile(full_alto_path):
+                os.remove(full_alto_path)
+
             alto_processor.add_description_tags()
             alto_processor.fix_alto_file_hyphenation()
             alto_processor.add_textblock_language()
-            if self.use_gap_filling:
-                alto_processor.fill_gaps(full_alto_path, self.input_file_path)
-            if full_alto_path and os.path.isfile(full_alto_path):
-                os.remove(full_alto_path)
 
             # If using segmenter, save a pixel-unit version of the ALTO *before* unit conversion (for PDF generation in generate_pdf)
             pixel_alto_path = None

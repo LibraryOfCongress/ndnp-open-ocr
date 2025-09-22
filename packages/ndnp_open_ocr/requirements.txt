@@ -33,6 +33,7 @@ s3transfer==0.10.1
 setuptools==69.0.2
 six==1.16.0
 soupsieve==2.5
+scikit-learn==1.7.1
 typer==0.6.1
 urllib3==2.2.1
 wheel==0.42.0

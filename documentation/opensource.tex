@@ -1,0 +1,66 @@
+\documentclass{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{sectsty}
+\usepackage{hyperref}
+\usepackage{bookmark}
+\usepackage{amssymb}
+
+\allsectionsfont{\sffamily\bfseries}
+\sectionfont{\Large}
+\subsectionfont{\normalsize}
+
+\title{Checklist for Preparing NDNP-Open-OCR for Open Source Release}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+This checklist outlines the essential tasks required to prepare the NDNP-Open-OCR codebase for public release, ensuring removal of internal references, elimination of sensitive information, verification of data, and compliance with licensing standards.
+
+\section{Draft AWS Environment Setup Recommendations}
+In the case that an organization does not have an existing IT team or AWS environment, draft a set of recommendations for setting up an appropriate AWS sandbox environment to run the NDNP-Open-OCR deployment. This should include:
+\begin{itemize}[label=$\square$]
+    \item Organizational unit structure
+    \item IAM roles and policies
+    \item Terraform deployment (spin up and spin down)
+\end{itemize}
+
+\section{Remove Library of Congress-Specific References}
+
+\begin{itemize}[label=$\square$]
+    \item Identify and eliminate references to the loc-preservation S3 bucket or paths in the codebase; replace with variables. Anonymize environment details, including AWS account IDs, ARNs, role names, and login URLs; provide generic configuration instructions.
+
+    \item Rephrase mentions of the Library of Congress in documentation; rewrite sections to be organization-agnostic and suitable for external contributors.
+    \item Generalized input data source (what if the input isn't S3 like loc-preservation?)
+\end{itemize}
+
+
+\section{Determine Redactions: Should the following should be redacted or kept}
+\begin{itemize}[label=$\square$]
+    
+    \item Gitlab CI pipeline workflows: These are used to deploy NDNP Open OCR to the LOC AWS account but may not be the case with other institutions.
+    \item CLI workflow for kicking off batches. Should this be generalized or should it be removed since it might be too LOC-specific? Open-source users likely won't be doing the batch merging of NDNP batches like our CLI does at present. I'm thinking we should at least remove some of the sync features in the open-source release, or specify that they are LOC-specific.
+\end{itemize}
+
+\section{Licensing Review}
+
+\begin{itemize}[label=$\square$]
+    \item Add a LICENSE file.
+    
+    \item Address considerations for use of American Stories models and code. Ensure it's adequately paid it's respects in public documentation.
+\end{itemize}
+
+\section{Audit Third-Party Dependencies for License Compatibility}
+
+\begin{itemize}[label=$\square$]
+    \item Inventory all dependencies and their licenses, including Python packages and system tools.
+    
+    \item Verify compatibility of dependency licenses with the project's intended license; replace incompatible components if required.
+    
+    \item Document licenses of all major dependencies (including American Stories) in the README or documentation for transparency.
+\end{itemize}
+
+\end{document}

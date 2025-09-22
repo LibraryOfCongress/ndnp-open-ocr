@@ -47,7 +47,13 @@ def handler(event, context):
         m = re.search(r"batch[_-]([a-zA-Z]+)_", batch_name)
         if m:
             code = m.group(1).lower()
-            dir_code = "vi" if code in ["vi", "va"] else "loc" if code == "lc" else code
+            code_to_dir = {
+                "lc": "loc",
+                "vi": "vi",
+                "va": "vi",
+                "lv": "vi",
+            }
+            dir_code = code_to_dir.get(code, code)
         else:
             dir_code = batch_name
 
