@@ -44,7 +44,7 @@ def handler(event, context):
     container_env = job.get("container", {}).get("environment", [])
     env_map = {e["name"]: e["value"] for e in container_env}
     input_bucket = env_map.get(
-        "BUCKET_NAME", os.environ.get("INPUT_BUCKET_NAME", "loc-preservation")
+        "BUCKET_NAME", os.environ.get("INPUT_BUCKET_NAME", "input-bucket")
     )
     prefix = env_map.get("PREFIX", job_name)
 
@@ -149,4 +149,3 @@ def log_to_s3(bucket_name, s3_key, log_data):
         Body=json.dumps(log_data, indent=2),
         ContentType="application/json",
     )
-

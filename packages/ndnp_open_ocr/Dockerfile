@@ -1,11 +1,3 @@
-#--------------------------------------------------------------------------------
-# Stage 1: grab OCR-Fileformat CLI and assets from the official image
-#--------------------------------------------------------------------------------
-FROM ubma/ocr-fileformat:latest AS ocr
-
-#--------------------------------------------------------------------------------
-# Stage 2: NDNP Open OCR Image Building
-#--------------------------------------------------------------------------------
 FROM python:3.11.0
 
 
@@ -53,9 +45,6 @@ RUN curl -L https://github.com/tesseract-ocr/tessdata${TESSERACT_DATA_SUFFIX}/ra
 RUN apt-get install  protobuf-compiler \
       libprotobuf-dev -y
 
-COPY --from=ocr /usr/local/bin/ocr-*       /usr/local/bin/
-COPY --from=ocr /usr/local/share/ocr-fileformat /usr/local/share/ocr-fileformat
-
 # Copy files from same directory as Dockerfile to /app
 WORKDIR /app/ndnp_open_ocr
 COPY . .
@@ -72,5 +61,5 @@ RUN pip install -r requirements.txt && \
     rm -rf /var/lib/apt/lists/*
 
 
-ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/lib
-ENV TESSDATA_PREFIX /usr/local/share/tessdata
+ENV LD_LIBRARY_PATH=/usr/local/lib
+ENV TESSDATA_PREFIX=/usr/local/share/tessdata
