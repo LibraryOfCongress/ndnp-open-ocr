@@ -3,6 +3,7 @@ import json
 import logging
 import tempfile
 import shutil
+from PIL import Image
 
 from ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
 from ndnp_open_ocr.storage import list_inputs, download_input, upload_outputs, record_text_blob
@@ -43,9 +44,26 @@ def run_local_batch():
     except Exception:
         pass
 
+    def is_valid_image(input_file_path: str) -> bool:
+        try:
+            with Image.open(input_file_path) as img:
+                img.verify()
+            return True
+        except Exception:
+            return False
+
+    def download_input_local(src_uri: str, rel_path: str, temp_dir: str) -> str:
+        path = download_input(src_uri, rel_path, temp_dir)
+        # If the file is a TIF but invalid (e.g., remote is actually JP2), use JP2 sidecar
+        if path.lower().endswith(".tif") and not is_valid_image(path):
+            jp2_candidate = path[:-4] + ".jp2"
+            if os.path.exists(jp2_candidate):
+                return jp2_candidate
+        return path
+
     for rel_path in items:
         with tempfile.TemporaryDirectory() as tmp:
-            in_path = download_input(src_uri, rel_path, tmp)
+            in_path = download_input_local(src_uri, rel_path, tmp)
             out_dir = os.path.join(tmp, "output")
             os.makedirs(out_dir, exist_ok=True)
 

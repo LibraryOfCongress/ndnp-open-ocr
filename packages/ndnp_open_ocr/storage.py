@@ -27,22 +27,33 @@ def env_sink_fallback() -> str:
 
 
 def list_inputs(source_uri: str, pattern: str = "**/*.tif") -> List[str]:
-    """Return rel_paths of all matching inputs under the given source URI."""
+    """Return rel_paths of all matching inputs under the given source URI.
+
+    Uses the filesystem-native path (from url_to_fs) to avoid scheme/bucket
+    mismatches when stripping the root prefix.
+    """
     root = _norm_root(source_uri)
-    fs, _ = fsspec.core.url_to_fs(root)
-    glob_pat = root + "/" + pattern
+    fs, fs_root = fsspec.core.url_to_fs(root)
+    base = fs_root.rstrip("/")
+    glob_pat = base + "/" + pattern
     paths = fs.glob(glob_pat)
     rels: List[str] = []
-    prefix = root + "/"
+    prefix = base + "/"
     for p in paths:
-        rel = p[len(prefix) :] if p.startswith(prefix) else os.path.basename(p)
-        rels.append(rel)
+        if p.startswith(prefix):
+            rels.append(p[len(prefix) :])
+        else:
+            # Fallback: relative to fs_root
+            try:
+                rels.append(os.path.relpath(p, base))
+            except Exception:
+                rels.append(os.path.basename(p))
     return sorted(rels)
 
 
-def prefetch_sidecars(fs, remote_tif: str, temp_dir: str) -> None:
-    base = os.path.splitext(os.path.basename(remote_tif))[0]
-    remote_dir = os.path.dirname(remote_tif)
+def prefetch_sidecars(fs, remote_input: str, temp_dir: str) -> None:
+    base = os.path.splitext(os.path.basename(remote_input))[0]
+    remote_dir = os.path.dirname(remote_input)
     for ext in (".jp2", ".pdf", ".xml"):
         r = os.path.join(remote_dir, base + ext)
         l = os.path.join(temp_dir, base + ext)
@@ -54,18 +65,25 @@ def prefetch_sidecars(fs, remote_tif: str, temp_dir: str) -> None:
 
 
 def download_input(source_uri: str, rel_path: str, temp_dir: str) -> str:
+    """Download the primary input to temp_dir preserving its extension when possible.
+
+    Also prefetch common sidecars (.jp2/.pdf/.xml) for downstream use.
+    Returns the local path to the primary input (with the same extension as rel_path).
+    """
     root = _norm_root(source_uri)
-    fs, _ = fsspec.core.url_to_fs(root)
-    remote_tif = root + "/" + rel_path
-    base = os.path.splitext(os.path.basename(rel_path))[0]
-    local_tif = os.path.join(temp_dir, base + ".tif")
+    fs, fs_root = fsspec.core.url_to_fs(root)
+    base = fs_root.rstrip("/")
+    remote_path = base + "/" + rel_path
+    base, ext = os.path.splitext(os.path.basename(rel_path))
+    ext = ext or ".tif"
+    local_path = os.path.join(temp_dir, base + ext)
     try:
-        fs.get(remote_tif, local_tif)
+        fs.get(remote_path, local_path)
     except Exception:
-        # allow fallback to jp2 if tif invalid/missing
+        # Ignore and rely on sidecar prefetch/fallbacks
         pass
-    prefetch_sidecars(fs, remote_tif, temp_dir)
-    return local_tif
+    prefetch_sidecars(fs, remote_path, temp_dir)
+    return local_path
 
 
 def upload_outputs(sink_uri: str, output_dir: str, rel_dir: str) -> None:
