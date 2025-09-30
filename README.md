@@ -22,6 +22,24 @@ The module creates AWS resources for the application including:
 - **S3 Bucket**: For storing the PDF and ALTO outputs from NDNP Open OCR.
 - **Cloudwatch Log Groups**: For storing logs of the Lambda functions and ECS/Fargate tasks.
 
+## Recommended AWS Account Setup
+
+We recommend running NDNP Open OCR in a hermetically sealed AWS account that is a child account within an AWS Organizations parent (management) account. This approach keeps project resources isolated, simplifies lifecycle tasks (fast spin-up, spin-down, and closure), and enables clearer cost allocation and stronger, project-scoped permissions.
+
+- Isolate per project: minimize blast radius and avoid cross-project interference.
+- Simplify billing: use consolidated billing to break out costs by account/project.
+- Streamline lifecycle: create, suspend, or close entire environments quickly.
+- Maximize least privilege: apply policies and guardrails specific to the project.
+
+Helpful AWS guides for setup:
+
+- What is AWS Organizations: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_introduction.html
+- Create an organization: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_org_create.html
+- Create an account in your organization (sub-account): https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_create.html
+- Work with organizational units (OUs): https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_ous.html
+- Getting started with AWS Organizations: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_getting-started.html
+
+
 ## Prerequisites
 
 - Terraform v1.4.6
