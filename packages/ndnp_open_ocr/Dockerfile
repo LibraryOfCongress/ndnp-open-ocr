@@ -29,10 +29,13 @@ RUN apt-get install -y --reinstall make && \
     libpng-dev libjpeg62-turbo-dev libtiff5-dev libicu-dev \
     libpango1.0-dev autoconf-archive
 
-# Install Tesseract (compiling from source as it may not be available in Amazon Linux repositories)
+# Install Tesseract from a pinned release tag for reproducible builds
+ARG TESSERACT_VERSION=5.4.1
 WORKDIR /opt
-RUN wget https://github.com/tesseract-ocr/tesseract/archive/refs/heads/main.zip && \
-    unzip main.zip && cd tesseract-main && \
+RUN wget -O tesseract-${TESSERACT_VERSION}.tar.gz \
+         https://github.com/tesseract-ocr/tesseract/archive/refs/tags/${TESSERACT_VERSION}.tar.gz && \
+    tar xzf tesseract-${TESSERACT_VERSION}.tar.gz && \
+    cd tesseract-${TESSERACT_VERSION} && \
     ./autogen.sh && ./configure && make && make install
 
 #### TESSERACT INSTALL #####
@@ -63,3 +66,5 @@ RUN pip install -r requirements.txt && \
 
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV TESSDATA_PREFIX=/usr/local/share/tessdata
+# Ensure the OCR library is importable when the repo is mounted at /app
+ENV PYTHONPATH=/app/packages:/app

@@ -187,8 +187,6 @@ def shift_element_coords(element: ET.Element, dx: int, dy: int) -> None:
             orig_vpos = float(el.attrib["VPOS"])
             el.set("VPOS", str(int(orig_vpos + dy)))
 
-# Note: helper utilities for block bbox and intersections are no longer needed
-# in this build since we only merge segmented region ALTO without gap filling.
 
 def merge_alto_region_xmls(source_image_path: str,
                            region_dir: str,
@@ -242,7 +240,7 @@ def merge_alto_region_xmls(source_image_path: str,
     )
 
     # ------------------------------------------------------------
-    # 2) No gap collection in this build; proceed to regions only
+    # 2) Region merge only (gap filling occurs later in processors)
 
 
     # ------------------------------------------------------------

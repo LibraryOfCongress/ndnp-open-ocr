@@ -13,10 +13,10 @@ from ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
 from ndnp_open_ocr.storage import (
     env_sink_fallback,
     env_source_fallback,
-    list_inputs,
-    download_input,
-    upload_outputs,
-    record_text_blob,
+    list_source_items,
+    fetch_item,
+    publish_outputs,
+    write_metadata,
 )
 
 logging.basicConfig(
@@ -54,20 +54,25 @@ def get_file_list():
     """List items using the configured source URI (or legacy S3 fallback)."""
     src_uri = os.getenv("SOURCE_URI") or env_source_fallback()
     pattern = os.getenv("INPUT_GLOB") or "**/*.tif"
-    return src_uri, list_inputs(src_uri, pattern)
+    return src_uri, list_source_items(src_uri, pattern)
 
 
 def download_input_local(src_uri, rel_path, temp_dir):
-    path = download_input(src_uri, rel_path, temp_dir)
+    path = fetch_item(src_uri, rel_path, temp_dir)
+    # If the .tif is corrupt or missing, try fetching the .jp2 from source
     if path.lower().endswith(".tif") and not is_valid_image(path):
-        jp2_candidate = path[:-4] + ".jp2"
-        if os.path.exists(jp2_candidate):
-            return jp2_candidate
+        root, _ = os.path.splitext(rel_path)
+        rel_jp2 = root + ".jp2"
+        try:
+            jp2_path = fetch_item(src_uri, rel_jp2, temp_dir)
+            return jp2_path
+        except Exception:
+            pass
     return path
 
 
 def upload_outputs_local(sink_uri, output_dir: str, rel_dir: str) -> None:
-    upload_outputs(sink_uri, output_dir, rel_dir)
+    publish_outputs(sink_uri, output_dir, rel_dir)
     clear_tmp_directory()
 
 
@@ -86,7 +91,7 @@ def clear_tmp_directory():
 def record_tesseract_version_local(sink_uri):
     try:
         version = str(pytesseract.get_tesseract_version())
-        record_text_blob(sink_uri, "tesseract_version.txt", version)
+        write_metadata(sink_uri, "tesseract_version.txt", version)
         logging.info(f"Recorded tesseract version {version}")
     except Exception as e:
         logging.error(f"Failed to record tesseract version: {e}")

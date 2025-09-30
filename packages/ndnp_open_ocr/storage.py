@@ -26,7 +26,7 @@ def env_sink_fallback() -> str:
     return f"s3://{bucket}/{prefix}"
 
 
-def list_inputs(source_uri: str, pattern: str = "**/*.tif") -> List[str]:
+def list_source_items(source_uri: str, pattern: str = "**/*.tif") -> List[str]:
     """Return rel_paths of all matching inputs under the given source URI.
 
     Uses the filesystem-native path (from url_to_fs) to avoid scheme/bucket
@@ -54,7 +54,8 @@ def list_inputs(source_uri: str, pattern: str = "**/*.tif") -> List[str]:
 def prefetch_sidecars(fs, remote_input: str, temp_dir: str) -> None:
     base = os.path.splitext(os.path.basename(remote_input))[0]
     remote_dir = os.path.dirname(remote_input)
-    for ext in (".jp2", ".pdf", ".xml"):
+    # Only fetch non-primary metadata sidecars; defer JP2 until explicitly needed
+    for ext in (".pdf", ".xml"):
         r = os.path.join(remote_dir, base + ext)
         l = os.path.join(temp_dir, base + ext)
         try:
@@ -64,7 +65,7 @@ def prefetch_sidecars(fs, remote_input: str, temp_dir: str) -> None:
             pass
 
 
-def download_input(source_uri: str, rel_path: str, temp_dir: str) -> str:
+def fetch_item(source_uri: str, rel_path: str, temp_dir: str) -> str:
     """Download the primary input to temp_dir preserving its extension when possible.
 
     Also prefetch common sidecars (.jp2/.pdf/.xml) for downstream use.
@@ -86,7 +87,13 @@ def download_input(source_uri: str, rel_path: str, temp_dir: str) -> str:
     return local_path
 
 
-def upload_outputs(sink_uri: str, output_dir: str, rel_dir: str) -> None:
+def publish_outputs(sink_uri: str, output_dir: str, rel_dir: str) -> None:
+    """Copy files from a local output_dir to the sink, preserving rel_dir.
+
+    For local file sinks (file://), ensure destination directories exist
+    before copying. For remote backends (e.g., s3://), the put operation
+    is sufficient.
+    """
     root = _norm_root(sink_uri)
     fs, _ = fsspec.core.url_to_fs(root)
     for name in os.listdir(output_dir):
@@ -94,10 +101,17 @@ def upload_outputs(sink_uri: str, output_dir: str, rel_dir: str) -> None:
         if not os.path.isfile(local_path):
             continue
         dst = "/".join(filter(None, [root, rel_dir, name]))
+        # Ensure parent directories exist (needed for local file sinks)
+        try:
+            parent = os.path.dirname(dst)
+            if parent:
+                fs.makedirs(parent, exist_ok=True)
+        except Exception:
+            pass
         fs.put(local_path, dst)
 
 
-def record_text_blob(sink_uri: str, blob_rel_key: str, content: str) -> None:
+def write_metadata(sink_uri: str, blob_rel_key: str, content: str) -> None:
     root = _norm_root(sink_uri)
     fs, _ = fsspec.core.url_to_fs(root)
     dst = "/".join(filter(None, [root, blob_rel_key]))
