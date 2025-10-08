@@ -59,6 +59,8 @@ validate:
       when: on_success
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
       when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "push" && $TF_STATE_NAME == "dillonpeterson"'
+      when: on_success
     - when: never
 
 
@@ -84,6 +86,8 @@ deploy:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
       when: on_success
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "push" && $TF_STATE_NAME == "dillonpeterson"'
       when: on_success
     - when: never
 
@@ -112,6 +116,8 @@ deploy_fargate:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
       when: on_success
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "push" && $TF_STATE_NAME == "dillonpeterson"'
       when: on_success
     - when: never
 
@@ -143,6 +149,8 @@ build_cli:
       when: on_success
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
       when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "push" && $TF_STATE_NAME == "dillonpeterson"'
+      when: on_success
     - when: never
 
 destroy:
@@ -155,5 +163,7 @@ destroy:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
       when: manual
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
+      when: manual
+    - if: '$CI_PIPELINE_SOURCE == "push" && $TF_STATE_NAME == "dillonpeterson"'
       when: manual
     - when: never
