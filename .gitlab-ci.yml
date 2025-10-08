@@ -19,6 +19,10 @@ workflow:
       variables:
         TF_STATE_NAME: "production-deployment"
       when: always
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      variables:
+        TF_STATE_NAME: "dillonpeterson"
+      when: always
     - when: never
 
 test_ndnp_open_ocr:
@@ -50,6 +54,12 @@ validate:
   script:
     - terraform fmt -check
     - terraform validate
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
+      when: on_success
+    - when: never
 
 
 # Consolidated Terraform Deployment
@@ -70,6 +80,12 @@ deploy:
     - export ECR_REPO_URI=$(terraform output -raw ecr_repo_url)
   artifacts:
     when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
+      when: on_success
+    - when: never
 
 # Docker Build and Push for Fargate Deployment
 deploy_fargate:
@@ -92,6 +108,12 @@ deploy_fargate:
     - docker push 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-${TF_STATE_NAME}:latest
   environment:
     name: $TF_STATE_NAME
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
+      when: on_success
+    - when: never
 
 # Python CLI Build Job
 build_cli:
@@ -116,6 +138,12 @@ build_cli:
     # To install the latest package on NDNPQR after it has been published with the line below, I simply run
     # pip install --upgrade
     - poetry publish --repository gitlab --username gitlab-ci-token --password ${CI_JOB_TOKEN}
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
+      when: on_success
+    - when: never
 
 destroy:
   stage: destroy
@@ -123,4 +151,9 @@ destroy:
     - terraform destroy -auto-approve
   dependencies:
     - deploy
-  when: manual
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+      when: manual
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
+      when: manual
+    - when: never
