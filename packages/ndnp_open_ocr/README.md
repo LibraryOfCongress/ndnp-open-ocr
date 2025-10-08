@@ -116,3 +116,9 @@ you can run them with:
 ```bash
 pytest
 ```
+
+To run the suite inside the project Docker image (matching the GitLab CI job), use:
+
+```bash
+make test
+```

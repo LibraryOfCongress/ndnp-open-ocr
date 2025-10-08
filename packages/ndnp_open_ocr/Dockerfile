@@ -24,6 +24,8 @@ RUN wget -O tesseract-${TESSERACT_VERSION}.tar.gz \
 ############################################
 FROM python:3.11.10-slim-bookworm
 
+ARG INCLUDE_TEST_DEPS="false"
+
 RUN set -eux; \
     apt-get update; \
     apt-get -y upgrade; \
@@ -61,7 +63,10 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
     PYTHONPATH=/app/packages:/app
 RUN python -m pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    if [ "$INCLUDE_TEST_DEPS" = "true" ]; then \
+      pip install --no-cache-dir -r requirements-test.txt; \
+    fi
 
 # Non-root user for runtime
 RUN useradd -m -u 10001 appuser && chown -R appuser:appuser /app /usr/local/share/tessdata

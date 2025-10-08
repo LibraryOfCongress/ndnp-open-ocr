@@ -1,4 +1,5 @@
 stages:
+  - test
   - validate
   - deploy
   - deploy_fargate
@@ -19,6 +20,21 @@ workflow:
         TF_STATE_NAME: "production-deployment"
       when: always
     - when: never
+
+test_ndnp_open_ocr:
+  stage: test
+  image: docker:24.0.2
+  services:
+    - docker:24.0.2-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_BUILDKIT: 1
+  before_script:
+    - apk add --no-cache bash
+  script:
+    - docker build --platform linux/amd64 --build-arg INCLUDE_TEST_DEPS=true -t ndnp-open-ocr-test ./packages/ndnp_open_ocr
+    - docker run --rm --platform linux/amd64 ndnp-open-ocr-test pytest
 
 validate:
   image:
