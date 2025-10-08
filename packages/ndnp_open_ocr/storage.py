@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import os
+import posixpath
 from typing import List, Tuple
+from urllib.parse import urlparse
 
 import fsspec
 
@@ -49,6 +51,62 @@ def list_source_items(source_uri: str, pattern: str = "**/*.tif") -> List[str]:
             except Exception:
                 rels.append(os.path.basename(p))
     return sorted(rels)
+
+
+def _trim_to_batch(parts: List[str]) -> List[str]:
+    """Return path segments starting at the first entry containing 'batch'."""
+
+    for idx, segment in enumerate(parts):
+        if "batch" in segment.lower():
+            return parts[idx:]
+    return parts
+
+
+def source_output_prefix(source_uri: str) -> str:
+    """Return the leading directory components from the source that should be
+    preserved when writing outputs.
+
+    For object stores (e.g., s3://bucket/prefix), drop the bucket name but
+    retain the remaining prefix hierarchy. For local or relative paths, keep
+    only the terminal directory name to avoid reconstructing absolute paths
+    in the sink.
+    """
+
+    root = _norm_root(source_uri)
+    _fs, fs_root = fsspec.core.url_to_fs(root)
+    parsed = urlparse(root)
+
+    if parsed.scheme and parsed.scheme != "file":
+        parts = [p for p in fs_root.split("/") if p]
+        if len(parts) <= 1:
+            return ""
+        trimmed = _trim_to_batch(parts[1:])
+        return "/".join(trimmed)
+
+    norm = os.path.normpath(fs_root)
+    parts = [p for p in norm.split(os.sep) if p]
+    if not parts:
+        return ""
+    trimmed = _trim_to_batch(parts)
+    if trimmed is parts:
+        return parts[-1]
+    return "/".join(trimmed)
+
+
+def build_output_rel_dir(source_uri: str, rel_path: str) -> str:
+    """Compose the relative directory for outputs preserving batch structure."""
+
+    prefix = source_output_prefix(source_uri)
+    rel_dir = posixpath.dirname(rel_path)
+
+    segments: List[str] = []
+    if prefix:
+        segments.extend([p for p in prefix.split("/") if p])
+    if rel_dir:
+        segments.extend([p for p in rel_dir.split("/") if p])
+
+    trimmed = _trim_to_batch(segments)
+    return "/".join(trimmed)
 
 
 def prefetch_sidecars(fs, remote_input: str, temp_dir: str) -> None:

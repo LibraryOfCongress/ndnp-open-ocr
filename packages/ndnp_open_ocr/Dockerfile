@@ -36,7 +36,7 @@ RUN set -eux; \
       # PDF utilities (only if used at runtime)
       ghostscript qpdf \
       # runtime libs for Tesseract
-      liblept5 libjpeg62-turbo libtiff6 libpng16-16 libpango-1.0-0 libicu72 \
+      liblept5 libjpeg62-turbo libtiff6 libpng16-16 libpango-1.0-0 libicu72 libgomp1 \
       default-jre-headless; \
     rm -rf /var/lib/apt/lists/*
 

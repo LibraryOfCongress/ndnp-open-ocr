@@ -14,6 +14,7 @@ from ndnp_open_ocr.storage import (
     fetch_item,
     publish_outputs,
     write_metadata,
+    build_output_rel_dir,
 )
 
 
@@ -72,7 +73,8 @@ def run_local_batch_with_uris(src_uri: str, sink_uri: str, pattern: str, use_seg
             )
             proc.process()
 
-            publish_outputs(sink_uri, out_dir, os.path.dirname(rel_path))
+            rel_dir = build_output_rel_dir(src_uri, rel_path)
+            publish_outputs(sink_uri, out_dir, rel_dir)
 
             try:
                 shutil.rmtree(tmp)
