@@ -153,3 +153,28 @@ resource "aws_cloudwatch_log_group" "batch_completion_function_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.batch_completion_function.function_name}"
   retention_in_days = 14
 }
+
+# Lambda function to list S3 keys and export CSV
+resource "aws_lambda_function" "list_keys_function" {
+  function_name    = "ndnp-open-ocr-list-keys-${var.env}"
+  filename         = var.output_path
+  handler          = "list_keys.handler"
+  role             = aws_iam_role.lambda_role.arn
+  runtime          = "python3.11"
+  source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
+  timeout          = 500
+
+  environment {
+    variables = {
+      OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
+      OUTPUT_PREFIX      = "keys_exports"
+      SAMPLE_ACCESS_N    = "5"
+    }
+  }
+}
+
+# Log group for list keys function
+resource "aws_cloudwatch_log_group" "list_keys_function_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.list_keys_function.function_name}"
+  retention_in_days = 14
+}
