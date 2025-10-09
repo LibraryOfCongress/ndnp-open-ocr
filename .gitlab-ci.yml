@@ -19,10 +19,6 @@ workflow:
       variables:
         TF_STATE_NAME: "production-deployment"
       when: always
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-      variables:
-        TF_STATE_NAME: "dillonpeterson1"
-      when: always
     - when: never
 
 # test_ndnp_open_ocr:
@@ -52,19 +48,12 @@ validate:
     - terraform init -force-copy
     - terraform workspace select ndnp-open-ocr-$TF_STATE_NAME || terraform workspace new ndnp-open-ocr-$TF_STATE_NAME
   script:
-    - |
-        if [ "$TF_STATE_NAME" = "dillonpeterson1" ]; then
-          echo "Skipping terraform fmt check for workspace $TF_STATE_NAME"
-        else
-          terraform fmt -check
-        fi
+    - terraform fmt -check
     - terraform validate
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
       when: on_success
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
-      when: on_success
-    - if: '$CI_PIPELINE_SOURCE == "push" && $TF_STATE_NAME == "dillonpeterson1"'
       when: on_success
     - when: never
 
@@ -91,8 +80,6 @@ deploy:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
       when: on_success
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
-      when: on_success
-    - if: '$CI_PIPELINE_SOURCE == "push" && $TF_STATE_NAME == "dillonpeterson1"'
       when: on_success
     - when: never
 
@@ -121,8 +108,6 @@ deploy_fargate:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
       when: on_success
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
-      when: on_success
-    - if: '$CI_PIPELINE_SOURCE == "push" && $TF_STATE_NAME == "dillonpeterson1"'
       when: on_success
     - when: never
 
@@ -154,8 +139,6 @@ build_cli:
       when: on_success
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
       when: on_success
-    - if: '$CI_PIPELINE_SOURCE == "push" && $TF_STATE_NAME == "dillonpeterson1"'
-      when: on_success
     - when: never
 
 destroy:
@@ -168,7 +151,5 @@ destroy:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
       when: manual
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "prod"'
-      when: manual
-    - if: '$CI_PIPELINE_SOURCE == "push" && $TF_STATE_NAME == "dillonpeterson1"'
       when: manual
     - when: never
