@@ -1005,7 +1005,8 @@ class OCRProcessor:
                         f.write(xml)
 
                 # segment_page returns (crops, boxes, width, height)
-                crops, boxes, h, w = segment_page(self.input_file_path)
+                # Keep names explicit to avoid confusion downstream.
+                crops, boxes, page_w, page_h = segment_page(self.input_file_path)
 
                 logging.info("Detected %d regions", len(crops))
                 boxes_dict = {}
@@ -1024,8 +1025,8 @@ class OCRProcessor:
                     region_dir=regions_dir,
                     boxes_dict=boxes_dict,
                     output_file=self._get_alto_file_path(),
-                    image_width=w,
-                    image_height=h,
+                    image_width=page_w,
+                    image_height=page_h,
                 )
                 logging.info("Composite ALTO written to %s", self._get_alto_file_path())
 

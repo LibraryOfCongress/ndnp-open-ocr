@@ -17,6 +17,7 @@ from ndnp_open_ocr.storage import (
     fetch_item,
     publish_outputs,
     write_metadata,
+    build_output_rel_dir,
 )
 
 logging.basicConfig(
@@ -129,7 +130,8 @@ def process_item(src_uri, sink_uri, rel_path):
         #     sys.exit(EXIT_CODE_OCR_FAILURE)
 
         # Upload outputs preserving relative directory
-        upload_outputs_local(sink_uri, output_path, os.path.dirname(rel_path))
+        rel_dir = build_output_rel_dir(src_uri, rel_path)
+        upload_outputs_local(sink_uri, output_path, rel_dir)
 
         if jp2_used:
             logging.info(f"JP2 was used instead of TIF for {rel_path}.")
