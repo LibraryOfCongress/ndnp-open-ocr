@@ -162,7 +162,7 @@ resource "aws_lambda_function" "list_keys_function" {
   role             = aws_iam_role.lambda_role.arn
   runtime          = "python3.11"
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
-  timeout          = 500
+  timeout          = 900
 
   environment {
     variables = {
