@@ -163,6 +163,7 @@ resource "aws_lambda_function" "list_keys_function" {
   runtime          = "python3.11"
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   timeout          = 900
+  memory_size      = 2048
 
   environment {
     variables = {
