@@ -59,6 +59,22 @@ brew install ghostscript
 pip install -r requirements.txt
 ```
 
+## AmericanStories Segmentation Assets
+
+Segments in the pipeline rely on models and code published in the [AmericanStories](https://github.com/dell-research-harvard/AmericanStories) project. For licensing clarity, the open-source distribution of NDNP Open OCR expects you to obtain those assets directly:
+
+1. Clone the upstream repository into the expected vendor path:
+
+   ```bash
+   git clone https://github.com/dell-research-harvard/AmericanStories.git packages/ndnp_open_ocr/vendor/AmericanStories
+   ```
+
+2. Follow the AmericanStories README to download the model weights (currently hosted on Dropbox) and place them under `packages/ndnp_open_ocr/vendor/AmericanStories/american_stories_models/`.
+
+3. Keep the directory structure intact (`american_stories_models`, `src`, etc.) so `ndnp_open_ocr.segmenter` can locate the assets at runtime.
+
+If you omit this step, segmentation features (e.g., `--segmentation` in the CLI) will not be available, but the core OCR pipeline remains functional.
+
 
 After installing these dependencies, you should be able to run the OCR reprocessing pipeline.
 ## Classes
