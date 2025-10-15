@@ -246,7 +246,7 @@ resource "aws_batch_job_definition" "batch_job_definition" {
   platform_capabilities = ["FARGATE"]
 
   container_properties = jsonencode({
-    image            = "${aws_ecr_repository.repo.repository_url}:latest"
+    image            = "${aws_ecr_repository.repo.repository_url}:${var.image_tag}"
     executionRoleArn = aws_iam_role.batch_execution_role.arn
     jobRoleArn       = aws_iam_role.batch_job_role.arn
     resourceRequirements = [

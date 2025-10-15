@@ -5,6 +5,7 @@ import os
 import shutil
 import pikepdf
 import pytesseract
+from pytesseract import TesseractError
 import datetime
 import cv2
 from enum import Enum
@@ -778,6 +779,7 @@ class OCRProcessor:
         self.layout_model = layout_model
         self.line_model = line_model
         self.visualize_segmentation = visualize_segmentation 
+        self._pixel_alto_path = None
 
     def _get_file_name(self):
         return os.path.splitext(os.path.basename(self.input_file_path))[0]
@@ -844,26 +846,25 @@ class OCRProcessor:
         will create a new PDF using Tesseract, with specified preprocessing settings applied to the
         input, then will postprocess the PDF to make it compliant with NDNP specifications for content.
         """
-        try:
-            logging.info("Generating PDF file")
+        logging.info("Generating PDF file")
 
-            if self.use_segmenter:
-                logging.info("Generating segmented PDF file")
-                pixel_alto_path = os.path.join(
-                    self.output_path, f"{self._get_file_name()}_pixel.xml"
-                )
+        pixel_alto_path = self._pixel_alto_path or os.path.join(
+            self.output_path, f"{self._get_file_name()}_pixel.xml"
+        )
+
+        try:
+            if os.path.isfile(pixel_alto_path):
+                logging.info("Generating PDF from ALTO geometry (%s)", pixel_alto_path)
                 self._build_pdf_from_alto(
                     self.input_file_path, pixel_alto_path, self._get_new_pdf_path()
                 )
-
-                if os.path.isfile(pixel_alto_path):
-                    os.remove(pixel_alto_path)
-
             else:
-                input_file_path = self._preprocess_image()
-                pdf = pytesseract.image_to_pdf_or_hocr(
-                    input_file_path, extension="pdf"
+                logging.info(
+                    "Pixel-unit ALTO missing for %s; using direct Tesseract PDF path",
+                    self._get_file_name(),
                 )
+                input_file_path = self._preprocess_image()
+                pdf = self._run_tesseract_pdf(input_file_path)
                 with open(self._get_new_pdf_path(), "w+b") as f:
                     f.write(pdf)
                 del pdf
@@ -884,6 +885,48 @@ class OCRProcessor:
             logging.info(f"PDF Generation successful: {self._get_file_name()}")
         except Exception as e:
             logging.error(f"PDF generation failed: {self._get_file_name()} {e}")
+        finally:
+            if self._pixel_alto_path and os.path.isfile(self._pixel_alto_path):
+                try:
+                    os.remove(self._pixel_alto_path)
+                except OSError:
+                    pass
+                self._pixel_alto_path = None
+
+    def _run_tesseract_pdf(self, input_file_path: str) -> bytes:
+        """Run Tesseract to produce a PDF, retrying with a re-encoded image on failure."""
+        try:
+            return pytesseract.image_to_pdf_or_hocr(input_file_path, extension="pdf")
+        except (TesseractError, FileNotFoundError) as err:
+            extra = ""
+            if isinstance(err, TesseractError):
+                extra = f" stderr={getattr(err, 'stderr', '').strip()}"
+            logging.warning(
+                "Primary Tesseract pass failed for %s (%s)%s; retrying with re-encoded image",
+                input_file_path,
+                err,
+                extra,
+            )
+            fallback = cv2.imread(self.input_file_path, cv2.IMREAD_GRAYSCALE)
+            if fallback is None:
+                logging.error(
+                    "Failed to load %s for fallback preprocessing; propagating error",
+                    self.input_file_path,
+                )
+                raise
+            temp_path = self._write_temp_image(fallback)
+            try:
+                return pytesseract.image_to_pdf_or_hocr(temp_path, extension="pdf")
+            except Exception:
+                logging.error(
+                    "Fallback Tesseract run also failed for %s", self._get_file_name()
+                )
+                raise
+            finally:
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
 
    
     
@@ -988,6 +1031,7 @@ class OCRProcessor:
             logging.info("Generating ALTO file")
             logger.info("Input file path: %s", self.input_file_path)
             full_alto_path = None
+            self._pixel_alto_path = None
 
             if self.use_segmenter:
                 logging.info("Segmentation mode enabled")
@@ -1039,8 +1083,13 @@ class OCRProcessor:
                 )
                 input_file_path = self._preprocess_image()
                 xml = pytesseract.image_to_alto_xml(input_file_path)
-                with open(self._get_alto_file_path(), "w+b") as f:
+                pixel_alto_path = os.path.join(
+                    self.output_path, f"{self._get_file_name()}_pixel.xml"
+                )
+                with open(pixel_alto_path, "w+b") as f:
                     f.write(xml)
+                shutil.copy(pixel_alto_path, self._get_alto_file_path())
+                self._pixel_alto_path = pixel_alto_path
 
             dpi = (300, 300)
 
@@ -1066,6 +1115,7 @@ class OCRProcessor:
                     self.output_path, f"{self._get_file_name()}_pixel.xml"
                 )
                 alto_processor.save(pixel_alto_path)
+                self._pixel_alto_path = pixel_alto_path
 
             # Now convert to inch1200 units
             alto_processor.convert_pixels_to_inches(dpi)

@@ -37,6 +37,7 @@ module "batch" {
   get_job_function_invoke_arn = module.lambda.get_job_function_invoke_arn
   batch_completion_function_name = module.lambda.batch_completion_function_name
   batch_completion_function_arn = module.lambda.batch_completion_function_arn
+  image_tag                   = var.batch_image_tag
 }
 
 output "ecr_repo_url" {

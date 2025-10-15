@@ -77,7 +77,7 @@ def handler(event, context):
                     )
         if not keys:
             # Organization-agnostic default; override via BATCH_BASED_PREFIX
-            prefix_base = os.environ.get("BATCH_BASED_PREFIX", "data/ndnp")
+            prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp")
             prefix = os.path.join(prefix_base, dir_code, batch_name)
             keys = get_tif_files(bucket_name, prefix)
 
