@@ -12,15 +12,13 @@ Notable components include, but are not limited to:
 - Leptonica (BSD-like)
 - Ghostscript (AGPL-3.0)
 - QPDF (Artistic-2.0 / Apache-2.0 components)
-- ExifTool (Artistic-2.0)
+- ExifTool (Artistic-1.0 or GPL-1.0-or-later)
 
 Ghostscript is distributed under the GNU Affero General Public License
 (AGPL-3.0). If you distribute this container or operate it as a
 network service that invokes Ghostscript, you may have additional
 obligations under the AGPL, including providing complete Corresponding
 Source to users of the service. See the Ghostscript license for details.
-See also `/licenses/app/AGPL_SOURCE_OFFER.md` inside the image for how to
-obtain Corresponding Source for AGPL-covered components.
 
 Portions of this product may include other open source software developed
 by third parties. Any trademarks are the property of their respective
