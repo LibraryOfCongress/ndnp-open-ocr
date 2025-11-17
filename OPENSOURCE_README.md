@@ -18,15 +18,17 @@ This document captures the pieces that matter most when running NDNP Open OCR ou
    ```bash
    make ocr-shell \
      MOUNT_IN=/ABS/PATH/to/tifs \
-     MOUNT_OUT=/ABS/PATH/to/out \
-     SOURCE_URI='file:///data/in' \
-     SINK_URI='file:///data/out'
+     MOUNT_OUT=/ABS/PATH/to/out
    ```
 4. **Run the pipeline** from inside the shell:
    ```bash
-   python -m ndnp_open_ocr.run_local --glob '**/*.tif' --segmentation true
+   python -m ndnp_open_ocr.run_local \
+     --source file:///data/in \
+     --sink file:///data/out \
+     --glob '**/*.tif' \
+     --segmentation true
    ```
-   `SOURCE_URI`/`SINK_URI` accept both `file://` and `s3://` URIs, so you can pull directly from S3 if desired.
+   `--source`/`--sink` accept both `file://` and `s3://` URIs, so you can pull directly from S3 if desired.
 
 ### AWS deployment + CLI workflow
 
@@ -97,4 +99,3 @@ The CLI stores the most recent `job_id` and `output_dir` in the OS keyring so yo
 
 - Use `scripts/gen_python_licenses.sh` to refresh THIRD_PARTY_NOTICES when dependencies change.
 - Keep Terraform state and backend configuration outside of this repository (e.g., remote state in your own S3 bucket).
-
