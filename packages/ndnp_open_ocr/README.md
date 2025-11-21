@@ -61,7 +61,16 @@ pip install -r requirements.txt
 
 ## AmericanStories Segmentation Assets
 
-Segments in the pipeline rely on models and code published in the [AmericanStories](https://github.com/dell-research-harvard/AmericanStories) project. For licensing clarity, the open-source distribution of NDNP Open OCR expects you to obtain those assets directly:
+Segments in the pipeline rely on models and code published in the [AmericanStories](https://github.com/dell-research-harvard/AmericanStories) project.
+
+When you build the Docker image via this directory’s `Dockerfile`, the image:
+
+1. Clones the current AmericanStories repository into `/app/ndnp_open_ocr/vendor/AmericanStories` at build time.
+2. Downloads the published AmericanStories model weights (currently hosted on Dropbox) into `/app/ndnp_open_ocr/vendor/AmericanStories/american_stories_models/`.
+
+This keeps the NDNP Open OCR source tree from vendoring those third-party assets while still producing a fully functional runtime image.
+
+For **local, non-Docker development** you can replicate the same layout manually:
 
 1. Clone the upstream repository into the expected vendor path:
 

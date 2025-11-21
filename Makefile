@@ -1,15 +1,3 @@
-build_x86:
-	docker build --platform linux/amd64 -t chronam_deploy:latest .
-	docker create --name artifacts chronam_deploy:latest
-	docker cp artifacts:/tmp/layer.zip .
-	docker rm artifacts
-
-build_arm:
-	docker build --platform linux/arm64 -t chronam_deploy_arm:latest .
-	docker create --name artifacts chronam_deploy_arm:latest
-	docker cp artifacts:/tmp/layer.zip .
-	docker rm artifacts
-
 # -----------------------------------------------------------------------------
 # Fargate image build + ECR push helpers
 # -----------------------------------------------------------------------------
@@ -111,13 +99,12 @@ prep-testdata:
 #   PYTHONPATH=/app python -m ndnp_open_ocr.run_local --glob '**/*.tif' --segmentation true
 .PHONY: ocr-shell
 ocr-shell:
-	@in_mount=""; out_mount=""; \
-	 if [ -n "$(MOUNT_IN)" ]; then in_mount="-v \"$(MOUNT_IN)\":/data/in"; fi; \
-	 if [ -n "$(MOUNT_OUT)" ]; then mkdir -p "$(MOUNT_OUT)"; out_mount="-v \"$(MOUNT_OUT)\":/data/out"; fi; \
+	@if [ -n "$$MOUNT_OUT" ]; then mkdir -p "$$MOUNT_OUT"; fi; \
 	 echo "Opening OCR shell (optional mounts: MOUNT_IN, MOUNT_OUT)."; \
 	 docker run --rm -it --platform $(PLATFORM) $(RUN_USER_FLAG) \
 	  -v "$(CURDIR)":/app \
-	  $$in_mount $$out_mount \
+	  $${MOUNT_IN:+-v "$$MOUNT_IN":/data/in} \
+	  $${MOUNT_OUT:+-v "$$MOUNT_OUT":/data/out} \
 	  $(AWS_MOUNT_FLAGS) \
 	  $(AWS_ENV_FLAGS) \
 	  -e TESSDATA_PREFIX=/usr/local/share/tessdata \

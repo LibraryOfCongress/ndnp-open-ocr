@@ -19,6 +19,36 @@ RUN wget -O tesseract-${TESSERACT_VERSION}.tar.gz \
     cd tesseract-${TESSERACT_VERSION} && \
     ./autogen.sh && ./configure && make -j"$(nproc)" && make install
 
+##############################################################
+# AmericanStories assets: clone repo + download model weights #
+##############################################################
+FROM python:3.11.10-slim-bookworm AS americanstories-assets
+
+# URL published in the upstream AmericanStories README
+ARG AMERICANSTORIES_REPO_URL="https://github.com/dell-research-harvard/AmericanStories.git"
+ARG AMERICANSTORIES_MODELS_URL="https://www.dropbox.com/sh/sfaf1nmuji9yhu6/AAAj1UGrPmCWFJUiTSP41ihpa?dl=1"
+
+https://www.dropbox.com/sh/sfaf1nmuji9yhu6/AAAj1UGrPmCWFJUiTSP41ihpa?dl=0
+
+RUN set -eux; \
+    apt-get update; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      ca-certificates curl git unzip; \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt
+RUN set -eux; \
+    git clone --depth 1 "${AMERICANSTORIES_REPO_URL}" AmericanStories; \
+    mkdir -p AmericanStories/american_stories_models; \
+    curl -fsSL -o /tmp/american_stories_models.zip "${AMERICANSTORIES_MODELS_URL}"; \
+    unzip -q /tmp/american_stories_models.zip -d /tmp/american_models; \
+    if [ -d /tmp/american_models/american_stories_models ]; then \
+      mv /tmp/american_models/american_stories_models/* AmericanStories/american_stories_models/; \
+    else \
+      mv /tmp/american_models/* AmericanStories/american_stories_models/; \
+    fi; \
+    rm -rf /tmp/american_stories_models.zip /tmp/american_models
+
 ############################################
 # Runtime: slim, copy built Tesseract      #
 ############################################
@@ -57,6 +87,12 @@ RUN set -eux; \
 # App files
 WORKDIR /app/ndnp_open_ocr
 COPY . .
+
+# AmericanStories segmentation assets (code + ONNX weights)
+# These are obtained at build time from the upstream project and model host
+# so that the open-source repo does not vendor them.
+RUN rm -rf vendor/AmericanStories || true
+COPY --from=americanstories-assets /opt/AmericanStories /app/ndnp_open_ocr/vendor/AmericanStories
 
 # Python deps
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
