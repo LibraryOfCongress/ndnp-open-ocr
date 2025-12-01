@@ -9,7 +9,8 @@ RUN set -eux; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates curl wget unzip \
       make g++ autoconf automake libtool pkg-config autoconf-archive \
-      libleptonica-dev libpng-dev libjpeg62-turbo-dev libtiff-dev libicu-dev libpango1.0-dev; \
+      libleptonica-dev libpng-dev libjpeg62-turbo-dev libtiff-dev libicu-dev libpango1.0-dev \
+      libopenjp2-7-dev; \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt
@@ -88,6 +89,7 @@ RUN set -eux; \
       ghostscript qpdf \
       # runtime libs for Tesseract
       liblept5 libjpeg62-turbo libtiff6 libpng16-16 libpango-1.0-0 libicu72 libgomp1 \
+      libopenjp2-7 \
       default-jre-headless; \
     rm -rf /var/lib/apt/lists/*
 

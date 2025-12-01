@@ -1032,16 +1032,6 @@ class OCRProcessor:
             logger.info("Input file path: %s", self.input_file_path)
             full_alto_path = None
             self._pixel_alto_path = None
-            tess_input_path = self.input_file_path
-            cleanup_path = None
-
-            # Convert JP2 to a temporary TIFF for Tesseract, since the binary may lack JP2 support.
-            if self.input_file_path.lower().endswith(".jp2"):
-                img = cv2.imread(self.input_file_path, cv2.IMREAD_GRAYSCALE)
-                if img is None:
-                    raise FileNotFoundError(self.input_file_path)
-                cleanup_path = self._write_temp_image(img)
-                tess_input_path = cleanup_path
 
             if self.use_segmenter:
                 logging.info("Segmentation mode enabled")
@@ -1054,7 +1044,7 @@ class OCRProcessor:
 
                 if self.use_gap_filling:
                     full_alto_path = os.path.join(self.output_path, f"{self._get_file_name()}_full.xml")
-                    xml = pytesseract.image_to_alto_xml(tess_input_path)
+                    xml = pytesseract.image_to_alto_xml(self.input_file_path)
                     with open(full_alto_path, "wb") as f:
                         f.write(xml)
 
@@ -1138,12 +1128,6 @@ class OCRProcessor:
             logging.info(f"ALTO Generation successful: {self._get_file_name()}")
         except Exception as e:
             logging.error(f"ALTO generation failed: {self._get_file_name()} {e}")
-        finally:
-            if cleanup_path:
-                try:
-                    os.remove(cleanup_path)
-                except OSError:
-                    pass
 
     def _visualize_alto_boxes(self, pixel_alto_path: str) -> None:
         """Overlay ALTO bounding boxes on the original TIFF and save as PNG for segmentation visualization."""
