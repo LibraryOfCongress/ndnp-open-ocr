@@ -23,12 +23,16 @@ build-ocr-image:
 
 # Build the runtime image and the deploy wrapper used by Fargate/Batch
 build_fargate:
+	# Build the core OCR runtime image
 	docker build --platform $(PLATFORM) -t ndnp_open_ocr:latest packages/ndnp_open_ocr
+	# Build the Fargate/Batch wrapper that runs the pipeline
 	docker build --platform $(PLATFORM) -t ndnp_open_ocr_deploy:latest packages/ndnp_open_ocr_fargate_deployment
 
 # Push the deploy wrapper image to ECR
 push_fargate: build_fargate
+	# Log in to ECR using the configured profile/region
 	aws ecr get-login-password --region $(AWS_REGION) $(if $(ECR_LOGIN_PROFILE),--profile $(ECR_LOGIN_PROFILE),) | docker login --username AWS --password-stdin $(ECR_REGISTRY)
+	# Tag and push the deploy image to the configured repo:tag
 	docker tag ndnp_open_ocr_deploy:latest $(ECR_REGISTRY)/$(ECR_REPO):$(ECR_IMAGE_TAG)
 	docker push $(ECR_REGISTRY)/$(ECR_REPO):$(ECR_IMAGE_TAG)
 
@@ -41,6 +45,8 @@ prep-testdata:
 
 # Open an interactive shell inside the OCR image with optional host mounts
 ocr-shell: build-ocr-image
+	# Usage: make ocr-shell MOUNT_IN=/abs/path/to/in MOUNT_OUT=/abs/path/to/out AWS_PROFILE=dev
+	# Then inside the container, run: python -m ndnp_open_ocr.run_local --input file:///data/in --output file:///data/out --glob '**/*.tif' --segmentation true
 	@if [ -n "$$MOUNT_OUT" ]; then mkdir -p "$$MOUNT_OUT"; fi; \
 	 echo "Opening OCR shell (optional mounts: MOUNT_IN, MOUNT_OUT)."; \
 	 docker run --rm -it --platform $(PLATFORM) $(RUN_USER_FLAG) \
