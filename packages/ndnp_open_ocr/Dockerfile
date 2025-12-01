@@ -9,8 +9,7 @@ RUN set -eux; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates curl wget unzip \
       make g++ autoconf automake libtool pkg-config autoconf-archive \
-      libleptonica-dev libpng-dev libjpeg62-turbo-dev libtiff-dev libicu-dev libpango1.0-dev \
-      libopenjp2-7-dev; \
+      libleptonica-dev libpng-dev libjpeg62-turbo-dev libtiff-dev libicu-dev libpango1.0-dev; \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt
@@ -28,8 +27,6 @@ FROM python:3.11.10-slim-bookworm AS americanstories-assets
 # URL published in the upstream AmericanStories README
 ARG AMERICANSTORIES_REPO_URL="https://github.com/dell-research-harvard/AmericanStories.git"
 ARG AMERICANSTORIES_MODELS_URL="https://www.dropbox.com/sh/sfaf1nmuji9yhu6/AAAj1UGrPmCWFJUiTSP41ihpa?dl=1"
-# Optional extra flags for curl (e.g., --insecure when behind a TLS-intercepting proxy)
-ARG AMERICANSTORIES_CURL_FLAGS=""
 
 RUN set -eux; \
     apt-get update; \
@@ -41,33 +38,12 @@ WORKDIR /opt
 RUN set -eux; \
     git clone --depth 1 "${AMERICANSTORIES_REPO_URL}" AmericanStories; \
     mkdir -p AmericanStories/american_stories_models; \
-    curl -fsSL ${AMERICANSTORIES_CURL_FLAGS} -o /tmp/american_stories_models.zip "${AMERICANSTORIES_MODELS_URL}"; \
-    python - <<'PY'
-import os, pathlib, shutil, zipfile
-
-zip_path = "/tmp/american_stories_models.zip"
-dest = "/tmp/american_models"
-os.makedirs(dest, exist_ok=True)
-
-with zipfile.ZipFile(zip_path) as zf:
-    for info in zf.infolist():
-        name = info.filename.lstrip("/")
-        if not name:
-            continue
-        target = pathlib.Path(dest) / name
-        if info.is_dir() or name.endswith("/"):
-            target.mkdir(parents=True, exist_ok=True)
-            continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with zf.open(info) as src, open(target, "wb") as dst:
-            shutil.copyfileobj(src, dst)
-PY
-
-RUN set -eux; \
+    curl -fsSL -o /tmp/american_stories_models.zip "${AMERICANSTORIES_MODELS_URL}"; \
+    unzip -q /tmp/american_stories_models.zip -d /tmp/american_models; \
     if [ -d /tmp/american_models/american_stories_models ]; then \
-      mv /tmp/american_models/american_stories_models/* /opt/AmericanStories/american_stories_models/; \
+      mv /tmp/american_models/american_stories_models/* AmericanStories/american_stories_models/; \
     else \
-      mv /tmp/american_models/* /opt/AmericanStories/american_stories_models/; \
+      mv /tmp/american_models/* AmericanStories/american_stories_models/; \
     fi; \
     rm -rf /tmp/american_stories_models.zip /tmp/american_models
 
@@ -89,14 +65,12 @@ RUN set -eux; \
       ghostscript qpdf \
       # runtime libs for Tesseract
       liblept5 libjpeg62-turbo libtiff6 libpng16-16 libpango-1.0-0 libicu72 libgomp1 \
-      libopenjp2-7 \
       default-jre-headless; \
     rm -rf /var/lib/apt/lists/*
 
 # Copy the built Tesseract from builder
 COPY --from=builder /usr/local/bin/tesseract /usr/local/bin/tesseract
 COPY --from=builder /usr/local/lib/ /usr/local/lib/
-COPY --from=builder /usr/local/share/tessdata /usr/local/share/tessdata
 ENV LD_LIBRARY_PATH=/usr/local/lib
 
 # Install traineddata under a controlled prefix
