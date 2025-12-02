@@ -37,3 +37,9 @@ variable "batch_completion_function_arn" {
   description = "ARN of the Batch Completion Lambda function"
   type        = string
 }
+
+variable "image_tag" {
+  description = "Container image tag used for the Batch job definition"
+  type        = string
+  default     = "latest"
+}

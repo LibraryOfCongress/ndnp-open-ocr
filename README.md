@@ -11,6 +11,83 @@ There are 3 primary components that need to be treated on an individual basis:
 3. Command Line Interface. This is the local CLI tool that can be used and distributed to control the AWS infrastructure laid out by Terraform.
 
 
+## Quick Start
+
+### Local batch testing (file:// inputs)
+
+1. Build the runtime image (installs Tesseract, Python deps, etc.):
+
+   ```bash
+   make build-ocr-image
+   ```
+
+2. (Optional) copy the bundled sample issue into `testdata/issue0602` to have a known-good TIFF/JP2 pair handy:
+
+   ```bash
+   make prep-testdata
+   ```
+
+3. Open an interactive shell with optional host mounts that expose your local TIFF directory and the destination for results. Any absolute paths work; the snippet below assumes `/ABS/PATH/to/tifs` contains NDNP-format issues.
+
+   ```bash
+   make ocr-shell \
+     MOUNT_IN=/ABS/PATH/to/tifs \
+     MOUNT_OUT=/ABS/PATH/to/out
+   ```
+
+   Inside the shell (which already has `PYTHONPATH` and Tesseract wired up), run:
+
+   ```bash
+   python -m ndnp_open_ocr.run_local \
+     --source file:///data/in \
+     --sink file:///data/out \
+     --glob '**/*.tif' \
+     --segmentation true
+   ```
+
+   The runner lists inputs under `/data/in`, processes each in a temp directory, and writes PDFs/ALTOS to `/data/out`. Swap `file://` for `s3://` URIs if you prefer to read/write directly from S3.
+
+### AWS deployment + CLI workflow
+
+1. Configure AWS credentials for the account where you want to host NDNP Open OCR. Export an `AWS_PROFILE`, `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, or rely on SSO—Terraform and the CLI use the standard AWS SDK chain.
+
+2. Provision the infrastructure:
+
+   ```bash
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+
+   Customize any variables (e.g., `s3_bucket_name`, `env`, `batch_image_tag`) via `terraform.tfvars` or `-var` flags so the stack names match your account.
+
+3. Point the CLI at your deployment by editing `packages/cli/ndnp_openocr/config.py` (bucket name plus Lambda ARNs) or by injecting those values during your build process.
+
+4. Build and install the CLI (from `packages/cli/`):
+
+   ```bash
+   cd packages/cli
+   poetry install   # or: poetry build && pip install dist/ndnp_openocr-*.whl
+   ```
+
+5. Use the CLI to exercise the pipeline end to end:
+
+   ```bash
+   # Kick off a job against an S3 batch
+   ndnp_openocr reprocess --batch_name=batch_example --bucket=my-ingest-bucket --segmentation
+
+   # Poll for status (uses stored job id if --job omitted)
+   ndnp_openocr get --job JOB_ID_FROM_REPROCESS
+
+   # Download the outputs and merge with a local batch for validation
+   ndnp_openocr sync --job JOB_ID_FROM_REPROCESS \
+     --local-batch /path/to/original_batch \
+     --output-dir /path/to/output_batch
+   ```
+
+   Additional helpers such as `ndnp_openocr delete` (cleanup) and `ndnp_openocr job_info` (current config snapshot) are available; run `ndnp_openocr --help` for the full list.
+
+
 
 # Deployment
 ## AWS Resources
@@ -21,6 +98,24 @@ The module creates AWS resources for the application including:
 - **Lambda Functions**: Includes scheduler function for creating new job in AWS Batch
 - **S3 Bucket**: For storing the PDF and ALTO outputs from NDNP Open OCR.
 - **Cloudwatch Log Groups**: For storing logs of the Lambda functions and ECS/Fargate tasks.
+
+## Recommended AWS Account Setup
+
+We recommend running NDNP Open OCR in a hermetically sealed AWS account that is a child account within an AWS Organizations parent (management) account. This approach keeps project resources isolated, simplifies lifecycle tasks (fast spin-up, spin-down, and closure), and enables clearer cost allocation and stronger, project-scoped permissions.
+
+- Isolate per project: minimize blast radius and avoid cross-project interference.
+- Simplify billing: use consolidated billing to break out costs by account/project.
+- Streamline lifecycle: create, suspend, or close entire environments quickly.
+- Maximize least privilege: apply policies and guardrails specific to the project.
+
+Helpful AWS guides for setup:
+
+- What is AWS Organizations: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_introduction.html
+- Create an organization: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_org_create.html
+- Create an account in your organization (sub-account): https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_create.html
+- Work with organizational units (OUs): https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_ous.html
+- Getting started with AWS Organizations: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_getting-started.html
+
 
 ## Prerequisites
 

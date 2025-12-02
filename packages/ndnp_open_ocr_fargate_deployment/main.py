@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import boto3
 import tempfile
 import logging
@@ -9,6 +10,15 @@ from PyPDF2 import PdfReader
 from PIL import Image
 import pytesseract
 from ndnp_open_ocr.processors import OCRProcessor, PreprocessingMethod
+from ndnp_open_ocr.storage import (
+    env_sink_fallback,
+    env_source_fallback,
+    list_source_items,
+    fetch_item,
+    publish_outputs,
+    write_metadata,
+    build_output_rel_dir,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,6 +26,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+# Keep an S3 client for legacy paths where needed
 s3 = boto3.client("s3")
 
 # Exit codes
@@ -40,83 +51,29 @@ def is_valid_image(input_file_path):
         return False
 
 
-def get_file_list(bucket_name, prefix):
-    s3_keys = []
-    paginator = s3.get_paginator("list_objects_v2")
-    pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
-
-    for page in pages:
-        if "Contents" in page:
-            for obj in page["Contents"]:
-                key = obj["Key"]
-                if key.lower().endswith(".tif"):
-                    s3_keys.append(key)
-    return s3_keys
+def get_file_list():
+    """List items using the configured source URI (or legacy S3 fallback)."""
+    src_uri = os.getenv("SOURCE_URI") or env_source_fallback()
+    pattern = os.getenv("INPUT_GLOB") or "**/*.tif"
+    return src_uri, list_source_items(src_uri, pattern)
 
 
-def download_files_from_s3(bucket_name, key, temp_dir):
-    file_name, file_ext = os.path.splitext(os.path.basename(key))
-    input_file_path = os.path.join(temp_dir, file_name + file_ext)
-    logging.debug("INPUT FILE PATH: %s", input_file_path)
-
-    # Download the original TIF
-    s3.download_file(bucket_name, key, input_file_path)
-
-    # If TIF is invalid, fallback to JP2
-    if not is_valid_image(input_file_path):
-        input_file_path = input_file_path.replace(".tif", ".jp2")
-        s3.download_file(bucket_name, key.replace(".tif", ".jp2"), input_file_path)
-
-    # Download additional sidecar files (.pdf, .xml)
-    extensions = [".pdf", ".xml"]
-    for ext in extensions:
-        s3_key = os.path.join(os.path.dirname(key), file_name + ext)
-        download_path = os.path.join(temp_dir, file_name + ext)
-
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def download_input_local(src_uri, rel_path, temp_dir):
+    path = fetch_item(src_uri, rel_path, temp_dir)
+    # If the .tif is corrupt or missing, try fetching the .jp2 from source
+    if path.lower().endswith(".tif") and not is_valid_image(path):
+        root, _ = os.path.splitext(rel_path)
+        rel_jp2 = root + ".jp2"
         try:
-            logging.info(f"{current_time} - Attempting to download: {s3_key}")
-            s3.download_file(bucket_name, s3_key, download_path)
-            logging.info(f"{current_time} - Successfully downloaded: {s3_key}")
-        except Exception as e:
-            logging.info(f"{current_time} - Error downloading {s3_key}. Error: {e}")
-
-    return input_file_path
+            jp2_path = fetch_item(src_uri, rel_jp2, temp_dir)
+            return jp2_path
+        except Exception:
+            pass
+    return path
 
 
-def upload_files_to_s3(
-    output_dir,
-    output_bucket_name,
-    output_prefix,
-    original_file_key,
-    original_prefix,
-):
-    """
-    Upload OCR outputs while preserving the relative folder structure from the original TIF.
-    """
-    # Figure out subdirectory structure relative to the prefix
-    # e.g. if original_prefix = "lcbp/ndnp/loc/batch_lc_20090321_volvo/data"
-    # and original_file_key = "lcbp/ndnp/loc/batch_lc_20090321_volvo/data/sn83030214/00175036945/1898120101/0001.tif"
-    # Then rel_path might be "sn83030214/00175036945/1898120101/0001.tif"
-    rel_path = os.path.relpath(original_file_key, original_prefix)
-
-    rel_dir = os.path.dirname(rel_path)  # e.g. "sn83030214/00175036945/1898120101"
-    file_base, _ = os.path.splitext(os.path.basename(rel_path))  # e.g. "0001"
-
-    for output_file in os.listdir(output_dir):
-        # For example, if 'output_file' is "0001.pdf", we want to store it as:
-        #   output_prefix/sn83030214/00175036945/1898120101/0001.pdf
-        output_file_path = os.path.join(output_dir, output_file)
-
-        # If you want to rename the output files (e.g. "0001_ocr.pdf"), do it here. For example:
-        #   new_filename = file_base + "_ocr" + os.path.splitext(output_file)[1]
-        # But if they're already named the way you like, use output_file directly.
-
-        output_key = os.path.join(output_prefix, rel_dir, output_file)
-        s3.upload_file(output_file_path, output_bucket_name, output_key)
-        logging.info(
-            f"Successfully uploaded {output_file_path} to s3://{output_bucket_name}/{output_key}"
-        )
+def upload_outputs_local(sink_uri, output_dir: str, rel_dir: str) -> None:
+    publish_outputs(sink_uri, output_dir, rel_dir)
     clear_tmp_directory()
 
 
@@ -132,20 +89,18 @@ def clear_tmp_directory():
         except Exception as e:
             logging.info(f"Failed to delete {file_path}. Reason: {e}")
 
-def record_tesseract_version(output_bucket_name, output_prefix):
-    """Write the tesseract version used by the worker to S3."""
-    version = str(pytesseract.get_tesseract_version())
-    key = os.path.join(output_prefix, "tesseract_version.txt")
+def record_tesseract_version_local(sink_uri):
     try:
-        s3.put_object(Bucket=output_bucket_name, Key=key, Body=version)
-        logging.info(f"Recorded tesseract version {version} at {key}")
+        version = str(pytesseract.get_tesseract_version())
+        write_metadata(sink_uri, "tesseract_version.txt", version)
+        logging.info(f"Recorded tesseract version {version}")
     except Exception as e:
         logging.error(f"Failed to record tesseract version: {e}")
 
 
-def process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefix):
+def process_item(src_uri, sink_uri, rel_path):
     with tempfile.TemporaryDirectory() as temp_dir:
-        input_file_path = download_files_from_s3(bucket_name, file_key, temp_dir)
+        input_file_path = download_input_local(src_uri, rel_path, temp_dir)
 
         jp2_used = input_file_path.endswith(".jp2")
 
@@ -170,51 +125,44 @@ def process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefi
                     text_found = True
                     break
 
-        # Track text presence and JP2 usage
-        if not text_found:
-            logging.error(f"No text found in the generated PDF for {file_key}.")
-            sys.exit(EXIT_CODE_OCR_FAILURE)  # "No Text" error
+        # if not text_found:
+        #     logging.error(f"No text found in the generated PDF for {rel_path}.")
+        #     sys.exit(EXIT_CODE_OCR_FAILURE)
 
-        # Upload everything (PDF, ALTO, etc.) to S3, preserving folder structure
-        upload_files_to_s3(
-            output_path, output_bucket_name, output_prefix, file_key, prefix
-        )
+        # Upload outputs preserving relative directory
+        rel_dir = build_output_rel_dir(src_uri, rel_path)
+        upload_outputs_local(sink_uri, output_path, rel_dir)
 
         if jp2_used:
-            logging.info(f"JP2 was used instead of TIF for {file_key}.")
-            sys.exit(EXIT_CODE_JP2_FALLBACK)  # "JP2 used" condition
-
+            logging.info(f"JP2 was used instead of TIF for {rel_path}.")
+            sys.exit(EXIT_CODE_JP2_FALLBACK)
         else:
-            logging.info(f"File processed successfully: {file_key}")
+            logging.info(f"File processed successfully: {rel_path}")
             sys.exit(EXIT_CODE_SUCCESS)
 
 
 if __name__ == "__main__":
     logging.info("Starting NDNP Open OCR Processing...")
 
-    bucket_name = os.getenv("BUCKET_NAME")
-    prefix = os.getenv(
-        "PREFIX"
-    )  # The original top-level prefix you used in get_file_list
-    output_prefix = os.getenv("OUTPUT_PREFIX")
-    output_bucket_name = os.getenv("OUTPUT_BUCKET_NAME")
+    # Build connectors from env (or legacy fallbacks)
+    src_uri = os.getenv("SOURCE_URI") or env_source_fallback()
+    sink_uri = os.getenv("SINK_URI") or env_sink_fallback()
 
     array_index = int(os.getenv("AWS_BATCH_JOB_ARRAY_INDEX", "0"))
 
     logging.info("Segmentation mode: %s", USE_SEGMENTATION)
 
-        # Record the tesseract version once for the batch. on the first array index
+        # Record the tesseract version once for the batch on the first array index
     if array_index == 0:
-        record_tesseract_version(output_bucket_name, output_prefix)
+        record_tesseract_version_local(sink_uri)
 
-    # Grab the files from the original prefix
-    file_list = get_file_list(bucket_name, prefix)
-    if array_index >= len(file_list):
+    # Grab the files from the source
+    src_uri, rel_items = get_file_list()
+    if array_index >= len(rel_items):
         logging.error(f"Array index {array_index} out of range.")
         sys.exit(EXIT_CODE_ARRAY_INDEX_ERROR)
 
+    rel_path = rel_items[array_index]
+    logging.info(f"Processing item: {rel_path}")
 
-    file_key = file_list[array_index]
-    logging.info(f"Processing file: {file_key}")
-
-    process_file(file_key, bucket_name, output_bucket_name, output_prefix, prefix)
+    process_item(src_uri, sink_uri, rel_path)

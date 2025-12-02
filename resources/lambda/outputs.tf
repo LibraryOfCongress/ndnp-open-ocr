@@ -22,3 +22,13 @@ output batch_completion_function_arn {
   description = "The ARN of the Batch Completion function"
   value       = aws_lambda_function.batch_completion_function.arn
 }
+
+output "list_keys_function_name" {
+  description = "The name of the List Keys function"
+  value       = aws_lambda_function.list_keys_function.function_name
+}
+
+output "list_keys_function_arn" {
+  description = "The ARN of the List Keys function"
+  value       = aws_lambda_function.list_keys_function.arn
+}

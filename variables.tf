@@ -9,3 +9,9 @@ variable "env" {
   type        = string
   default     = "development-deployment"
 }
+
+variable "batch_image_tag" {
+  description = "Docker image tag used by AWS Batch job definition"
+  type        = string
+  default     = "opensource1.1"
+}

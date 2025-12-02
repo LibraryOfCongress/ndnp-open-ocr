@@ -59,6 +59,31 @@ brew install ghostscript
 pip install -r requirements.txt
 ```
 
+## AmericanStories Segmentation Assets
+
+Segments in the pipeline rely on models and code published in the [AmericanStories](https://github.com/dell-research-harvard/AmericanStories) project.
+
+When you build the Docker image via this directory’s `Dockerfile`, the image:
+
+1. Clones the current AmericanStories repository into `/app/ndnp_open_ocr/vendor/AmericanStories` at build time.
+2. Downloads the published AmericanStories model weights (currently hosted on Dropbox) into `/app/ndnp_open_ocr/vendor/AmericanStories/american_stories_models/`.
+
+This keeps the NDNP Open OCR source tree from vendoring those third-party assets while still producing a fully functional runtime image.
+
+For **local, non-Docker development** you can replicate the same layout manually:
+
+1. Clone the upstream repository into the expected vendor path:
+
+   ```bash
+   git clone https://github.com/dell-research-harvard/AmericanStories.git packages/ndnp_open_ocr/vendor/AmericanStories
+   ```
+
+2. Follow the AmericanStories README to download the model weights (currently hosted on Dropbox) and place them under `packages/ndnp_open_ocr/vendor/AmericanStories/american_stories_models/`.
+
+3. Keep the directory structure intact (`american_stories_models`, `src`, etc.) so `ndnp_open_ocr.segmenter` can locate the assets at runtime.
+
+If you omit this step, segmentation features (e.g., `--segmentation` in the CLI) will not be available, but the core OCR pipeline remains functional.
+
 
 After installing these dependencies, you should be able to run the OCR reprocessing pipeline.
 ## Classes
@@ -115,4 +140,10 @@ you can run them with:
 
 ```bash
 pytest
+```
+
+To run the suite inside the project Docker image (matching the GitLab CI job), use:
+
+```bash
+make test
 ```

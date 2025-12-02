@@ -16,6 +16,10 @@ def handler(event, context):
     if event.get("queryStringParameters"):
         flag = event["queryStringParameters"].get("use_segmenter", "false")
         use_segmenter = str(flag).lower() == "true"
+        # Optional: connector wiring
+        source_uri = event["queryStringParameters"].get("source_uri")
+        sink_uri = event["queryStringParameters"].get("sink_uri")
+        array_size_override = event["queryStringParameters"].get("array_size")
     logger.info(f"Use segmenter: {use_segmenter}")
 
     logger.info(f"Batch Name: {batch_name}")
@@ -47,13 +51,35 @@ def handler(event, context):
         m = re.search(r"batch[_-]([a-zA-Z]+)_", batch_name)
         if m:
             code = m.group(1).lower()
-            dir_code = "vi" if code in ["vi", "va"] else "loc" if code == "lc" else code
+            code_to_dir = {
+                "lc": "loc",
+                "vi": "vi",
+                "va": "vi",
+                "lv": "vi",
+            }
+            dir_code = code_to_dir.get(code, code)
         else:
             dir_code = batch_name
 
-        prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp")
-        prefix = os.path.join(prefix_base, dir_code, batch_name)
-        keys = get_tif_files(bucket_name, prefix)
+        # If custom connectors provided, pass them through and compute array size from override
+        # Otherwise, default to S3 discovery using historical NDNP layout.
+        prefix = None
+        keys = []
+
+        if source_uri:
+            logger.info("source_uri provided; will pass-through without listing.")
+            if array_size_override is not None:
+                try:
+                    keys = [None] * int(array_size_override)
+                except Exception:
+                    logger.warning(
+                        "Invalid array_size override; falling back to S3 prefix discovery if possible."
+                    )
+        if not keys:
+            # Organization-agnostic default; override via BATCH_BASED_PREFIX
+            prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp")
+            prefix = os.path.join(prefix_base, dir_code, batch_name)
+            keys = get_tif_files(bucket_name, prefix)
 
         # Check alternative prefixes if no TIFF files found
         if not keys:
@@ -80,19 +106,35 @@ def handler(event, context):
         array_size = len(keys)
         logger.info(f"Submitting AWS Batch array job with size: {array_size}")
 
+        env_overrides = [
+            {"name": "BUCKET_NAME", "value": bucket_name},
+            {"name": "PREFIX", "value": prefix or ""},
+            {"name": "OUTPUT_PREFIX", "value": job_name},
+            {"name": "USE_SEGMENTATION", "value": str(use_segmenter).lower()},
+        ]
+
+        # Preferred: URI-style envs
+        if not source_uri and prefix:
+            # build default S3 source uri from discovery
+            source_uri = f"s3://{bucket_name}/{prefix}"
+        if not sink_uri:
+            out_bucket = os.environ.get("OUTPUT_BUCKET_NAME", "")
+            if out_bucket:
+                sink_uri = f"s3://{out_bucket}/{job_name}"
+
+        if source_uri:
+            env_overrides.append({"name": "SOURCE_URI", "value": source_uri})
+        if sink_uri:
+            env_overrides.append({"name": "SINK_URI", "value": sink_uri})
+
+        # No connector-specific envs; we prefer URI-based config only
+
         response = batch.submit_job(
             jobName=job_name,
             jobQueue=batch_job_queue,
             jobDefinition=batch_job_definition,
             arrayProperties={"size": array_size},
-            containerOverrides={
-                "environment": [
-                    {"name": "BUCKET_NAME", "value": bucket_name},
-                    {"name": "PREFIX", "value": prefix},
-                    {"name": "OUTPUT_PREFIX", "value": job_name},
-                    {"name": "USE_SEGMENTATION", "value": str(use_segmenter).lower()},
-                ]
-            },
+            containerOverrides={"environment": env_overrides},
         )
 
         logger.info(f"AWS Batch ID: {response['jobId']}")
