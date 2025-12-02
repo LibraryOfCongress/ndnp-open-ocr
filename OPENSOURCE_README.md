@@ -62,6 +62,12 @@ This document captures the pieces that matter most when running NDNP Open OCR ou
    ```
    Clean up with `ndnp_openocr delete --job-id JOB_ID --output-dir /path/to/output_batch` when you are finished.
 
+## AmericanStories Assets (optional)
+
+AmericanStories models power the optional segmentation path (e.g., `--segmentation` in the CLI) and are pulled into the Docker image during the build. Licensing and model refresh notes for those assets are tracked in `OPENSOURCE_README.md` in the AmericanStories project.
+
+If you omit the AmericanStories code/models, NDNP Open OCR still builds and runs the core Tesseract-based pipeline. The trade-off is limited functionality: segmentation-aware features are disabled and outputs remain page-level rather than article-aware. Use this mode when licensing constraints prevent bundling the AmericanStories assets.
+
 ## Infrastructure Overview
 
 Terraform creates the AWS resources NDNP Open OCR needs to run at scale:
@@ -78,7 +84,7 @@ Deploy into a dedicated AWS account or VPC to keep costs and permissions isolate
 
 1. Set Terraform variables via `terraform.tfvars`, environment variables, or `-var` flags (e.g., `s3_bucket_name`, `env`, backend bucket/key).
 2. Run `terraform init/plan/apply` as shown above.
-3. Push the container image that AWS Batch references (see `Makefile` targets `build_fargate`, `push_fargate`, or adapt them to your registry/credentials).
+3. Build the Batch container image (`make build-ocr-image` or `docker build ...`) and push it to your registry for the target environment.
 4. Update any automation or CI pipelines to inject the correct `ndnp_openocr/config.py` before building the CLI.
 
 ## CLI Reference
