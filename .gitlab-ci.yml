@@ -8,6 +8,7 @@ stages:
 
 variables:
   AWS_REGION: "us-east-2"
+  BATCH_IMAGE_TAG: "opensource1.1"
 
 workflow:
   rules:
@@ -72,7 +73,7 @@ deploy:
     - terraform init -force-copy
     - terraform workspace select ndnp-open-ocr-$TF_STATE_NAME || terraform workspace new ndnp-open-ocr-$TF_STATE_NAME
   script:
-    - terraform apply -input=false -auto-approve
+    - terraform apply -input=false -auto-approve -var="batch_image_tag=${BATCH_IMAGE_TAG}"
     - export ECR_REPO_URI=$(terraform output -raw ecr_repo_url)
   artifacts:
     when: always
@@ -101,11 +102,12 @@ deploy_fargate:
     - . /tmp/venv/bin/activate
     - pip install awscli
     - export AWS_REGION=${AWS_REGION:-"us-east-2"}
+    - export IMAGE_TAG=${BATCH_IMAGE_TAG:-"opensource1.1"}
   script:
     - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin 342134162356.dkr.ecr.us-east-2.amazonaws.com
-    - docker build --platform linux/amd64 -t ndnp_open_ocr:latest ./packages/ndnp_open_ocr
-    - docker tag ndnp_open_ocr:latest 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-${TF_STATE_NAME}:latest
-    - docker push 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-${TF_STATE_NAME}:latest
+    - docker build --platform linux/amd64 -t ndnp_open_ocr:${IMAGE_TAG} ./packages/ndnp_open_ocr
+    - docker tag ndnp_open_ocr:${IMAGE_TAG} 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-${TF_STATE_NAME}:${IMAGE_TAG}
+    - docker push 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-${TF_STATE_NAME}:${IMAGE_TAG}
   environment:
     name: $TF_STATE_NAME
   rules:
