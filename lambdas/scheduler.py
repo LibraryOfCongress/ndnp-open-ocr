@@ -111,6 +111,8 @@ def handler(event, context):
             {"name": "PREFIX", "value": prefix or ""},
             {"name": "OUTPUT_PREFIX", "value": job_name},
             {"name": "USE_SEGMENTATION", "value": str(use_segmenter).lower()},
+            # Flatten batch_* under job_id for worker outputs
+            {"name": "DROP_BATCH_SUBDIR", "value": "true"},
         ]
 
         # Preferred: URI-style envs

@@ -28,16 +28,16 @@ module "lambda" {
 }
 
 module "batch" {
-  source                      = "./resources/batch"
-  task_family                 = "ndnp-open-ocr"
-  service_name                = "ndnp-open-ocr-service"
-  aws_s3_output_bucket        = module.s3.bucket_name
-  env                         = var.env
-  get_job_function_name       = module.lambda.get_job_function_name
-  get_job_function_invoke_arn = module.lambda.get_job_function_invoke_arn
+  source                         = "./resources/batch"
+  task_family                    = "ndnp-open-ocr"
+  service_name                   = "ndnp-open-ocr-service"
+  aws_s3_output_bucket           = module.s3.bucket_name
+  env                            = var.env
+  get_job_function_name          = module.lambda.get_job_function_name
+  get_job_function_invoke_arn    = module.lambda.get_job_function_invoke_arn
   batch_completion_function_name = module.lambda.batch_completion_function_name
-  batch_completion_function_arn = module.lambda.batch_completion_function_arn
-  image_tag                   = var.batch_image_tag
+  batch_completion_function_arn  = module.lambda.batch_completion_function_arn
+  image_tag                      = var.batch_image_tag
 }
 
 output "ecr_repo_url" {
