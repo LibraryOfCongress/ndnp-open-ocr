@@ -85,10 +85,14 @@ deploy:
 
 # Docker Build and Push for Fargate Deployment
 deploy_fargate:
-  image: docker:latest
+  image: docker:24.0.2
   services:
     - docker:24.0.2-dind
   stage: deploy_fargate
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_DRIVER: overlay2
   dependencies:
     - deploy
   before_script:
