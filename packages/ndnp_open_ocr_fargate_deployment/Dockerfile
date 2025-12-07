@@ -1,5 +1,6 @@
 # FARGATE DEPLOYMENT IMAGE
-FROM ndnp_open_ocr:latest
+ARG BASE_TAG=latest
+FROM ndnp_open_ocr:${BASE_TAG}
 
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt

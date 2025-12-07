@@ -106,7 +106,8 @@ deploy_fargate:
   script:
     - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin 342134162356.dkr.ecr.us-east-2.amazonaws.com
     - docker build --platform linux/amd64 -t ndnp_open_ocr:${IMAGE_TAG} ./packages/ndnp_open_ocr
-    - docker tag ndnp_open_ocr:${IMAGE_TAG} 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-${TF_STATE_NAME}:${IMAGE_TAG}
+    - docker build --platform linux/amd64 --build-arg BASE_TAG=${IMAGE_TAG} -t ndnp_open_ocr_deploy:${IMAGE_TAG} ./packages/ndnp_open_ocr_fargate_deployment
+    - docker tag ndnp_open_ocr_deploy:${IMAGE_TAG} 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-${TF_STATE_NAME}:${IMAGE_TAG}
     - docker push 342134162356.dkr.ecr.us-east-2.amazonaws.com/ndnp-open-ocr-container-repo-${TF_STATE_NAME}:${IMAGE_TAG}
   environment:
     name: $TF_STATE_NAME
