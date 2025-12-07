@@ -31,15 +31,17 @@ ARG AMERICANSTORIES_MODELS_URL="https://www.dropbox.com/sh/sfaf1nmuji9yhu6/AAAj1
 RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      ca-certificates curl git unzip; \
+      ca-certificates curl git unzip libarchive-tools; \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 RUN set -eux; \
     git clone --depth 1 "${AMERICANSTORIES_REPO_URL}" AmericanStories; \
     mkdir -p AmericanStories/american_stories_models; \
     curl -fsSL -o /tmp/american_stories_models.zip "${AMERICANSTORIES_MODELS_URL}"; \
-    unzip -q /tmp/american_stories_models.zip -d /tmp/american_models; \
+    mkdir -p /tmp/american_models; \
+    bsdtar -xf /tmp/american_stories_models.zip -C /tmp/american_models; \
     if [ -d /tmp/american_models/american_stories_models ]; then \
       mv /tmp/american_models/american_stories_models/* AmericanStories/american_stories_models/; \
     else \

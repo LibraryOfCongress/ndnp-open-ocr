@@ -1,12 +1,12 @@
 PLATFORM ?= linux/amd64
-IMAGE_NAME ?= ndnp_open_ocr:latest
+IMAGE_NAME ?= ndnp_open_ocr:opensource1.1
 # Mount AWS credentials for both root and appuser; pass profile/config env
 AWS_MOUNT_FLAGS := -v $$HOME/.aws:/root/.aws:ro -v $$HOME/.aws:/home/appuser/.aws:ro
 AWS_ENV_FLAGS := $(if $(AWS_PROFILE),-e AWS_PROFILE=$(AWS_PROFILE),) -e AWS_SDK_LOAD_CONFIG=1
 AWS_REGION ?= us-east-2
 ECR_REGISTRY ?= 342134162356.dkr.ecr.$(AWS_REGION).amazonaws.com
 ECR_REPO ?= ndnp-open-ocr-container-repo-development-deployment
-ECR_IMAGE_TAG ?= latest
+ECR_IMAGE_TAG ?= opensource1.1
 ECR_LOGIN_PROFILE ?= NDNP_OPEN_OCR_DEVELOPER_DEV-342134162356
 
 help:

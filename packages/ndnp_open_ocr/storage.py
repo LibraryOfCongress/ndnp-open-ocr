@@ -62,6 +62,13 @@ def _trim_to_batch(parts: List[str]) -> List[str]:
     return parts
 
 
+def _drop_leading_batch(parts: List[str]) -> List[str]:
+    """Remove the first segment if it looks like a batch identifier."""
+    if parts and "batch" in parts[0].lower():
+        return parts[1:]
+    return parts
+
+
 def source_output_prefix(source_uri: str) -> str:
     """Return the leading directory components from the source that should be
     preserved when writing outputs.
@@ -94,7 +101,11 @@ def source_output_prefix(source_uri: str) -> str:
 
 
 def build_output_rel_dir(source_uri: str, rel_path: str) -> str:
-    """Compose the relative directory for outputs preserving batch structure."""
+    """Compose the relative directory for outputs preserving batch structure.
+
+    If DROP_BATCH_SUBDIR=true, omit the leading batch_* segment so outputs land
+    directly under the job_id prefix (used by Fargate/Batch workers).
+    """
 
     prefix = source_output_prefix(source_uri)
     rel_dir = posixpath.dirname(rel_path)
@@ -106,6 +117,8 @@ def build_output_rel_dir(source_uri: str, rel_path: str) -> str:
         segments.extend([p for p in rel_dir.split("/") if p])
 
     trimmed = _trim_to_batch(segments)
+    if os.getenv("DROP_BATCH_SUBDIR", "false").lower() == "true":
+        trimmed = _drop_leading_batch(trimmed)
     return "/".join(trimmed)
 
 
