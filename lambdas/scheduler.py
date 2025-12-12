@@ -78,28 +78,30 @@ def handler(event, context):
         if not keys:
             # Organization-agnostic default; override via BATCH_BASED_PREFIX
             prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp")
-            prefix = os.path.join(prefix_base, dir_code, batch_name)
+            # Require an exact batch directory by adding a trailing slash to the prefix.
+            prefix = os.path.join(prefix_base, dir_code, batch_name, "")
             keys = get_tif_files(bucket_name, prefix)
 
         # Check alternative prefixes if no TIFF files found
         if not keys:
             if dir_code == "dlc":
                 alt_dir_code = "loc"
-                alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name)
+                alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name, "")
                 keys = get_tif_files(bucket_name, alt_prefix)
                 prefix = alt_prefix if keys else prefix
 
             elif dir_code == "vi":
                 alt_dir_code = "virginia"
-                alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name)
+                alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name, "")
                 keys = get_tif_files(bucket_name, alt_prefix)
                 prefix = alt_prefix if keys else prefix
 
         if not keys:
-            logger.error(f"No TIFF files found in prefix: {prefix}")
+            msg = f"No TIFF files found in source data at s3://{bucket_name}/{prefix}"
+            logger.error(msg)
             return {
                 "statusCode": 404,
-                "body": json.dumps(f"No TIFF files found at prefix: {prefix}"),
+                "body": json.dumps(msg),
             }
 
         job_name = os.path.split(prefix.rstrip("/"))[-1] + "__" + str(uuid.uuid4())
