@@ -28,7 +28,7 @@ def env_sink_fallback() -> str:
     return f"s3://{bucket}/{prefix}"
 
 
-def list_source_items(source_uri: str, pattern: str = "**/*.tif") -> List[str]:
+def list_source_items(source_uri: str, pattern: str = "**/*.[tT][iI][fF]") -> List[str]:
     """Return rel_paths of all matching inputs under the given source URI.
 
     Uses the filesystem-native path (from url_to_fs) to avoid scheme/bucket
