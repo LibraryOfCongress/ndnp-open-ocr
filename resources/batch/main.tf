@@ -270,6 +270,10 @@ resource "aws_batch_job_definition" "batch_job_definition" {
       {
         name  = "OUTPUT_BUCKET_NAME",
         value = var.aws_s3_output_bucket
+      },
+      {
+        name  = "DROP_BATCH_SUBDIR",
+        value = "true"
       }
     ]
     networkConfiguration = {

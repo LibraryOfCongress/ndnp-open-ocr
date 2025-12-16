@@ -11,6 +11,7 @@ segmenter_dummy.merge_alto_region_xmls = lambda **kwargs: None
 sys.modules['ndnp_open_ocr.segmenter'] = segmenter_dummy
 pytesseract_dummy = types.ModuleType('pytesseract')
 pytesseract_dummy.get_tesseract_version = lambda: '0.0'
+pytesseract_dummy.TesseractError = Exception
 sys.modules['pytesseract'] = pytesseract_dummy
 
 for mod_name in ['exiftool', 'pikepdf', 'cv2']:

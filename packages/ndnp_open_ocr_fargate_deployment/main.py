@@ -54,7 +54,8 @@ def is_valid_image(input_file_path):
 def get_file_list():
     """List items using the configured source URI (or legacy S3 fallback)."""
     src_uri = os.getenv("SOURCE_URI") or env_source_fallback()
-    # Case-insensitive match for .tif/.TIF files so array size matches scheduler discovery
+    # Case-insensitive match for .tif/.TIF files so array size matches scheduler discovery,
+    # and allow prefix-style listing to match scheduler's S3 behavior.
     pattern = os.getenv("INPUT_GLOB") or "**/*.[tT][iI][fF]"
     return src_uri, list_source_items(src_uri, pattern)
 
