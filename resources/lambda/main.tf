@@ -10,7 +10,7 @@ resource "aws_lambda_function" "scheduler_function" {
   filename         = var.output_path
   handler          = "scheduler.handler"
   role             = aws_iam_role.lambda_role.arn
-  runtime          = "python3.11"
+  runtime          = "python3.12"
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   timeout          = 500
 
@@ -32,7 +32,7 @@ resource "aws_lambda_function" "get_job_function" {
   filename         = var.output_path
   handler          = "get_job_status.handler"
   role             = aws_iam_role.lambda_role.arn
-  runtime          = "python3.11"
+  runtime          = "python3.12"
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   timeout          = 500
 
@@ -136,7 +136,7 @@ resource "aws_lambda_function" "batch_completion_function" {
   filename         = var.output_path
   handler          = "batch_completion_trigger.handler"
   role             = aws_iam_role.lambda_role.arn  # reusing existing IAM role
-  runtime          = "python3.11"
+  runtime          = "python3.12"
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   timeout          = 500
 
@@ -160,7 +160,7 @@ resource "aws_lambda_function" "list_keys_function" {
   filename         = var.output_path
   handler          = "list_keys.handler"
   role             = aws_iam_role.lambda_role.arn
-  runtime          = "python3.11"
+  runtime          = "python3.12"
   source_code_hash = filebase64sha256(data.archive_file.zip.output_path)
   timeout          = 900
   memory_size      = 2048
