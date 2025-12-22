@@ -5,7 +5,7 @@ description = ""
 authors = ["Library of Congress"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.12"
 boto3 = "^1.23.10"
 botocore = "^1.26.10"
 click = "8.0.1"
