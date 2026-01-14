@@ -32,16 +32,63 @@ This document captures the pieces that matter most when running NDNP Open OCR ou
 
 ### AWS deployment + CLI workflow
 
-1. **Configure AWS credentials** for the target account (environment variables, shared config/credentials file, SSO, etc.).
-2. **Provision infrastructure**:
-   ```bash
-   terraform init
-   terraform plan
-   terraform apply
+### 1. Configure AWS credentials
+ for the target account (environment variables, shared config/credentials file, SSO, etc.).
+### 2. Configure environment-specific Terraform variables
+   Before deploying, update the following varibales in `variables.tf` to match your environment **or** override them at runtime using `-var`
+   ```hcl
+   s3_bucketname
+   env
+   batch_image_tag
    ```
-   Customize variables such as `s3_bucket_name`, `env`, `batch_image_tag`, or the backend configuration so the stack names match your environment.
-3. **Wire the CLI to your deployment** by editing `packages/cli/ndnp_openocr/config.py` (bucket name + Lambda ARNs). If you publish the CLI, regenerate this file per environment or inject it during your build.
-4. **Install the CLI**:
+   These values control resource naming/isolation and the tagging container image used by openocr
+
+### 3. Provision infrastructure:
+   If this a **fresh install in a new AWS account** (ie. you are not using an existing Terraform state)
+   1. **Update the Terraform backend configuration**
+      Configure the backend to use an **s3 bucket and key** owned by this AWS account.
+      You may do this in **one of two ways**:
+      **Option A - Edit the backend configuration in code** 
+      Update `backend "s3" configuration to point to the correct bucket and key for this account.
+      **Option B - Override the backends at initilization time**
+      Supply backend values using `-backend-config` during initialization. 
+      
+   2. **Initialize Terraform**
+   ```bash
+   terraform init --reconfigure
+   ```
+   Or when overriding backend values explicitly:
+
+   ```bash
+      terraform init -reconfigure \
+      -backend-config="bucket=<state-bucket-name>" \
+      -backend-config="key=<state-key-path>" \
+      -backend-config="region=<aws-region>"
+      ```
+
+   the `--reconfigure` ensures Terraform does not attempt to read or migrate an existing remote state. If this not a new AWS account, ommit the `--reconfigure` flag.
+   
+   3. **Review and apply the plan**
+   ```bash
+      terraform plan
+      terraform apply
+   ```
+   
+   4. **Build fargate image for ndnp openocr**
+      1. **Update Makefile variables**
+         * AWS Account ID
+         * region 
+         * Any other environment-specific values
+
+      2. **Build and push image**
+         ```bash
+            make build_fargate  # This takes about 15 minutes
+            make push_fargate
+         ```
+  
+### 4. Wire the CLI to your deployment
+ By editing `packages/cli/ndnp_openocr/config.py` (bucket name + Lambda ARNs). If you publish the CLI, regenerate this file per environment or inject it during your build.
+5. **Install the CLI**:
    ```bash
    cd packages/cli
    poetry install
