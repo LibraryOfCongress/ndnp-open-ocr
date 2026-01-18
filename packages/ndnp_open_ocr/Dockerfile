@@ -1,7 +1,7 @@
 ############################################
 # Builder: build Tesseract from source tag #
 ############################################
-FROM python:3.11.10-slim-bookworm AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 ARG TESSERACT_VERSION=5.4.1
 RUN set -eux; \
@@ -22,7 +22,7 @@ RUN wget -O tesseract-${TESSERACT_VERSION}.tar.gz \
 ##############################################################
 # AmericanStories assets: clone repo + download model weights #
 ##############################################################
-FROM python:3.11.10-slim-bookworm AS americanstories-assets
+FROM python:3.12-slim-bookworm AS americanstories-assets
 
 # URL published in the upstream AmericanStories README
 ARG AMERICANSTORIES_REPO_URL="https://github.com/dell-research-harvard/AmericanStories.git"
@@ -52,7 +52,7 @@ RUN set -eux; \
 ############################################
 # Runtime: slim, copy built Tesseract      #
 ############################################
-FROM python:3.11.10-slim-bookworm
+FROM python:3.12-slim-bookworm
 
 ARG INCLUDE_TEST_DEPS="false"
 
