@@ -79,16 +79,15 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
    ```
    Customize variables such as `s3_bucket_name`, `env`, `batch_image_tag`, or the backend configuration so the stack names match your environment.
 3. **Wire the CLI to your deployment** by editing `packages/cli/ndnp_openocr/config.py` (bucket name + Lambda ARNs). If you publish the CLI, regenerate this file per environment or inject it during your build.
-4. **Install the CLI**:
+4. **Install the CLI** (into your current shell/virtualenv):
    ```bash
    cd packages/cli
-   poetry install
-   # or: poetry build && pip install dist/ndnp_openocr-*.whl
+   make install   # poetry install + build + pip install the wheel into this env
    ```
 5. **Run jobs end-to-end**:
    ```bash
    # Kick off a Batch-backed OCR job
-   ndnp_openocr reprocess --batch_name batch_example --bucket my-ingest-bucket --segmentation
+   ndnp_openocr reprocess --batch_name <batch_prefix_in_input_bucket> --bucket <input_bucket_name> --segmentation
 
    # Poll for status
    ndnp_openocr get --job JOB_ID
@@ -99,6 +98,10 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
      --output-dir /path/to/output_batch
    ```
    Clean up with `ndnp_openocr delete --job-id JOB_ID --output-dir /path/to/output_batch` when you are finished.
+   Notes:
+   - `batch_name` is the prefix of the batch in the input bucket you want to reprocess.
+   - `bucket` is the S3 bucket containing that batch.
+   - `--segmentation` enables the AmericanStories segmentation model for improved layout detection (omit to use baseline Tesseract layout).
 
 ## AmericanStories Assets (optional)
 
