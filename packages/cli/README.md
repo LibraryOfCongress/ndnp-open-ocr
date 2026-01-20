@@ -22,16 +22,10 @@ python cli.py sync --job=<JOB_ID_FROM_REPROCESS> \
   --output-dir=<output_dir> --local-batch=<local_batch_path>
 ```
 
-To check status of reprocessing job:
+To check status of the reprocessing job:
 
 ```sh
-python cli.py check-status --job <JOB_ID_FROM_REPROCESS>
-```
-
-To check for missing files between loc-preservation batch and S3 output for given job id:
-
-```sh
- python cli.py get-missing --job <JOB_ID_FROM_REPROCESS>
+python cli.py get --job <JOB_ID_FROM_REPROCESS>
 ```
 
 
