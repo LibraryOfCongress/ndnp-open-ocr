@@ -86,8 +86,11 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
    ```
 5. **Run jobs end-to-end**:
    ```bash
-   # Kick off a Batch-backed OCR job
+   # Kick off a Batch-backed OCR job (processes TIF files by default)
    ndnp_openocr reprocess --batch_name <batch_prefix_in_input_bucket> --bucket <input_bucket_name> --segmentation
+
+   # To process JP2 files instead of TIF
+   ndnp_openocr reprocess --batch_name <batch_prefix_in_input_bucket> --bucket <input_bucket_name> --img-extension=jp2
 
    # Poll for status
    ndnp_openocr get --job JOB_ID
@@ -102,6 +105,7 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
    - `batch_name` is the prefix of the batch in the input bucket you want to reprocess.
    - `bucket` is the S3 bucket containing that batch.
    - `--segmentation` enables the AmericanStories segmentation model for improved layout detection (omit to use baseline Tesseract layout).
+   - `--img-extension` specifies the image file type to process: `tif` (default) or `jp2`.
 
 ## AmericanStories Assets (optional)
 

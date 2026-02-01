@@ -73,8 +73,11 @@ There are 3 primary components that need to be treated on an individual basis:
 5. Use the CLI to exercise the pipeline end to end:
 
    ```bash
-   # Kick off a job against an S3 batch
+   # Kick off a job against an S3 batch (processes TIF files by default)
    ndnp_openocr reprocess --batch_name=batch_example --bucket=my-ingest-bucket --segmentation
+
+   # To process JP2 files instead of TIF
+   ndnp_openocr reprocess --batch_name=batch_example --bucket=my-ingest-bucket --img-extension=jp2
 
    # Poll for status (uses stored job id if --job omitted)
    ndnp_openocr get --job JOB_ID_FROM_REPROCESS

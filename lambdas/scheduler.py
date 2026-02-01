@@ -13,6 +13,10 @@ def handler(event, context):
     batch_name = event["pathParameters"]["batchName"]
     bucket_name = event["pathParameters"]["bucketName"]
     use_segmenter = False
+    source_uri = None
+    sink_uri = None
+    array_size_override = None
+    img_extension = None
     if event.get("queryStringParameters"):
         flag = event["queryStringParameters"].get("use_segmenter", "false")
         use_segmenter = str(flag).lower() == "true"
@@ -20,6 +24,8 @@ def handler(event, context):
         source_uri = event["queryStringParameters"].get("source_uri")
         sink_uri = event["queryStringParameters"].get("sink_uri")
         array_size_override = event["queryStringParameters"].get("array_size")
+        # Optional: image extension (e.g., "jp2" or "tif" - defaults to "tif")
+        img_extension = event["queryStringParameters"].get("img_extension")
     logger.info(f"Use segmenter: {use_segmenter}")
 
     logger.info(f"Batch Name: {batch_name}")
@@ -34,8 +40,14 @@ def handler(event, context):
     logger.info(f"Batch Job Queue: {batch_job_queue}")
     logger.info(f"Batch Job Definition: {batch_job_definition}")
 
-    def get_tif_files(bucket, prefix):
-        """Return list of TIFF files from the specified S3 prefix."""
+    def get_image_files(bucket, prefix, extension=".tif"):
+        """Return list of image files from the specified S3 prefix.
+
+        Args:
+            bucket: S3 bucket name
+            prefix: S3 prefix to search
+            extension: File extension to match (case-insensitive)
+        """
         keys = []
         paginator = s3.get_paginator("list_objects_v2")
         pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
@@ -43,7 +55,7 @@ def handler(event, context):
             if "Contents" in page:
                 for obj in page["Contents"]:
                     file_name = obj["Key"]
-                    if file_name.lower().endswith(".tif"):
+                    if file_name.lower().endswith(extension):
                         keys.append(file_name)
         return keys
 
@@ -66,6 +78,15 @@ def handler(event, context):
         prefix = None
         keys = []
 
+        # Determine file extension to search for based on img_extension
+        # Supports: "jp2" or "tif" (default)
+        if img_extension and "jp2" in img_extension.lower():
+            file_extension = ".jp2"
+            worker_glob = "**/*.[jJ][pP]2"
+        else:
+            file_extension = ".tif"
+            worker_glob = "**/*.[tT][iI][fF]"
+
         if source_uri:
             logger.info("source_uri provided; will pass-through without listing.")
             if array_size_override is not None:
@@ -80,24 +101,24 @@ def handler(event, context):
             prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp")
             # Require an exact batch directory by adding a trailing slash to the prefix.
             prefix = os.path.join(prefix_base, dir_code, batch_name, "")
-            keys = get_tif_files(bucket_name, prefix)
+            keys = get_image_files(bucket_name, prefix, file_extension)
 
-        # Check alternative prefixes if no TIFF files found
+        # Check alternative prefixes if no image files found
         if not keys:
             if dir_code == "dlc":
                 alt_dir_code = "loc"
                 alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name, "")
-                keys = get_tif_files(bucket_name, alt_prefix)
+                keys = get_image_files(bucket_name, alt_prefix, file_extension)
                 prefix = alt_prefix if keys else prefix
 
             elif dir_code == "vi":
                 alt_dir_code = "virginia"
                 alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name, "")
-                keys = get_tif_files(bucket_name, alt_prefix)
+                keys = get_image_files(bucket_name, alt_prefix, file_extension)
                 prefix = alt_prefix if keys else prefix
 
         if not keys:
-            msg = f"No TIFF files found in source data at s3://{bucket_name}/{prefix}"
+            msg = f"No image files ({file_extension}) found in source data at s3://{bucket_name}/{prefix}"
             logger.error(msg)
             return {
                 "statusCode": 404,
@@ -113,13 +134,12 @@ def handler(event, context):
             {"name": "PREFIX", "value": prefix or ""},
             {"name": "OUTPUT_PREFIX", "value": job_name},
             {"name": "USE_SEGMENTATION", "value": str(use_segmenter).lower()},
-            # Flatten batch_* under job_id for worker outputs
             {"name": "DROP_BATCH_SUBDIR", "value": "true"},
+            {"name": "INPUT_GLOB", "value": worker_glob},
         ]
 
         # Preferred: URI-style envs
         if not source_uri and prefix:
-            # build default S3 source uri from discovery
             source_uri = f"s3://{bucket_name}/{prefix}"
         if not sink_uri:
             out_bucket = os.environ.get("OUTPUT_BUCKET_NAME", "")
@@ -130,8 +150,6 @@ def handler(event, context):
             env_overrides.append({"name": "SOURCE_URI", "value": source_uri})
         if sink_uri:
             env_overrides.append({"name": "SINK_URI", "value": sink_uri})
-
-        # No connector-specific envs; we prefer URI-based config only
 
         response = batch.submit_job(
             jobName=job_name,

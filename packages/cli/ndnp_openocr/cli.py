@@ -42,13 +42,15 @@ def initialize_config():
     return config_dict
 
 
-def reprocess_batch(ctx, batch_name: str, bucket: str, segmentation: bool):
+def reprocess_batch(ctx, batch_name: str, bucket: str, segmentation: bool, img_extension: str = None):
     """Kicks off reprocessing job for a certain S3 NDNP batch.
 
     Parameters
     ----------
     segmentation: bool
         Flag to indicate whether the OCR job should run in segmentation mode.
+    img_extension: str
+        Image file extension to process: "jp2" or "tif" (default: tif).
     """
     lambda_client = boto3.client(
         "lambda",
@@ -58,12 +60,16 @@ def reprocess_batch(ctx, batch_name: str, bucket: str, segmentation: bool):
             connect_timeout=10,  # Time in seconds
         ),
     )
+    query_params = {"use_segmenter": str(segmentation).lower()}
+    if img_extension:
+        query_params["img_extension"] = img_extension
+
     payload = {
         "pathParameters": {
             "batchName": batch_name,
             "bucketName": bucket,
         },
-        "queryStringParameters": {"use_segmenter": str(segmentation).lower()},
+        "queryStringParameters": query_params,
     }
     try:
         # Async invoke the scheduler Lambda function passing the prefix and bucket name
@@ -278,13 +284,18 @@ def job_info(ctx):
     default=False,
     help="Enable segmentation based OCR processing.",
 )
+@click.option(
+    "--img-extension",
+    default=None,
+    help="Image file extension to process: 'jp2' or 'tif' (default: tif).",
+)
 @click.pass_context
-def reprocess(ctx, batch_name: str, bucket: str, segmentation: bool):
+def reprocess(ctx, batch_name: str, bucket: str, segmentation: bool, img_extension: str):
     """Command to kick off reprocessing job for a certain S3 NDNP batch."""
     if not batch_name:
         print("[red]No batch_name provided. Exiting.")
         return
-    ctx = reprocess_batch(ctx, batch_name, bucket, segmentation)
+    ctx = reprocess_batch(ctx, batch_name, bucket, segmentation, img_extension)
 
 
 cli.add_command(sync)

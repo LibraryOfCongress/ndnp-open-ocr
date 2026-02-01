@@ -34,13 +34,16 @@ def is_valid_image(input_file_path: str) -> bool:
 
 
 def download_input_local(src_uri: str, rel_path: str, temp_dir: str) -> str:
+    """Download input file, falling back to JP2 if TIF is corrupt."""
     path = fetch_item(src_uri, rel_path, temp_dir)
-    # If the file is a TIF but invalid (e.g., remote is actually JP2), fetch JP2 explicitly
+    # If the file is a TIF but invalid (e.g., corrupt), try fetching JP2 as fallback
     if path.lower().endswith(".tif") and not is_valid_image(path):
         root, _ = os.path.splitext(rel_path)
         rel_jp2 = root + ".jp2"
         try:
-            return fetch_item(src_uri, rel_jp2, temp_dir)
+            jp2_path = fetch_item(src_uri, rel_jp2, temp_dir)
+            logging.info(f"JP2 used as fallback (TIF was invalid) for {rel_path}")
+            return jp2_path
         except Exception:
             return path
     return path
@@ -89,7 +92,8 @@ def run_local_batch() -> None:
     if not (src_uri and sink_uri):
         raise SystemExit("Please set SOURCE_URI and SINK_URI for local runs.")
     use_segmenter = os.getenv("USE_SEGMENTATION", "false").lower() == "true"
-    pattern = os.getenv("INPUT_GLOB") or "**/*.tif"
+    # Case-insensitive match for .tif/.TIF files
+    pattern = os.getenv("INPUT_GLOB") or "**/*.[tT][iI][fF]"
     run_local_batch_with_uris(src_uri, sink_uri, pattern, use_segmenter)
 
 
@@ -112,7 +116,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     if not (src_uri and sink_uri):
         parser.error("--input/--output (or --source/--sink) are required, or set INPUT_URI/OUTPUT_URI")
 
-    pattern = args.glob or os.environ.get("INPUT_GLOB") or "**/*.tif"
+    # Case-insensitive match for .tif/.TIF files by default
+    pattern = args.glob or os.environ.get("INPUT_GLOB") or "**/*.[tT][iI][fF]"
     seg_env = os.environ.get("USE_SEGMENTATION", "false").lower()
     use_segmenter = (args.segmentation or seg_env) == "true"
 
