@@ -40,7 +40,7 @@ resource "aws_route_table_association" "b" {
 resource "aws_subnet" "subnet_1" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
-  availability_zone       = "us-east-2a"
+  availability_zone       = "${var.region}a"
   map_public_ip_on_launch = true
   tags = {
     Name = "ndnp-open-ocr-subnet-1-${var.env}"
@@ -50,7 +50,7 @@ resource "aws_subnet" "subnet_1" {
 resource "aws_subnet" "subnet_2" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.2.0/24"
-  availability_zone       = "us-east-2b"
+  availability_zone       = "${var.region}b"
   map_public_ip_on_launch = true
   tags = {
     Name = "ndnp-open-ocr-subnet-2-${var.env}"
@@ -216,10 +216,15 @@ resource "aws_batch_compute_environment" "batch_compute_environment" {
     subnets            = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
     security_group_ids = [aws_security_group.main_sg.id]
   }
-
   tags = {
     Name = "ndnp-open-ocr-batch-compute-environment-${var.env}"
   }
+  depends_on = [
+    aws_iam_role_policy_attachment.batch_service_role_policy,
+    aws_iam_role_policy_attachment.ecs_cluster_management_policy_attachment,
+    aws_iam_role_policy_attachment.ecs_list_clusters_policy_attachment
+  ]
+
 }
 
 # AWS Batch Job Queue
@@ -265,7 +270,7 @@ resource "aws_batch_job_definition" "batch_job_definition" {
     environment = [
       {
         name  = "AWS_REGION",
-        value = "us-east-2"
+        value = var.region
       },
       {
         name  = "OUTPUT_BUCKET_NAME",
@@ -283,7 +288,7 @@ resource "aws_batch_job_definition" "batch_job_definition" {
       logDriver = "awslogs"
       options = {
         "awslogs-group"         = "/aws/batch/job"
-        "awslogs-region"        = "us-east-2"
+        "awslogs-region"        = var.region
         "awslogs-stream-prefix" = "batch"
       }
     }
