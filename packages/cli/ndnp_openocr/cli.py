@@ -26,7 +26,6 @@ import shutil
 from . import config
 
 CONFIG_KEYS = ["job_id", "output_dir"]
-REGION = "us-east-2"
 
 
 def initialize_config():
@@ -54,7 +53,7 @@ def reprocess_batch(ctx, batch_name: str, bucket: str, segmentation: bool, img_e
     """
     lambda_client = boto3.client(
         "lambda",
-        region_name=REGION,
+        region_name=config.AWS_REGION,
         config=Config(
             read_timeout=900,  # Time in seconds
             connect_timeout=10,  # Time in seconds
@@ -173,7 +172,7 @@ def get(ctx, job: str):
         keyring.set_password("ndnp_openocr", "job_id", job)
 
     # Setup AWS Lambda client
-    lambda_client = boto3.client("lambda", region_name=REGION)
+    lambda_client = boto3.client("lambda", region_name=config.AWS_REGION)
     console = Console()
     print("JOB ID: ", job)
     payload = {"pathParameters": {"jobName": job}}
@@ -227,7 +226,7 @@ def delete(ctx, job_id, output_dir):
         bucket_name = ctx.obj['config']["OUTPUT_BUCKET_NAME"]
 
         # Delete S3 directory
-        s3 = boto3.resource("s3", region_name=REGION)
+        s3 = boto3.resource("s3", region_name=config.AWS_REGION)
         bucket = s3.Bucket(bucket_name)
         prefix = f"{job_id}/"  # Assuming the job_id is the prefix for the files in S3
         try:

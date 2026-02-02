@@ -15,6 +15,7 @@ rich = "^13.7.1"
 s3transfer = "^0.10.0"
 awscli = "^1.32.57"
 keyring = "^25.1.0"
+python-dotenv = "^1.0.0"
 
 [tool.poetry.dev-dependencies]
 
