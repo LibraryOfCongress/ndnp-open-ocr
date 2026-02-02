@@ -26,10 +26,12 @@ help:
 	@echo "terraform-init   Initialize Terraform"
 	@echo "terraform-plan   Plan Terraform changes"
 	@echo "terraform-apply  Apply Terraform changes"
+	@echo "terraform-destroy Destroy Terraform resources"
 	@echo "build-ocr-image  Build OCR Docker image"
 	@echo "build_fargate    Build Fargate images"
 	@echo "push_fargate     Push to ECR"
 	@echo "ocr-shell        Interactive container shell"
+	@echo "install-cli      Install CLI tool"
 
 build-ocr-image:
 	docker build --platform $(PLATFORM) -t $(IMAGE_NAME) packages/ndnp_open_ocr
@@ -71,10 +73,10 @@ check-env:
 
 terraform-init:
 	terraform init
-	@if terraform workspace list | grep -q "$(AWS_REGION)"; then \
-		terraform workspace select $(AWS_REGION); \
+	@if terraform workspace list | grep -q "$(ENVIRONMENT)"; then \
+		terraform workspace select $(ENVIRONMENT); \
 	else \
-		terraform workspace new $(AWS_REGION); \
+		terraform workspace new $(ENVIRONMENT); \
 	fi
 
 terraform-plan: check-env
@@ -83,4 +85,10 @@ terraform-plan: check-env
 terraform-apply: check-env
 	terraform apply
 
-.PHONY: help build-ocr-image build_fargate push_fargate prep-testdata ocr-shell check-env terraform-init terraform-plan terraform-apply
+terraform-destroy: check-env
+	terraform destroy
+
+install-cli:
+	pip install packages/cli
+
+.PHONY: help build-ocr-image build_fargate push_fargate prep-testdata ocr-shell check-env terraform-init terraform-plan terraform-apply terraform-destroy install-cli

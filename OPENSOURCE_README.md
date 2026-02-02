@@ -126,12 +126,11 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
 
 ### 4. Wire the CLI to your deployment
  By editing `packages/cli/ndnp_openocr/config.py` (bucket name + Lambda ARNs). If you publish the CLI, regenerate this file per environment or inject it during your build.
-5. **Install the CLI**:
+5. **Install the CLI** (from the repository root):
    ```bash
-   cd packages/cli
-   make install   # poetry install + build + pip install the wheel into this env
+   make install-cli
    ```
-5. **Run jobs end-to-end**:
+6. **Run jobs end-to-end** (from the repository root):
    ```bash
    # Kick off a Batch-backed OCR job (processes TIF files by default)
    ndnp_openocr reprocess --batch_name <batch_prefix_in_input_bucket> --bucket <input_bucket_name> --segmentation
@@ -180,6 +179,8 @@ Deploy into a dedicated AWS account or VPC to keep costs and permissions isolate
 4. Update any automation or CI pipelines to inject the correct `ndnp_openocr/config.py` before building the CLI.
 
 ## CLI Reference
+
+**Note:** Run all CLI commands from the repository root directory where `.env` is located.
 
 `ndnp_openocr` exposes the following commands:
 
