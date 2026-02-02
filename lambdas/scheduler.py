@@ -97,14 +97,18 @@ def handler(event, context):
                         "Invalid array_size override; falling back to S3 prefix discovery if possible."
                     )
         if not keys:
-            # Organization-agnostic default; override via BATCH_BASED_PREFIX
-            prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp")
-            # Require an exact batch directory by adding a trailing slash to the prefix.
-            prefix = os.path.join(prefix_base, dir_code, batch_name, "")
+            # For loc-preservation bucket, use LOC-specific directory structure
+            # For other buckets, use batch_name directly as prefix
+            if bucket_name == "loc-preservation":
+                prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp")
+                prefix = os.path.join(prefix_base, dir_code, batch_name, "")
+            else:
+                prefix = f"{batch_name}/"
             keys = get_image_files(bucket_name, prefix, file_extension)
 
-        # Check alternative prefixes if no image files found
-        if not keys:
+        # Check alternative prefixes if no image files found (LOC-specific)
+        if not keys and bucket_name == "loc-preservation":
+            prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp")
             if dir_code == "dlc":
                 alt_dir_code = "loc"
                 alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name, "")

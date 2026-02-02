@@ -1,9 +1,10 @@
-"""CLI Configuration - loads from .env file."""
+"""CLI Configuration - loads from .env file in current working directory."""
 import os
+from pathlib import Path
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(Path.cwd() / ".env")
 except ImportError:
     pass
 
