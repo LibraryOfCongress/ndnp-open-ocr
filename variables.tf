@@ -10,6 +10,12 @@ variable "env" {
   default     = "development-deployment"
 }
 
+variable "region" {
+  description = "AWS region to deploy resources in"
+  type        = string
+  default     = "us-east-2"
+}
+
 variable "batch_image_tag" {
   description = "Docker image tag used by AWS Batch job definition"
   type        = string
