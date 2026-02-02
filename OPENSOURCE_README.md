@@ -1,8 +1,46 @@
-# NDNP Open OCR (Open-Source Guide)
+# NDNP Open OCR
 
-This document captures the pieces that matter most when running NDNP Open OCR outside of the Library of Congress network. It focuses on the local developer loop, the AWS deployment path, and the CLI workflow used to orchestrate OCR jobs.
+**NDNP-Open-OCR** is an open-source pipeline developed by the Library of Congress to reprocess and improve the quality of Optical Character Recognition (OCR) text from digitized historical newspapers.
 
-## Quick Start
+This software is designed to work specifically with data produced under the National Digital Newspaper Program (NDNP) technical specification. NDNP is a collaborative partnership involving the National Endowment for the Humanities (NEH), the Library of Congress, and various participating institutions, all of which contribute to the Chronicling America Historic Newspaper website.
+
+
+## What does the **NDNP-Open-OCR** pipeline do?
+**At a high level, NDNP-Open-OCR...**
+- works with existing NDNP data packages (batches) as its input, 
+- creates new ALTO XML and PDF files for every newspaper scan in a batch,
+- can be deployed locally or in common cloud environments,
+- uses the Tesseract OCR engine and custom post-processing steps,
+- is accessed via a command line interface (CLI), and
+- has potential to be adapted for other data.
+
+While **NDNP-Open-OCR** is most relevant for parties using the NDNP technical specification, we envision the pipeline to be useful for a number of other use cases. 
+
+
+[Read more about the Library of Congress' newspaper OCR reprocessing effort here](https://guides.loc.gov/chronicling-america/improved-text).
+
+[Read more about the NDNP Technical Specification here](https://www.loc.gov/ndnp/).
+
+## Advanced Segmentation Setting
+Historical newspapers are complex documents with a variety of page and column layouts that can be challenging for OCR engines to parse. All versions of **NDNP-Open-OCR** use Tesseract's generalized layout detection model. **NDNP-Open-OCR** version 1.1 and later includes an option to use an advanced segmentation setting that more accurately identifies columns, text, and other regions on historical newspaper scans. This setting incorporates newspaper layout detection modeling from the American Stories (Harvard) dataset. 
+[Read more about Harvard's American Stories project here](https://dell-research-harvard.github.io/resources/americanstories).
+
+## Contact
+We are sharing this pipeline to advance a core objective of the NDNP: improving access to historical American newspapers. We encourage you to share with us how you are using the code and welcome your feedback.
+
+For questions or support, contact NDNP staff at the Library of Congress (ndnptech@loc.gov).
+
+
+## ----------
+
+
+## Quick Start (Open-Source Guide for Developers)
+This document captures the pieces that matter most when running **NDNP-Open-OCR** outside of the Library of Congress network. It focuses on the local developer loop, the AWS deployment path, and the CLI workflow used to orchestrate OCR jobs.
+
+### Note
+
+- These instructions currently use AWS as the cloud environment.
+  
 
 ### Local batch testing (file:// inputs or S3)
 
