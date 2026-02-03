@@ -95,15 +95,16 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
     preds = torch.from_numpy(raw)[0]
     logger.debug("Raw ONNX out shape: %s", raw.shape)
 
-    # 4) NMS
+    # 4) NMS - Use iou_thres=0.10 to match AmericanStories recommended settings.
+    # Gap filling recovers any content missed due to suppressed regions.
     if backend == "yolo":
-        det = non_max_suppression(preds, conf_thres=0.01, iou_thres=0.40)
+        det = non_max_suppression(preds, conf_thres=0.01, iou_thres=0.10)
     elif backend == "yolov8":
         # v8 NMS expects (bs, boxes, 6) → list of 1 tensor
         out = nms_yolov8(
             preds.unsqueeze(0),
             conf_thres=0.01,
-            iou_thres=0.40,
+            iou_thres=0.10,
             max_det=1000,
             agnostic=True,
         )
