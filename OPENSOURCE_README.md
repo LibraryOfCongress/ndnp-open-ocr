@@ -30,10 +30,6 @@ We are sharing this pipeline to advance a core objective of the NDNP: improving 
 
 For questions or support, contact NDNP staff at the Library of Congress (ndnptech@loc.gov).
 
-
-## ----------
-
-
 ## Quick Start (Open-Source Guide for Developers)
 This document captures the pieces that matter most when running **NDNP-Open-OCR** outside of the Library of Congress network. It focuses on the local developer loop, the AWS deployment path, and the CLI workflow used to orchestrate OCR jobs.
 
@@ -82,6 +78,8 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
    These values control resource naming/isolation and the tagging container image used by openocr
 
 ### 3. Provision infrastructure:
+   Run `make check-env` to verify your `.env` values and TF_VAR exports before running Terraform.
+
    If this a **fresh install in a new AWS account** (ie. you are not using an existing Terraform state)
    1. **Update the Terraform backend configuration**
       Configure the backend to use an **s3 bucket and key** owned by this AWS account.
@@ -173,7 +171,7 @@ Deploy into a dedicated AWS account or VPC to keep costs and permissions isolate
 
 ## Deployment Details
 
-1. Set Terraform variables via `terraform.tfvars`, environment variables, or `-var` flags (e.g., `s3_bucket_name`, `env`, backend bucket/key).
+1. Configure `.env` (see `.env.example`) and run `make check-env` to verify values. Terraform picks up `TF_VAR_*` exports from `.env` via the Makefile.
 2. Run `terraform init/plan/apply` as shown above.
 3. Build the Batch container image (`make build-ocr-image` or `docker build ...`) and push it to your registry for the target environment.
 4. Update any automation or CI pipelines to inject the correct `ndnp_openocr/config.py` before building the CLI.

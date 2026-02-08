@@ -12,7 +12,7 @@ cd packages/cli
 make install                 # poetry install + build + pip install the wheel into this env
 ```
 
-Run commands from the same shell: `ndnp_openocr --help` (or `python ndnp_openocr/cli.py --help` from `packages/cli` if you prefer not to install the entrypoint).
+Run commands from the same shell: `ndnp_openocr --help`.
 
 ## Configure
 

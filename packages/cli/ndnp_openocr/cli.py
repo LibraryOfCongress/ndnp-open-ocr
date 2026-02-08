@@ -1,13 +1,3 @@
-import sys
-from pathlib import Path
-
-# Allow running as `python ndnp_openocr/cli.py` without installing the package.
-if __package__ is None or __package__ == "":
-    pkg_root = Path(__file__).resolve().parent.parent
-    if str(pkg_root) not in sys.path:
-        sys.path.insert(0, str(pkg_root))
-    __package__ = "ndnp_openocr"
-
 import boto3
 import click
 import requests
