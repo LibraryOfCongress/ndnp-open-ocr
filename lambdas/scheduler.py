@@ -63,15 +63,18 @@ def handler(event, context):
         m = re.search(r"batch[_-]([a-zA-Z]+)_", batch_name)
         if m:
             code = m.group(1).lower()
-            code_to_dir = {
-                "lc": "loc",
-                "vi": "vi",
-                "va": "vi",
-                "lv": "vi",
-            }
-            dir_code = code_to_dir.get(code, code)
         else:
-            dir_code = batch_name
+            # Handle non-standard batch names like "dlc_alpha_ver01"
+            m = re.match(r"([a-zA-Z]+)_", batch_name)
+            code = m.group(1).lower() if m else batch_name
+
+        code_to_dir = {
+            "lc": "loc",
+            "vi": "vi",
+            "va": "vi",
+            "lv": "vi",
+        }
+        dir_code = code_to_dir.get(code, code)
 
         # If custom connectors provided, pass them through and compute array size from override
         # Otherwise, default to S3 discovery using historical NDNP layout.

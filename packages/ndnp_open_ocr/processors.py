@@ -21,6 +21,7 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from PIL import Image, ImageDraw
 from collections import defaultdict
+from statistics import median
 import copy
 
 logger = logging.getLogger(__name__)
@@ -164,7 +165,7 @@ class AltoProcessor:
             content = f.read()
         self.soup = BeautifulSoup(content, "lxml-xml")
 
-    def fill_gaps(self, full_alto_path, image_path, eps_touch=3):
+    def fill_gaps(self, full_alto_path, image_path, eps_touch=10):
         # Simple & explicit: compute gaps = full_strings - composite_strings (pixel space),
         # then append each GAP TextLine into the nearest overlapping composite TextBlock.
         # Adds lots of prints so you can see what's happening.
@@ -258,7 +259,7 @@ class AltoProcessor:
         comp_string_boxes = []
         comp_line_boxes = []
         for _line, line_strings, lb in _iter_line_with_boxes(composite_tree, img, NS):
-            for _s, box in line_strings:
+            for _s_el, box in line_strings:
                 comp_string_boxes.append(box)
             comp_line_boxes.append(lb)
 
@@ -267,8 +268,11 @@ class AltoProcessor:
         page = get_page(composite_tree, NS)
         page_w = int(float(page.get("WIDTH", 0))) if page is not None else img.width
         page_h = int(float(page.get("HEIGHT", 0))) if page is not None else img.height
-        # margin ~0.2% of page width, at least 10px (broader to suppress bleed)
-        margin = max(10, int(page_w * 0.002))
+        # margin ~0.3% of page width, at least 10px or 0.6× median text height
+        comp_heights = [b[3] - b[1] for b in comp_string_boxes if b[3] > b[1]]
+        typical_h = int(median(comp_heights)) if comp_heights else 0
+        margin = max(10, int(page_w * 0.003), int(typical_h * 0.6))
+        logger.info(f"[fill_gaps] margin_px={margin} typical_text_h={typical_h}")
 
         def _expand(b, m):
             x1,y1,x2,y2 = b
@@ -281,14 +285,17 @@ class AltoProcessor:
         total_full_strings = sum(len(ls) for _l, ls, _lb in full_lines)
 
         # Determine kept (gap) strings by line
+        # With clean segmentation (IOU=0.10 + containment filter), we only need basic
+        # geometric intersection check. The segmenter handles overlap/nesting upstream.
         kept_by_line = {}
         kept_count = 0
         for line, line_strings, lb in full_lines:
             kept = []
             for s, box in line_strings:
-                # compare against expanded boxes to suppress narrow-gap bleed
-                if not any(_intersect(box, cb, eps_touch) for cb in comp_boxes_expanded):
-                    kept.append((s, box))
+                # Keep strings that don't intersect with expanded composite boxes
+                if any(_intersect(box, cb, eps_touch) for cb in comp_boxes_expanded):
+                    continue
+                kept.append((s, box))
             # If this looks like a narrow gutter between two composite lines, drop it entirely
             if kept:
                 y1, y2 = lb[1], lb[3]
