@@ -63,11 +63,17 @@ There are 3 primary components that need to be treated on an individual basis:
 
 3. Point the CLI at your deployment by editing `packages/cli/ndnp_openocr/config.py` (bucket name plus Lambda ARNs) or by injecting those values during your build process.
 
-4. Build and install the CLI (from `packages/cli/`):
+4. Install the CLI:
 
+   **From the GitLab Package Registry** (recommended):
+   ```bash
+   pip install ndnp_openocr --index-url https://gitlab-ci-token:<your_personal_token>@git.loc.gov/api/v4/projects/2983/packages/pypi/simple
+   ```
+
+   **From source** (requires [Poetry](https://python-poetry.org/docs/#installation)):
    ```bash
    cd packages/cli
-   poetry install   # or: poetry build && pip install dist/ndnp_openocr-*.whl
+   poetry install
    ```
 
 5. Use the CLI to exercise the pipeline end to end:

@@ -2,17 +2,16 @@
 
 The CLI submits jobs to the NDNP Open OCR stack, checks job status, and syncs AWS Batch outputs from S3 into a local batch directory. This guide assumes you are running outside Library of Congress networks.
 
-## Install (one command)
+## Install from source
 
-Prereqs: Python 3.12+ and Poetry on your PATH. Activate the virtualenv you want to use first; install goes into that env (no extra Poetry venv is created).
+Prereqs: Python 3.12+ and [Poetry](https://python-poetry.org/docs/#installation).
 
 ```sh
-pip install poetry           # if you don't already have it
 cd packages/cli
-make install                 # poetry install + build + pip install the wheel into this env
+make install
 ```
 
-Run commands from the same shell: `ndnp_openocr --help` (or `python ndnp_openocr/cli.py --help` from `packages/cli` if you prefer not to install the entrypoint).
+Verify: `ndnp_openocr --help`
 
 ## Configure
 

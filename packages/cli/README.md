@@ -30,17 +30,15 @@ python cli.py get --job <JOB_ID_FROM_REPROCESS>
 
 
 
-
 ## Requirements
 
 Before running the CLI, make sure that you have installed the required Python libraries listed in the accompanying `requirements.txt` file.
 
 ## Quick install (preferred)
 
-Prereqs: Python 3.12+ and Poetry on your PATH. Activate the virtualenv you want to use first; the install goes into that env (no extra Poetry venv is created).
+Prereqs: Python 3.12+ and [Poetry](https://python-poetry.org/docs/#installation). Activate the virtualenv you want to use first; the install goes into that env (no extra Poetry venv is created).
 
 ```sh
-pip install poetry           # if you don't already have it
 cd packages/cli
 make install                 # poetry install + build + pip install the wheel into this env
 ndnp_openocr --help          # verify the CLI is on PATH in this shell
@@ -64,6 +62,14 @@ ndnp_openocr sync --job=batch_dlc_kite_ver01_____5ce7bcad-ec0e-4978-a760-cd6d457
 
 
 ## Installation on NDNPQR: From Scratch
+
+### Install from GitLab Package Registry (recommended)
+
+```sh
+pip install ndnp_openocr --index-url https://gitlab-ci-token:<your_personal_token>@git.loc.gov/api/v4/projects/2983/packages/pypi/simple
+```
+
+### From scratch
 These will need to be installed using virtualenv and python3.8 in the target VM environment.
 * dzdo yum install -y python39
 <!-- * sudo yum install python34-devel.x86_64 -->
