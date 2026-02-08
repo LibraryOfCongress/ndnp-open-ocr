@@ -13,6 +13,3 @@ install: check-poetry
 	poetry build
 	pip install --force-reinstall dist/ndnp_openocr-*-py3-none-any.whl
 	@echo "CLI ready. Run: ndnp_openocr --help"
-
-clean:
-	rm -rf dist *.egg-info
