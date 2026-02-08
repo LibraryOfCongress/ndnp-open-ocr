@@ -4,35 +4,29 @@ This command line interface (CLI) enables you to trigger batch processing jobs o
 
 ## Test Commands to Run Presently:
 
-Authenticate with AWS through Idaptive:
+Authenticate with AWS via SSO (replace placeholders):
 
 ```sh
-idaptive-aws-cli-login -u dpeterson -t loc.my.idaptive.app -r us-east-2\
+aws sso login --profile <aws-profile> --region <aws-region>
 ```
 
 To kickoff batch processing job
 ```sh
-python cli.py reprocess --batch_name=notvalidated_orig \
-  --bucket=ndnp-open-ocr-output-development-deployment --segmentation
+python cli.py reprocess --batch_name=<batch_prefix_in_input_bucket> \
+  --bucket=<input_bucket_name> --segmentation
 ```
 
 To pull data down from reprocessing job:
 ```sh
-python cli.py sync --job=batch_dlc_kite_ver01__ace007e8-9643-45f2-abe1-d849d11ac8ea --output-dir=/Volumes/ExtremeSSD/batch_dlc_kite_ver04 --local-batch=/Volumes/ExtremeSSD/batch_dlc_kite_ver01
+python cli.py sync --job=<JOB_ID_FROM_REPROCESS> \
+  --output-dir=<output_dir> --local-batch=<local_batch_path>
 ```
 
-To check status of reprocessing job:
+To check status of the reprocessing job:
 
 ```sh
-python cli.py check-status --job JOB_ID (output of previous command)
+python cli.py get --job <JOB_ID_FROM_REPROCESS>
 ```
-
-To check for missing files between loc-preservation batch and S3 output for given job id:
-
-```sh
- python cli.py get-missing --job JOB_ID
-```
-
 
 
 
@@ -40,47 +34,19 @@ To check for missing files between loc-preservation batch and S3 output for give
 
 Before running the CLI, make sure that you have installed the required Python libraries listed in the accompanying `requirements.txt` file.
 
-## Installation: Using Poetry to Build and Distribute with Pip Install
+## Quick install (preferred)
 
-Poetry is a powerful packaging and dependency management tool that simplifies building and distributing Python packages. Here's how to use Poetry to manage the NDNP Open OCR package:
+Prereqs: Python 3.12+ and [Poetry](https://python-poetry.org/docs/#installation). Activate the virtualenv you want to use first; the install goes into that env (no extra Poetry venv is created).
 
-### Installing Poetry
-
-If you don't have Poetry installed, you can install it by running:
-
-```bash
-pip install poetry
+```sh
+cd packages/cli
+make install                 # poetry install + build + pip install the wheel into this env
+ndnp_openocr --help          # verify the CLI is on PATH in this shell
 ```
 
-### Building the Package
-
-Navigate to the root directory of the project (where `pyproject.toml` is located) and run:
-
-```bash
-poetry build
-```
-
-This command will create a `dist` directory containing the packaged files, ready for distribution.
-
-### Installing the Package Locally
-
-To install the package locally for testing, use:
-
-```bash
-poetry install
-```
-
-This command will install the package and its dependencies in a virtual environment managed by Poetry.
-
-### Activating the Virtual Environment
-
-To activate the virtual environment managed by Poetry, run:
-
-```bash
-poetry shell
-```
-
-This allows you to run the CLI tool in the environment automatically spun up by Poetry.
+Notes:
+- If you need to run without installing the entrypoint, you can call `python ndnp_openocr/cli.py --help` from this directory.
+- `make install` is idempotent and safe to re-run when dependencies change.
 
 ### Running the CLI Tool
 
@@ -95,7 +61,15 @@ ndnp_openocr sync --job=batch_dlc_kite_ver01_____5ce7bcad-ec0e-4978-a760-cd6d457
 
 
 
-## Installation: From Scratch
+## Installation on NDNPQR: From Scratch
+
+### Install from GitLab Package Registry (recommended)
+
+```sh
+pip install ndnp_openocr --index-url https://gitlab-ci-token:<your_personal_token>@git.loc.gov/api/v4/projects/2983/packages/pypi/simple
+```
+
+### From scratch
 These will need to be installed using virtualenv and python3.8 in the target VM environment.
 * dzdo yum install -y python39
 <!-- * sudo yum install python34-devel.x86_64 -->
