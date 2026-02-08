@@ -138,12 +138,14 @@ def handler(event, context):
             {"name": "PREFIX", "value": prefix or ""},
             {"name": "OUTPUT_PREFIX", "value": job_name},
             {"name": "USE_SEGMENTATION", "value": str(use_segmenter).lower()},
+            # Flatten batch_* under job_id for worker outputs
             {"name": "DROP_BATCH_SUBDIR", "value": "true"},
             {"name": "INPUT_GLOB", "value": worker_glob},
         ]
 
         # Preferred: URI-style envs
         if not source_uri and prefix:
+            # build default S3 source uri from discovery
             source_uri = f"s3://{bucket_name}/{prefix}"
         if not sink_uri:
             out_bucket = os.environ.get("OUTPUT_BUCKET_NAME", "")

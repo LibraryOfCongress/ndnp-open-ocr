@@ -95,7 +95,7 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
     preds = torch.from_numpy(raw)[0]
     logger.debug("Raw ONNX out shape: %s", raw.shape)
 
-    # 4) NMS
+    # 4) NMS - iou_thres=0.40 balances detection coverage with overlap suppression.
     if backend == "yolo":
         det = non_max_suppression(preds, conf_thres=0.01, iou_thres=0.40)
     elif backend == "yolov8":
