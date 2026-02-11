@@ -24,6 +24,7 @@ def initialize_config():
         "OUTPUT_BUCKET_NAME": config.OUTPUT_BUCKET_NAME,
         "SCHEDULER_ARN": config.SCHEDULER_ARN,
         "GET_JOB_ARN": config.GET_JOB_ARN,
+        "LIST_KEYS_ARN": config.LIST_KEYS_ARN,
     }
     # Load other config values from keyring as needed
     for key in CONFIG_KEYS:
@@ -287,11 +288,119 @@ def reprocess(ctx, batch_name: str, bucket: str, segmentation: bool, img_extensi
     ctx = reprocess_batch(ctx, batch_name, bucket, segmentation, img_extension)
 
 
+@click.command(name="list_keys")
+@click.option(
+    "--batch-name",
+    multiple=True,
+    help="S3 prefix (batch name) to list keys for. Can be specified multiple times for multiple batches.",
+)
+@click.option(
+    "--bucket",
+    default="loc-preservation",
+    help="The S3 bucket that the batch(es) are located in.",
+)
+@click.option(
+    "--output-bucket",
+    default=None,
+    help="S3 bucket to write the CSV to. Defaults to the configured output bucket.",
+)
+@click.option(
+    "--output-prefix",
+    default=None,
+    help="S3 prefix for the CSV output. Defaults to 'keys_exports'.",
+)
+@click.option(
+    "--sample-access-check",
+    default=0,
+    type=int,
+    help="Number of keys to sample for storage accessibility (e.g. detect archived objects).",
+)
+@click.pass_context
+def list_keys(ctx, batch_name, bucket, output_bucket, output_prefix, sample_access_check):
+    """Generate a CSV listing of all S3 object keys for one or more NDNP batches.
+
+    Invokes the list-keys Lambda function which scans the specified S3 bucket
+    and prefix(es), writes a CSV (Bucket Name, Key) to the output bucket,
+    and returns a summary with the CSV location and key counts.
+    """
+    if not batch_name:
+        print("[red]No batch name(s) provided. Use --batch-name to specify at least one batch.")
+        return
+
+    lambda_client = boto3.client(
+        "lambda",
+        region_name=config.AWS_REGION,
+        config=Config(
+            read_timeout=900,
+            connect_timeout=10,
+        ),
+    )
+
+    payload = {
+        "bucket": bucket,
+        "batches": list(batch_name),
+    }
+    if output_bucket:
+        payload["output_bucket"] = output_bucket
+    if output_prefix:
+        payload["output_prefix"] = output_prefix
+    if sample_access_check > 0:
+        payload["sample_access_check"] = sample_access_check
+
+    console = Console()
+    print(
+        f"[bold cyan]Generating CSV key listing for {len(batch_name)} batch(es) in bucket '{bucket}'..."
+    )
+
+    try:
+        response = lambda_client.invoke(
+            FunctionName=ctx.obj["config"]["LIST_KEYS_ARN"],
+            InvocationType="RequestResponse",
+            Payload=json.dumps(payload).encode("utf-8"),
+        )
+
+        response_payload = json.loads(response["Payload"].read())
+        status_code = response_payload.get("statusCode", 0)
+        body = json.loads(response_payload.get("body", "{}"))
+
+        if status_code == 200:
+            print(f"\n[green]{body.get('message', 'Export complete.')}")
+            print(f"\n[bold]CSV location:[/bold] {body.get('csv_s3_uri', 'N/A')}")
+            print(f"[bold]Total keys:[/bold] {body.get('total_keys', 'N/A')}")
+
+            per_prefix = body.get("per_prefix_counts", [])
+            if per_prefix:
+                print("\n[bold]Per-prefix counts:[/bold]")
+                for entry in per_prefix:
+                    print(f"  {entry.get('prefix', '?')}: {entry.get('count', 0)} keys")
+
+            sample = body.get("sample_access", [])
+            if sample:
+                print("\n[bold]Sample access check:[/bold]")
+                console.print_json(json.dumps(sample, indent=2))
+
+            # Download the CSV from S3 to the current directory
+            s3_bucket = body.get("output_bucket")
+            s3_key = body.get("output_key")
+            if s3_bucket and s3_key:
+                local_filename = os.path.basename(s3_key)
+                print(f"\n[bold cyan]Downloading CSV to ./{local_filename}...")
+                s3_client = boto3.client("s3", region_name=config.AWS_REGION)
+                s3_client.download_file(s3_bucket, s3_key, local_filename)
+                print(f"[green]CSV saved to ./{local_filename}")
+        else:
+            print(f"[red]Lambda returned status {status_code}: {body}")
+
+    except Exception as e:
+        print(f"[red]Failed to invoke list-keys Lambda: {e}")
+
+
 cli.add_command(sync)
 cli.add_command(reprocess)
 cli.add_command(get)
 cli.add_command(job_info)
 cli.add_command(delete)
+cli.add_command(list_keys)
 
 if __name__ == "__main__":
     cli()
