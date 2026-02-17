@@ -1,3 +1,4 @@
+import re
 import boto3
 import click
 import requests
@@ -287,46 +288,45 @@ def reprocess(ctx, batch_name: str, bucket: str, segmentation: bool, img_extensi
         return
     ctx = reprocess_batch(ctx, batch_name, bucket, segmentation, img_extension)
 
+# TODO: Combine this S3 prefix matching to single function in CLI to remove backend
+# dependence on LOC.
+def _resolve_batch_prefix(batch_name: str, bucket: str) -> str:
+    """Build the full S3 prefix for a batch, matching the scheduler's path logic.
+
+    For the loc-preservation bucket, batches live under
+    loc-preservation/lcbp/ndnp/<dir_code>/<batch_name>/.
+    For other buckets the batch name is used directly.
+    """
+    if bucket != "loc-preservation":
+        return batch_name
+
+    code_to_dir = {"lc": "loc", "vi": "vi", "va": "vi", "lv": "vi"}
+    m = re.search(r"batch[_-]([a-zA-Z]+)_", batch_name)
+    if m:
+        code = m.group(1).lower()
+    else:
+        m = re.match(r"([a-zA-Z]+)_", batch_name)
+        code = m.group(1).lower() if m else batch_name
+    dir_code = code_to_dir.get(code, code)
+
+    return os.path.join("lcbp/ndnp", dir_code, batch_name)
+
 
 @click.command(name="list_keys")
-@click.option(
-    "--batch-name",
-    multiple=True,
-    help="S3 prefix (batch name) to list keys for. Can be specified multiple times for multiple batches.",
-)
+@click.argument("batch_name", nargs=-1, required=True)
 @click.option(
     "--bucket",
     default="loc-preservation",
     help="The S3 bucket that the batch(es) are located in.",
 )
-@click.option(
-    "--output-bucket",
-    default=None,
-    help="S3 bucket to write the CSV to. Defaults to the configured output bucket.",
-)
-@click.option(
-    "--output-prefix",
-    default=None,
-    help="S3 prefix for the CSV output. Defaults to 'keys_exports'.",
-)
-@click.option(
-    "--sample-access-check",
-    default=0,
-    type=int,
-    help="Number of keys to sample for storage accessibility (e.g. detect archived objects).",
-)
 @click.pass_context
-def list_keys(ctx, batch_name, bucket, output_bucket, output_prefix, sample_access_check):
+def list_keys(ctx, batch_name, bucket):
     """Generate a CSV listing of all S3 object keys for one or more NDNP batches.
 
     Invokes the list-keys Lambda function which scans the specified S3 bucket
     and prefix(es), writes a CSV (Bucket Name, Key) to the output bucket,
     and returns a summary with the CSV location and key counts.
     """
-    if not batch_name:
-        print("[red]No batch name(s) provided. Use --batch-name to specify at least one batch.")
-        return
-
     lambda_client = boto3.client(
         "lambda",
         region_name=config.AWS_REGION,
@@ -336,17 +336,12 @@ def list_keys(ctx, batch_name, bucket, output_bucket, output_prefix, sample_acce
         ),
     )
 
+    resolved = [_resolve_batch_prefix(b, bucket) for b in batch_name]
+
     payload = {
         "bucket": bucket,
-        "batches": list(batch_name),
+        "batches": resolved,
     }
-    if output_bucket:
-        payload["output_bucket"] = output_bucket
-    if output_prefix:
-        payload["output_prefix"] = output_prefix
-    if sample_access_check > 0:
-        payload["sample_access_check"] = sample_access_check
-
     console = Console()
     print(
         f"[bold cyan]Generating CSV key listing for {len(batch_name)} batch(es) in bucket '{bucket}'..."
@@ -373,11 +368,6 @@ def list_keys(ctx, batch_name, bucket, output_bucket, output_prefix, sample_acce
                 print("\n[bold]Per-prefix counts:[/bold]")
                 for entry in per_prefix:
                     print(f"  {entry.get('prefix', '?')}: {entry.get('count', 0)} keys")
-
-            sample = body.get("sample_access", [])
-            if sample:
-                print("\n[bold]Sample access check:[/bold]")
-                console.print_json(json.dumps(sample, indent=2))
 
             # Download the CSV from S3 to the current directory
             s3_bucket = body.get("output_bucket")

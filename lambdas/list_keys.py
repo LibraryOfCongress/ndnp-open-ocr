@@ -3,6 +3,7 @@ import csv
 import json
 import time
 import uuid
+import random
 import logging
 import boto3
 from botocore.exceptions import ClientError
@@ -16,13 +17,10 @@ logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 s3 = boto3.client("s3")
 
 
-def _iter_keys(bucket: str, prefix: str, suffix: str | None = None):
+def _iter_keys(bucket: str, prefix: str):
     paginator = s3.get_paginator("list_objects_v2")
     for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
         for obj in page.get("Contents", []) if page else []:
-            key = obj.get("Key")
-            if suffix and key and not key.endswith(suffix):
-                continue
             yield {
                 "Key": key,
                 "Size": obj.get("Size"),
@@ -35,8 +33,8 @@ def _iter_keys(bucket: str, prefix: str, suffix: str | None = None):
 
 
 def _sample_access(bucket: str, keys: list[str], n: int = 5):
-    """Try a 1-byte range GET on up to first N keys to detect archived storage."""
-    sample = keys[: max(0, min(n, len(keys)))]
+    """Try a 1-byte range GET on up to N randomly-selected keys to detect archived storage."""
+    sample = random.sample(keys, min(n, len(keys))) if keys else []
     out = []
     for key in sample:
         info = {"Key": key}
@@ -168,7 +166,6 @@ def handler(event, context):
         logger.error("No prefixes provided after normalization")
         return {"statusCode": 400, "body": json.dumps("Missing prefix or batches.")}
 
-    # Always list all files; ignore any provided suffix filters
     suffix = None
     sample_n = int(
         (query.get("sample_access_check") if query else None)
@@ -205,7 +202,7 @@ def handler(event, context):
     tmp_path = f"/tmp/{export_name}"
 
     total = 0
-    first_keys = []
+    tif_keys = []
     per_prefix_counts = []
 
     with open(tmp_path, "w", newline="") as f:
@@ -215,16 +212,17 @@ def handler(event, context):
         for p in prefixes:
             logger.info("Listing keys: bucket=%s prefix=%s", input_bucket, p)
             cnt = 0
-            for obj in _iter_keys(input_bucket, p, suffix):
-                if len(first_keys) < 25:
-                    first_keys.append(obj["Key"])
-                writer.writerow([input_bucket, obj.get("Key")])
+            for obj in _iter_keys(input_bucket, p):
+                key = obj.get("Key")
+                writer.writerow([input_bucket, key])
                 cnt += 1
                 total += 1
+                if key and key.lower().endswith(".tif"):
+                    tif_keys.append(key)
             per_prefix_counts.append({"prefix": p, "count": cnt})
             logger.info("Found %d keys under prefix %s", cnt, p)
 
-    sample_info = _sample_access(input_bucket, first_keys, sample_n) if sample_n > 0 else []
+    sample_info = _sample_access(input_bucket, tif_keys, sample_n) if sample_n > 0 else []
     if sample_info:
         logger.info("Sample access check results: %s", sample_info)
     logger.info("Total keys written: %d", total)
