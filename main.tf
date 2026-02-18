@@ -42,6 +42,13 @@ module "batch" {
 }
 
 output "ecr_repo_url" {
-  value       = module.batch.repository_url
-  description = "The URI of the ECR repository for Docker images"
+  value = module.batch.repository_url
+}
+
+output "output_bucket" {
+  value = module.s3.bucket_name
+}
+
+output "get_job_lambda_arn" {
+  value = module.lambda.get_job_function_invoke_arn
 }

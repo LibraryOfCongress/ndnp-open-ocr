@@ -54,12 +54,18 @@ def is_valid_image(input_file_path):
 def get_file_list():
     """List items using the configured source URI (or legacy S3 fallback)."""
     src_uri = os.getenv("SOURCE_URI") or env_source_fallback()
-    # Case-insensitive match for .tif/.TIF files so array size matches scheduler discovery
+     # Case-insensitive match for image (.tif/.jp2) files so array size matches scheduler discovery
     pattern = os.getenv("INPUT_GLOB") or "**/*.[tT][iI][fF]"
     return src_uri, list_source_items(src_uri, pattern)
 
 
 def download_input_local(src_uri, rel_path, temp_dir):
+    """Download input file, falling back to JP2 if TIF is corrupt.
+
+    Returns:
+        tuple: (local_path, jp2_fallback) where jp2_fallback is True only if
+               a TIF was requested but JP2 was used due to corruption.
+    """
     path = fetch_item(src_uri, rel_path, temp_dir)
     # If the .tif is corrupt or missing, try fetching the .jp2 from source
     if path.lower().endswith(".tif") and not is_valid_image(path):
@@ -67,10 +73,10 @@ def download_input_local(src_uri, rel_path, temp_dir):
         rel_jp2 = root + ".jp2"
         try:
             jp2_path = fetch_item(src_uri, rel_jp2, temp_dir)
-            return jp2_path
+            return jp2_path, True  # JP2 used as fallback
         except Exception:
             pass
-    return path
+    return path, False  # No fallback needed
 
 
 def upload_outputs_local(sink_uri, output_dir: str, rel_dir: str) -> None:
@@ -101,9 +107,7 @@ def record_tesseract_version_local(sink_uri):
 
 def process_item(src_uri, sink_uri, rel_path):
     with tempfile.TemporaryDirectory() as temp_dir:
-        input_file_path = download_input_local(src_uri, rel_path, temp_dir)
-
-        jp2_used = input_file_path.endswith(".jp2")
+        input_file_path, jp2_fallback = download_input_local(src_uri, rel_path, temp_dir)
 
         # Process the file and generate OCR output
         output_path = os.path.join(temp_dir, "output")
@@ -134,8 +138,9 @@ def process_item(src_uri, sink_uri, rel_path):
         rel_dir = build_output_rel_dir(src_uri, rel_path)
         upload_outputs_local(sink_uri, output_path, rel_dir)
 
-        if jp2_used:
-            logging.info(f"JP2 was used instead of TIF for {rel_path}.")
+        if jp2_fallback:
+            # Only log fallback message when TIF was requested but JP2 was used due to corruption
+            logging.info(f"JP2 was used as fallback (TIF was invalid) for {rel_path}.")
             sys.exit(EXIT_CODE_JP2_FALLBACK)
         else:
             logging.info(f"File processed successfully: {rel_path}")

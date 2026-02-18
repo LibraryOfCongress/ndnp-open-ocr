@@ -11,7 +11,7 @@ cd packages/cli
 make install
 ```
 
-Verify: `ndnp_openocr --help`
+Run commands from the same shell: `ndnp_openocr --help`.
 
 ## Configure
 

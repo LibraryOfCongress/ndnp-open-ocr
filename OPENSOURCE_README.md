@@ -30,10 +30,6 @@ We are sharing this pipeline to advance a core objective of the NDNP: improving 
 
 For questions or support, contact NDNP staff at the Library of Congress (ndnptech@loc.gov).
 
-
-## ----------
-
-
 ## Quick Start (Open-Source Guide for Developers)
 This document captures the pieces that matter most when running **NDNP-Open-OCR** outside of the Library of Congress network. It focuses on the local developer loop, the AWS deployment path, and the CLI workflow used to orchestrate OCR jobs.
 
@@ -82,15 +78,17 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
    These values control resource naming/isolation and the tagging container image used by openocr
 
 ### 3. Provision infrastructure:
+   Run `make check-env` to verify your `.env` values and TF_VAR exports before running Terraform.
+
    If this a **fresh install in a new AWS account** (ie. you are not using an existing Terraform state)
    1. **Update the Terraform backend configuration**
       Configure the backend to use an **s3 bucket and key** owned by this AWS account.
       You may do this in **one of two ways**:
-      **Option A - Edit the backend configuration in code** 
+      **Option A - Edit the backend configuration in code**
       Update `backend "s3" configuration to point to the correct bucket and key for this account.
       **Option B - Override the backends at initilization time**
-      Supply backend values using `-backend-config` during initialization. 
-      
+      Supply backend values using `-backend-config` during initialization.
+
    2. **Initialize Terraform**
    ```bash
    terraform init --reconfigure
@@ -105,17 +103,17 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
       ```
 
    the `--reconfigure` ensures Terraform does not attempt to read or migrate an existing remote state. If this not a new AWS account, ommit the `--reconfigure` flag.
-   
+
    3. **Review and apply the plan**
    ```bash
       terraform plan
       terraform apply
    ```
-   
+
    4. **Build fargate image for ndnp openocr**
       1. **Update Makefile variables**
          * AWS Account ID
-         * region 
+         * region
          * Any other environment-specific values
 
       2. **Build and push image**
@@ -123,18 +121,20 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
             make build_fargate  # This takes about 15 minutes
             make push_fargate
          ```
-  
+
 ### 4. Wire the CLI to your deployment
  By editing `packages/cli/ndnp_openocr/config.py` (bucket name + Lambda ARNs). If you publish the CLI, regenerate this file per environment or inject it during your build.
-5. **Install the CLI**:
+5. **Install the CLI** (from the repository root):
    ```bash
-   cd packages/cli
-   make install   # poetry install + build + pip install the wheel into this env
+   make install-cli
    ```
-5. **Run jobs end-to-end**:
+6. **Run jobs end-to-end** (from the repository root):
    ```bash
-   # Kick off a Batch-backed OCR job
+   # Kick off a Batch-backed OCR job (processes TIF files by default)
    ndnp_openocr reprocess --batch_name <batch_prefix_in_input_bucket> --bucket <input_bucket_name> --segmentation
+
+   # To process JP2 files instead of TIF
+   ndnp_openocr reprocess --batch_name <batch_prefix_in_input_bucket> --bucket <input_bucket_name> --img-extension=jp2
 
    # Poll for status
    ndnp_openocr get --job JOB_ID
@@ -149,6 +149,7 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
    - `batch_name` is the prefix of the batch in the input bucket you want to reprocess.
    - `bucket` is the S3 bucket containing that batch.
    - `--segmentation` enables the AmericanStories segmentation model for improved layout detection (omit to use baseline Tesseract layout).
+   - `--img-extension` specifies the image file type to process: `tif` (default) or `jp2`.
 
 ## AmericanStories Assets (optional)
 
@@ -170,12 +171,14 @@ Deploy into a dedicated AWS account or VPC to keep costs and permissions isolate
 
 ## Deployment Details
 
-1. Set Terraform variables via `terraform.tfvars`, environment variables, or `-var` flags (e.g., `s3_bucket_name`, `env`, backend bucket/key).
+1. Configure `.env` (see `.env.example`) and run `make check-env` to verify values. Terraform picks up `TF_VAR_*` exports from `.env` via the Makefile.
 2. Run `terraform init/plan/apply` as shown above.
 3. Build the Batch container image (`make build-ocr-image` or `docker build ...`) and push it to your registry for the target environment.
 4. Update any automation or CI pipelines to inject the correct `ndnp_openocr/config.py` before building the CLI.
 
 ## CLI Reference
+
+**Note:** Run all CLI commands from the repository root directory where `.env` is located.
 
 `ndnp_openocr` exposes the following commands:
 

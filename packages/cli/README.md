@@ -45,7 +45,6 @@ ndnp_openocr --help          # verify the CLI is on PATH in this shell
 ```
 
 Notes:
-- If you need to run without installing the entrypoint, you can call `python ndnp_openocr/cli.py --help` from this directory.
 - `make install` is idempotent and safe to re-run when dependencies change.
 
 ### Running the CLI Tool

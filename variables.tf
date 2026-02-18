@@ -21,3 +21,4 @@ variable "batch_image_tag" {
   type        = string
   default     = "opensource1.1"
 }
+
