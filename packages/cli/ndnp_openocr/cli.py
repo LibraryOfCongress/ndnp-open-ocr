@@ -277,7 +277,8 @@ def job_info(ctx):
 )
 @click.option(
     "--img-extension",
-    default=None,
+    default="tif",
+    type=click.Choice(["jp2", "tif"], case_sensitive=False),
     help="Image file extension to process: 'jp2' or 'tif' (default: tif).",
 )
 @click.pass_context

@@ -26,6 +26,16 @@ def handler(event, context):
         array_size_override = event["queryStringParameters"].get("array_size")
         # Optional: image extension (e.g., "jp2" or "tif" - defaults to "tif")
         img_extension = event["queryStringParameters"].get("img_extension")
+
+    VALID_IMG_EXTENSIONS = {"jp2", "tif"}
+    if img_extension and img_extension.lower() not in VALID_IMG_EXTENSIONS:
+        msg = f"Invalid img_extension '{img_extension}'. Must be one of: {', '.join(sorted(VALID_IMG_EXTENSIONS))}"
+        logger.error(msg)
+        return {
+            "statusCode": 400,
+            "body": json.dumps(msg),
+        }
+
     logger.info(f"Use segmenter: {use_segmenter}")
 
     logger.info(f"Batch Name: {batch_name}")
