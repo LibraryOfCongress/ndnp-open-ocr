@@ -80,10 +80,10 @@ There are 3 primary components that need to be treated on an individual basis:
 
    ```bash
    # Kick off a job against an S3 batch (processes TIF files by default)
-   ndnp_openocr reprocess --batch_name=batch_example --bucket=my-ingest-bucket --segmentation
+   ndnp_openocr process --batch_name=batch_example --bucket=my-ingest-bucket --segmentation
 
    # To process JP2 files instead of TIF
-   ndnp_openocr reprocess --batch_name=batch_example --bucket=my-ingest-bucket --img-extension=jp2
+   ndnp_openocr process --batch_name=batch_example --bucket=my-ingest-bucket --img-extension=jp2
 
    # Poll for status (uses stored job id if --job omitted)
    ndnp_openocr get --job JOB_ID_FROM_REPROCESS
@@ -189,4 +189,4 @@ The pipeline will work on any subdirectories too; With that, for testing purpose
 }
 ```
 
-passing that as the "prefix" will only reprocess batches in the 1877083101 directory.
+passing that as the "prefix" will only process batches in the 1877083101 directory.

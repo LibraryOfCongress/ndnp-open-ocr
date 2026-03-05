@@ -78,6 +78,48 @@ def non_max_suppression(pred, conf_thres=0.02, iou_thres=0.45):
     return pred[keep]
 
 
+def filter_contained_boxes(boxes, crops, threshold=0.85):
+    """Drop the smaller box when two boxes overlap by >= *threshold* of the smaller's area."""
+    n = len(boxes)
+    if n <= 1:
+        return boxes, crops
+
+    areas = [(b[2] - b[0]) * (b[3] - b[1]) for b in boxes]
+    contained = set()
+
+    for i in range(n):
+        if i in contained:
+            continue
+        for j in range(i + 1, n):
+            if j in contained:
+                continue
+
+            # intersection rectangle
+            ix0, iy0 = max(boxes[i][0], boxes[j][0]), max(boxes[i][1], boxes[j][1])
+            ix1, iy1 = min(boxes[i][2], boxes[j][2]), min(boxes[i][3], boxes[j][3])
+            if ix1 <= ix0 or iy1 <= iy0:
+                continue
+
+            inter_area = (ix1 - ix0) * (iy1 - iy0)
+            smaller_area = min(areas[i], areas[j])
+            if smaller_area <= 0:
+                continue
+
+            # discard the smaller box if it's mostly covered
+            if inter_area / smaller_area >= threshold:
+                if areas[i] <= areas[j]:
+                    contained.add(i)
+                    break
+                else:
+                    contained.add(j)
+
+    if contained:
+        logger.debug("Containment filter removed %d of %d boxes", len(contained), n)
+
+    kept = [idx for idx in range(n) if idx not in contained]
+    return [boxes[i] for i in kept], [crops[i] for i in kept]
+
+
 def get_layout_predictions(session, img, input_name, backend="yolov8"):
     """
     Returns:
@@ -128,6 +170,10 @@ def get_layout_predictions(session, img, input_name, backend="yolov8"):
         if ox1 > ox0 and oy1 > oy0:
             boxes.append((ox0, oy0, ox1, oy1))
             crops.append((i, img[oy0:oy1, ox0:ox1]))
+
+    # 6) Remove boxes significantly overlapping with a larger box
+    boxes, crops = filter_contained_boxes(boxes, crops)
+
     logger.debug("Final regions: %d", len(boxes))
     return crops, boxes
 

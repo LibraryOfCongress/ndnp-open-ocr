@@ -131,10 +131,10 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
 6. **Run jobs end-to-end** (from the repository root):
    ```bash
    # Kick off a Batch-backed OCR job (processes TIF files by default)
-   ndnp_openocr reprocess --batch_name <batch_prefix_in_input_bucket> --bucket <input_bucket_name> --segmentation
+   ndnp_openocr process --batch_name <batch_prefix_in_input_bucket> --bucket <input_bucket_name> --segmentation
 
    # To process JP2 files instead of TIF
-   ndnp_openocr reprocess --batch_name <batch_prefix_in_input_bucket> --bucket <input_bucket_name> --img-extension=jp2
+   ndnp_openocr process --batch_name <batch_prefix_in_input_bucket> --bucket <input_bucket_name> --img-extension=jp2
 
    # Poll for status
    ndnp_openocr get --job JOB_ID
@@ -146,7 +146,7 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
    ```
    Clean up with `ndnp_openocr delete --job-id JOB_ID --output-dir /path/to/output_batch` when you are finished.
    Notes:
-   - `batch_name` is the prefix of the batch in the input bucket you want to reprocess.
+   - `batch_name` is the prefix of the batch in the input bucket you want to process.
    - `bucket` is the S3 bucket containing that batch.
    - `--segmentation` enables the AmericanStories segmentation model for improved layout detection (omit to use baseline Tesseract layout).
    - `--img-extension` specifies the image file type to process: `tif` (default) or `jp2`.
@@ -184,7 +184,7 @@ Deploy into a dedicated AWS account or VPC to keep costs and permissions isolate
 
 | Command    | Description |
 |------------|-------------|
-| `reprocess` | Invoke the scheduler Lambda to submit an AWS Batch array job. |
+| `process` | Invoke the scheduler Lambda to submit an AWS Batch array job. |
 | `get`       | Fetch job status JSON from the get-job Lambda. |
 | `sync`      | Merge Batch outputs from S3 into a local batch folder. |
 | `delete`    | Remove job outputs from S3 and/or local disk. |
