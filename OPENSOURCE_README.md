@@ -2,7 +2,7 @@
 
 **NDNP-Open-OCR** is an open-source pipeline developed by the Library of Congress to reprocess and improve the quality of Optical Character Recognition (OCR) text from digitized historical newspapers.
 
-This software is designed to work specifically with data produced under the National Digital Newspaper Program (NDNP) technical specification. NDNP is a collaborative partnership involving the National Endowment for the Humanities (NEH), the Library of Congress, and various participating institutions, all of which contribute to the Chronicling America Historic Newspaper website.
+This software is designed to work specifically with data produced under the [National Digital Newspaper Program (NDNP)](https://www.loc.gov/ndnp/) technical specification. NDNP is a collaborative partnership involving the National Endowment for the Humanities (NEH), the Library of Congress, and various participating institutions, all of which contribute to the [Chronicling America Historic Newspaper](https://www.loc.gov/collections/chronicling-america/about-this-collection/) website. Library of Congress staff have added NDNP data processed with this pipeline to Chronicling America since 2024.
 
 
 ## What does the **NDNP-Open-OCR** pipeline do?
