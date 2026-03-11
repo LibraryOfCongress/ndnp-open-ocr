@@ -17,19 +17,14 @@ In no way are the patent or trademark rights of any person affected by CC0, nor 
 Unless expressly stated otherwise, the person who associated a work with this deed makes no warranties about the work, and disclaims liability for all uses of the work, to the fullest extent permitted by applicable law. When using or citing the work, you should not imply endorsement by the author or the affirmer.
 
 Acknowledgments
-The Digital Viewer and Validator (DVV) software incorporates code from the following software applications, each without modification and entirely under their own licenses.
 
-- JHove  
-  See dvv2\\license\\JHove_License.txt
-
-- Image Magick  
-  See dvv2\\lib\\ImageMagick-7\\LICENSE.txt
-
-Additional Acknowledgments
-This project bundles or depends on additional third-party components (see NOTICE and THIRD_PARTY_NOTICES.md for full license texts), including:
+NDNP Open OCR software incorporates code from the following software applications, each without modification and entirely under their own licenses.
 
 - Tesseract OCR
 - Leptonica
 - Ghostscript
 - QPDF
 - ExifTool
+- American Stories
+
+In addition, NDNP Open OCR relies on the open-source Python requirements listed in requirements.txt and pyproject.toml. For an exhaustive review of dependencies installed in NDNP Open OCR's docker image (runtime environment) please see packages/ndnp_open_ocr/Dockerfile.
