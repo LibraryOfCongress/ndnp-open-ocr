@@ -22,7 +22,7 @@ def _iter_keys(bucket: str, prefix: str):
     for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
         for obj in page.get("Contents", []) if page else []:
             yield {
-                "Key": key,
+                "Key": obj.get("Key"),
                 "Size": obj.get("Size"),
                 "LastModified": obj.get("LastModified").isoformat()
                 if obj.get("LastModified")
