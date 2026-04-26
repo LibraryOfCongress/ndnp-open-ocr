@@ -15,7 +15,8 @@ from datetime import datetime
 import re
 from tempfile import NamedTemporaryFile
 import xml.sax.saxutils as saxutils
-from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls 
+from ndnp_open_ocr.alto import renumber_alto_ids
+from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
 from PIL import Image
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
@@ -41,44 +42,6 @@ def get_page(tree: ET.ElementTree, NS: dict) -> ET.Element:
     if page is None:
         raise RuntimeError("No <alto:Page> element found.")
     return page
-
-
-def renumber_alto_ids(tree: ET.ElementTree, NS: dict) -> None:
-    """
-    Assign sequential, unique IDs to all ALTO block/line/string elements.
-    Must be called any time new elements are
-    added to the tree (e.g. after gap filling).
-    """
-    root = tree.getroot()
-    ns_uri = NS["alto"]
-
-    page = tree.find(".//alto:Page", NS)
-    page_w = int(float(page.get("WIDTH", 0))) if page is not None else 1
-    x_tol = max(int(page_w * 0.06), 100)
-
-    id_specs = [
-        (f"{{{ns_uri}}}ComposedBlock",     "cblock"),
-        (f"{{{ns_uri}}}TextBlock",         "block"),
-        (f"{{{ns_uri}}}TextLine",          "line"),
-        (f"{{{ns_uri}}}String",            "string"),
-        (f"{{{ns_uri}}}Illustration",      "cblock"),
-        (f"{{{ns_uri}}}GraphicalElement",  "cblock"),
-    ]
-
-    prefix_to_elems: dict[str, list[ET.Element]] = defaultdict(list)
-    for tag, prefix in id_specs:
-        prefix_to_elems[prefix].extend(root.findall(f".//{tag}"))
-
-    for prefix, elems in prefix_to_elems.items():
-        elems.sort(
-            key=lambda el: (
-                int(el.attrib.get("HPOS", 0)) // x_tol,
-                int(el.attrib.get("VPOS", 0)),
-                int(el.attrib.get("HPOS", 0)),
-            )
-        )
-        for i, el in enumerate(elems):
-            el.set("ID", f"{prefix}_{i}")
 
 def boxes_intersect(a: tuple, b: tuple, eps: int = 0) -> bool:
     ax1, ay1, ax2, ay2 = a
@@ -466,7 +429,7 @@ class AltoProcessor:
 
         logger.info(f"[fill_gaps] appended_lines={appended_lines} appended_strings={appended_strings}")
 
-        renumber_alto_ids(composite_tree, NS)
+        renumber_alto_ids(composite_tree.getroot(), NS["alto"])
 
         composite_tree.write(composite_path, encoding="utf-8", xml_declaration=True)
         with open(composite_path, "r") as f:
