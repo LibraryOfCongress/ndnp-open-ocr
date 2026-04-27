@@ -1067,7 +1067,13 @@ class OCRProcessor:
 
                 for idx, (rid, crop) in enumerate(crops):
                     logging.debug("OCRing region %s", rid)
-                    xml = pytesseract.image_to_alto_xml(crop)
+                    # PSM 6 (uniform block of text). The default PSM 3 runs
+                    # Tesseract's auto page segmenter on each per-region crop,
+                    # which is redundant with the AmericanStories segmentation
+                    # we already did and causes multiple words to be picked up 
+                    # as a single word in some cases, causing layout issues and lack 
+                    # of <sp> elements in the ALTO.
+                    xml = pytesseract.image_to_alto_xml(crop, config="--psm 6")
                     xml_path = os.path.join(regions_dir, f"region_{rid}.xml")
                     with open(xml_path, "wb") as f:
                         f.write(xml)
