@@ -1,12 +1,13 @@
-from collections import defaultdict
 import os
 import sys
 import logging
 import cv2
 import numpy as np
- 
+
 import xml.etree.ElementTree as ET
 import copy
+
+from ndnp_open_ocr.alto import NS_ALTO, NS_XSI, renumber_alto_ids
  
 
 
@@ -34,8 +35,6 @@ from effocr.engines.yolov8_ops import non_max_suppression as nms_yolov8
 layout_model_path = os.path.join(
     REPO_ROOT, "american_stories_models", "layout_model_new.onnx"
 )
-NS_ALTO = "http://www.loc.gov/standards/alto/ns-v3#"
-NS_XSI = "http://www.w3.org/2001/XMLSchema-instance"
 cv2.setNumThreads(0)
 
 # ----------------------------------------------------------------------
@@ -331,32 +330,9 @@ def merge_alto_region_xmls(source_image_path: str,
             ps.append(child_copy)
 
     # ------------------------------------------------------------
-    # 6)  Renumber IDs using *the same* sort rule
+    # 6)  Renumber IDs
     # ------------------------------------------------------------
-    id_specs = [
-        (f"{{{NS_ALTO}}}ComposedBlock", "cblock"),
-        (f"{{{NS_ALTO}}}TextBlock",    "block"),
-        (f"{{{NS_ALTO}}}TextLine",     "line"),
-        (f"{{{NS_ALTO}}}String",       "string"),
-        (f"{{{NS_ALTO}}}Illustration","cblock"),
-        (f"{{{NS_ALTO}}}GraphicalElement","cblock"),
-    ]
-
-    prefix_to_elems = defaultdict(list)
-    for tag, prefix in id_specs:
-        elems = root.findall(f".//{tag}")
-        prefix_to_elems[prefix].extend(elems)
-
-    for prefix, all_elems in prefix_to_elems.items():
-        all_elems.sort(
-            key=lambda el: (
-                int(el.attrib.get("HPOS", 0)) // X_TOL,
-                int(el.attrib.get("VPOS", 0)),
-                int(el.attrib.get("HPOS", 0)),
-            )
-        )
-        for i, el in enumerate(all_elems):
-            el.set("ID", f"{prefix}_{i}")
+    renumber_alto_ids(root, NS_ALTO)
 
     # ------------------------------------------------------------
     # 7)  Write merged ALTO

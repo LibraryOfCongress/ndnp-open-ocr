@@ -15,7 +15,8 @@ from datetime import datetime
 import re
 from tempfile import NamedTemporaryFile
 import xml.sax.saxutils as saxutils
-from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls 
+from ndnp_open_ocr.alto import renumber_alto_ids
+from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
 from PIL import Image
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
@@ -427,6 +428,8 @@ class AltoProcessor:
                 target_block.set("HEIGHT", str(max(1, ny2 - ny1)))
 
         logger.info(f"[fill_gaps] appended_lines={appended_lines} appended_strings={appended_strings}")
+
+        renumber_alto_ids(composite_tree.getroot(), NS["alto"])
 
         composite_tree.write(composite_path, encoding="utf-8", xml_declaration=True)
         with open(composite_path, "r") as f:
@@ -1064,7 +1067,13 @@ class OCRProcessor:
 
                 for idx, (rid, crop) in enumerate(crops):
                     logging.debug("OCRing region %s", rid)
-                    xml = pytesseract.image_to_alto_xml(crop)
+                    # PSM 6 (uniform block of text). The default PSM 3 runs
+                    # Tesseract's auto page segmenter on each per-region crop,
+                    # which is redundant with the AmericanStories segmentation
+                    # we already did and causes multiple words to be picked up 
+                    # as a single word in some cases, causing layout issues and lack 
+                    # of <sp> elements in the ALTO.
+                    xml = pytesseract.image_to_alto_xml(crop, config="--psm 6")
                     xml_path = os.path.join(regions_dir, f"region_{rid}.xml")
                     with open(xml_path, "wb") as f:
                         f.write(xml)
