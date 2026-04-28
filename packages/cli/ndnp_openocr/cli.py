@@ -5,6 +5,7 @@ import requests
 from .helpers import sync_s3_batch
 from rich import print
 from rich.console import Console
+from rich.table import Table
 import json
 import time
 import logging
@@ -72,11 +73,31 @@ def process_batch(ctx, batch_name: str, bucket: str, segmentation: bool, img_ext
         )
 
         response_payload = json.loads(response["Payload"].read())
-        print(response_payload)
+        status_code = response_payload.get("statusCode", 0)
+        body = json.loads(response_payload.get("body", "{}"))
 
-        body = json.loads(response_payload["body"])
+        if status_code == 409:
+            # Batch is in cold storage
+            print(f"\n[bold red]ERROR: {body.get('error', 'Batch is in cold storage')}")
+            print(f"[red]{body.get('detail', '')}")
+            sampled = body.get("sampled", [])
+            if sampled:
+                table = Table(title="Sampled TIF Storage Classes")
+                table.add_column("Key", style="cyan", no_wrap=False)
+                table.add_column("Storage Class", style="bold")
+                for entry in sampled:
+                    key = entry.get("Key", "")
+                    storage = entry.get("StorageClass", "UNKNOWN")
+                    style = "red" if storage in ("GLACIER", "DEEP_ARCHIVE") else "green"
+                    table.add_row(key.split("/")[-1], f"[{style}]{storage}")
+                Console().print(table)
+            return ctx
+
+        if status_code != 200:
+            print(f"[red]Scheduler returned status {status_code}: {body}")
+            return ctx
+
         job_id = body["job"]
-
         keyring.set_password("ndnp_openocr", "job_id", job_id)
 
         print(
@@ -320,8 +341,14 @@ def _resolve_batch_prefix(batch_name: str, bucket: str) -> str:
     default="loc-preservation",
     help="The S3 bucket that the batch(es) are located in.",
 )
+@click.option(
+    "--storage-class",
+    is_flag=True,
+    default=False,
+    help="Include StorageClass column in the CSV output.",
+)
 @click.pass_context
-def list_keys(ctx, batch_name, bucket):
+def list_keys(ctx, batch_name, bucket, storage_class):
     """Generate a CSV listing of all S3 object keys for one or more NDNP batches.
 
     Invokes the list-keys Lambda function which scans the specified S3 bucket
@@ -342,6 +369,8 @@ def list_keys(ctx, batch_name, bucket):
     payload = {
         "bucket": bucket,
         "batches": resolved,
+        "sample_access_check": 5,
+        "include_storage_class": storage_class,
     }
     console = Console()
     print(
@@ -356,6 +385,19 @@ def list_keys(ctx, batch_name, bucket):
         )
 
         response_payload = json.loads(response["Payload"].read())
+
+        # Check for Lambda execution errors (unhandled exceptions, timeouts, etc.)
+        if response.get("FunctionError"):
+            error_msg = response_payload.get("errorMessage", "Unknown error")
+            error_type = response_payload.get("errorType", "Unknown")
+            print(f"[red]Lambda execution failed ({error_type}): {error_msg}")
+            trace = response_payload.get("stackTrace")
+            if trace:
+                print("[red]Stack trace:")
+                for line in trace:
+                    print(f"[red]  {line}")
+            return
+
         status_code = response_payload.get("statusCode", 0)
         body = json.loads(response_payload.get("body", "{}"))
 
@@ -379,6 +421,25 @@ def list_keys(ctx, batch_name, bucket):
                 s3_client = boto3.client("s3", region_name=config.AWS_REGION)
                 s3_client.download_file(s3_bucket, s3_key, local_filename)
                 print(f"[green]CSV saved to ./{local_filename}")
+
+            sample_access = body.get("sample_access", [])
+            if sample_access:
+                table = Table(title=f"Storage class sample ({len(sample_access)} random TIFs)")
+                table.add_column("Key", style="cyan", no_wrap=False)
+                table.add_column("Storage Class", style="bold")
+                table.add_column("Accessible", style="bold")
+                for entry in sample_access:
+                    key = entry.get("Key", "")
+                    storage = entry.get("StorageClass") or "STANDARD"
+                    accessible = entry.get("Accessible", False)
+                    error = entry.get("ErrorCode", "")
+                    if "GLACIER" in storage.upper() or "DEEP" in storage.upper():
+                        sc_style = "red"
+                    else:
+                        sc_style = "green"
+                    acc_str = f"[green]Yes" if accessible else f"[red]No ({error})" if error else "[red]No"
+                    table.add_row(key.split("/")[-1], f"[{sc_style}]{storage}", acc_str)
+                Console().print(table)
         else:
             print(f"[red]Lambda returned status {status_code}: {body}")
 
