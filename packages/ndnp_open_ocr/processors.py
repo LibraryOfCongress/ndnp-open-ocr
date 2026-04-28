@@ -491,7 +491,7 @@ class AltoProcessor:
         processing_software.append(software_name)
 
         software_version = self.soup.new_tag("softwareVersion")
-        software_version.string = "1.1"
+        software_version.string = "1.2.0"
         processing_software.append(software_version)
 
         application_description = self.soup.new_tag("applicationDescription")
