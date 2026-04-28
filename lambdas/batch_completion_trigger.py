@@ -66,7 +66,7 @@ def handler(event, context):
         "job_name": job_name,
         "batch_name": batch_name,
         "created": current_date,
-        "ndnp_open_ocr_version": "1.1",
+        "ndnp_open_ocr_version": os.environ.get("NDNP_OPEN_OCR_VERSION", "unknown"),
         "tesseract_version": tesseract_version,
         "status": status_value,
         "summary": {

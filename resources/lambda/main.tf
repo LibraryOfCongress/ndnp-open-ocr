@@ -4,6 +4,16 @@ data "archive_file" "zip" {
   output_path = var.output_path
 }
 
+# Single source of truth for the package version. The Lambda stamps this into
+# job result JSON so the version reported matches the deployed Python package.
+# Pulled from packages/ndnp_open_ocr/__init__.py's __version__ constant.
+locals {
+  ndnp_open_ocr_version = regex(
+    "__version__\\s*=\\s*\"([^\"]+)\"",
+    file("${path.module}/../../packages/ndnp_open_ocr/__init__.py"),
+  )[0]
+}
+
 # Scheduler kicks of AWS Batch jobs to kick off OCR reprocessing of an entire batch.
 resource "aws_lambda_function" "scheduler_function" {
   function_name    = "ndnp-open-ocr-scheduler-lambda-function-${var.env}"
@@ -142,8 +152,9 @@ resource "aws_lambda_function" "batch_completion_function" {
 
   environment {
     variables = {
-      OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
-      BATCH_QUEUE        = var.batch_job_queue
+      OUTPUT_BUCKET_NAME    = var.aws_s3_output_bucket
+      BATCH_QUEUE           = var.batch_job_queue
+      NDNP_OPEN_OCR_VERSION = local.ndnp_open_ocr_version
     }
   }
 }

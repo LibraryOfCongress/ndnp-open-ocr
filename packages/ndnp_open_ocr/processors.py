@@ -15,6 +15,7 @@ from datetime import datetime
 import re
 from tempfile import NamedTemporaryFile
 import xml.sax.saxutils as saxutils
+from ndnp_open_ocr import __version__
 from ndnp_open_ocr.alto import renumber_alto_ids
 from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
 from PIL import Image
@@ -491,7 +492,7 @@ class AltoProcessor:
         processing_software.append(software_name)
 
         software_version = self.soup.new_tag("softwareVersion")
-        software_version.string = "1.1"
+        software_version.string = __version__
         processing_software.append(software_version)
 
         application_description = self.soup.new_tag("applicationDescription")
