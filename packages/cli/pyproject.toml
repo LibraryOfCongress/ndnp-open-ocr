@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ndnp_openocr"
-version = "0.1.12"
+version = "0.1.13"
 description = ""
 authors = ["Library of Congress"]
 

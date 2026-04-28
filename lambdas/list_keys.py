@@ -166,6 +166,15 @@ def handler(event, context):
         logger.error("No prefixes provided after normalization")
         return {"statusCode": 400, "body": json.dumps("Missing prefix or batches.")}
 
+    include_storage_class = (
+        (query.get("include_storage_class") if query else None)
+        or body.get("include_storage_class", False)
+        or event.get("include_storage_class", False)
+    )
+    # Normalize truthy string values
+    if isinstance(include_storage_class, str):
+        include_storage_class = include_storage_class.lower() in ("true", "1", "yes")
+
     suffix = None
     sample_n = int(
         (query.get("sample_access_check") if query else None)
@@ -207,14 +216,20 @@ def handler(event, context):
 
     with open(tmp_path, "w", newline="") as f:
         writer = csv.writer(f)
-        # As requested: two columns: Bucket Name, Key
-        writer.writerow(["Bucket Name", "Key"])
+        if include_storage_class:
+            writer.writerow(["Bucket Name", "Key", "StorageClass"])
+        else:
+            writer.writerow(["Bucket Name", "Key"])
         for p in prefixes:
             logger.info("Listing keys: bucket=%s prefix=%s", input_bucket, p)
             cnt = 0
             for obj in _iter_keys(input_bucket, p):
                 key = obj.get("Key")
-                writer.writerow([input_bucket, key])
+                if include_storage_class:
+                    storage = obj.get("StorageClass") or "STANDARD"
+                    writer.writerow([input_bucket, key, storage])
+                else:
+                    writer.writerow([input_bucket, key])
                 cnt += 1
                 total += 1
                 if key and key.lower().endswith(".tif"):

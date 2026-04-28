@@ -1,5 +1,6 @@
 import os
 import re
+import random
 import boto3
 import json
 import uuid
@@ -141,6 +142,45 @@ def handler(event, context):
                 "statusCode": 404,
                 "body": json.dumps(msg),
             }
+
+        # Sample up to 5 random TIFs and check storage class + accessibility before submitting
+        sample_keys = random.sample(keys, min(5, len(keys)))
+        frozen_samples = []
+        for key in sample_keys:
+            info = {"Key": key}
+            try:
+                head = s3.head_object(Bucket=bucket_name, Key=key)
+                info["StorageClass"] = head.get("StorageClass") or "STANDARD"
+                # Attempt a 1-byte range GET to verify the object is actually accessible
+                # (restored DEEP_ARCHIVE objects still report DEEP_ARCHIVE in StorageClass)
+                s3.get_object(Bucket=bucket_name, Key=key, Range="bytes=0-0")
+                info["Accessible"] = True
+            except s3.exceptions.InvalidObjectState:
+                info["Accessible"] = False
+            except Exception as e:
+                error_code = getattr(e, "response", {}).get("Error", {}).get("Code", type(e).__name__)
+                if error_code == "InvalidObjectState":
+                    info["Accessible"] = False
+                else:
+                    info.setdefault("StorageClass", "UNKNOWN")
+                    info["Accessible"] = False
+                    info["Error"] = str(e)
+            frozen_samples.append(info)
+
+        inaccessible = [s for s in frozen_samples if not s.get("Accessible", False)]
+        if inaccessible:
+            msg = {
+                "error": "Batch is in frozen (Glacier) storage and cannot be processed",
+                "detail": f"{len(inaccessible)} of {len(frozen_samples)} sampled TIFs are inaccessible. "
+                          f"Submit a Platform Services ticket to restore the batch to standard storage and try again.",
+                "sampled": frozen_samples,
+            }
+            logger.error("Storage class check failed: %s", msg)
+            return {
+                "statusCode": 409,
+                "body": json.dumps(msg),
+            }
+        logger.info("Storage class check passed: %s", frozen_samples)
 
         job_name = os.path.split(prefix.rstrip("/"))[-1] + "__" + str(uuid.uuid4())
         array_size = len(keys)

@@ -26,7 +26,7 @@ Ensure your AWS CLI is logged in and can assume the right roles. Any standard me
 
 ## Common commands
 
-`ndnp_openocr reprocess --batch_name BATCH --bucket BUCKET --segmentation`
+`ndnp_openocr process --batch_name BATCH --bucket BUCKET --segmentation`
 : Submit a job for a batch in S3. Stores the `job_id` in your OS keyring. `BATCH` is the prefix of the batch in the input bucket; `BUCKET` is that input bucket. `--segmentation` uses the AmericanStories segmentation model for improved layout detection (omit to use baseline Tesseract layout).
 
 `ndnp_openocr get --job JOB_ID`
@@ -44,13 +44,13 @@ Ensure your AWS CLI is logged in and can assume the right roles. Any standard me
 ## Typical workflow
 
 ```sh
-ndnp_openocr reprocess --batch_name my_batch --bucket my-bucket --segmentation
+ndnp_openocr process --batch_name my_batch --bucket my-bucket --segmentation
 ndnp_openocr get                              # optional: check status (uses stored job_id)
 ndnp_openocr sync --local-batch /data/batch   --output-dir /data/batch_out
 ndnp_openocr delete --job-id JOB_ID --output-dir /data/batch_out   # cleanup when done
 ```
 
 Notes:
-- `batch_name` is the prefix in the input bucket you want to reprocess.
+- `batch_name` is the prefix in the input bucket you want to process.
 - `bucket` is the S3 bucket that holds that batch.
 - `--segmentation` enables the AmericanStories segmentation model for better layout detection; drop it to use basic Tesseract layout.

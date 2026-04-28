@@ -33,8 +33,8 @@ def initialize_config():
     return config_dict
 
 
-def reprocess_batch(ctx, batch_name: str, bucket: str, segmentation: bool, img_extension: str = None):
-    """Kicks off reprocessing job for a certain S3 NDNP batch.
+def process_batch(ctx, batch_name: str, bucket: str, segmentation: bool, img_extension: str = None):
+    """Kicks off processing job for a certain S3 NDNP batch.
 
     Parameters
     ----------
@@ -263,7 +263,7 @@ def job_info(ctx):
 @click.option(
     "--batch_name",
     default="",
-    help="The batch_name in loc-preservation bucket to reprocess.",
+    help="The batch_name in loc-preservation bucket to process.",
 )
 @click.option(
     "--bucket",
@@ -282,12 +282,12 @@ def job_info(ctx):
     help="Image file extension to process: 'jp2' or 'tif' (default: tif).",
 )
 @click.pass_context
-def reprocess(ctx, batch_name: str, bucket: str, segmentation: bool, img_extension: str):
-    """Command to kick off reprocessing job for a certain S3 NDNP batch."""
+def process(ctx, batch_name: str, bucket: str, segmentation: bool, img_extension: str):
+    """Command to kick off processing job for a certain S3 NDNP batch."""
     if not batch_name:
         print("[red]No batch_name provided. Exiting.")
         return
-    ctx = reprocess_batch(ctx, batch_name, bucket, segmentation, img_extension)
+    ctx = process_batch(ctx, batch_name, bucket, segmentation, img_extension)
 
 # TODO: Combine this S3 prefix matching to single function in CLI to remove backend
 # dependence on LOC.
@@ -387,7 +387,7 @@ def list_keys(ctx, batch_name, bucket):
 
 
 cli.add_command(sync)
-cli.add_command(reprocess)
+cli.add_command(process)
 cli.add_command(get)
 cli.add_command(job_info)
 cli.add_command(delete)
