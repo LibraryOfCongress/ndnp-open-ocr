@@ -141,19 +141,21 @@ def fetch_item(source_uri: str, rel_path: str, temp_dir: str) -> str:
 
     Also prefetch common sidecars (.jp2/.pdf/.xml) for downstream use.
     Returns the local path to the primary input (with the same extension as rel_path).
+    Raises FileNotFoundError or the underlying fsspec exception if the download fails.
     """
     root = _norm_root(source_uri)
     fs, fs_root = fsspec.core.url_to_fs(root)
-    base = fs_root.rstrip("/")
-    remote_path = base + "/" + rel_path
-    base, ext = os.path.splitext(os.path.basename(rel_path))
+    fs_base = fs_root.rstrip("/")
+    remote_path = fs_base + "/" + rel_path
+    name_base, ext = os.path.splitext(os.path.basename(rel_path))
     ext = ext or ".tif"
-    local_path = os.path.join(temp_dir, base + ext)
-    try:
-        fs.get(remote_path, local_path)
-    except Exception:
-        # Ignore and rely on sidecar prefetch/fallbacks
-        pass
+    local_path = os.path.join(temp_dir, name_base + ext)
+    fs.get(remote_path, local_path)
+    if not os.path.isfile(local_path):
+        raise FileNotFoundError(
+            f"fs.get returned without error but {local_path} was not written "
+            f"(remote: {remote_path})"
+        )
     prefetch_sidecars(fs, remote_path, temp_dir)
     return local_path
 
