@@ -15,6 +15,7 @@ from datetime import datetime
 import re
 from tempfile import NamedTemporaryFile
 import xml.sax.saxutils as saxutils
+from ndnp_open_ocr import __version__
 from ndnp_open_ocr.alto import renumber_alto_ids
 from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
 from PIL import Image
