@@ -142,9 +142,8 @@ resource "aws_lambda_function" "batch_completion_function" {
 
   environment {
     variables = {
-      OUTPUT_BUCKET_NAME    = var.aws_s3_output_bucket
-      BATCH_QUEUE           = var.batch_job_queue
-      NDNP_OPEN_OCR_VERSION = "1.2.0"
+      OUTPUT_BUCKET_NAME = var.aws_s3_output_bucket
+      BATCH_QUEUE        = var.batch_job_queue
     }
   }
 }
