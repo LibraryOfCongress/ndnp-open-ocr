@@ -163,8 +163,8 @@ def get_layout_predictions(session, img, input_name, class_names, backend="yolov
         x0, y0, x1, y1 = d[:4]
         # yolov8 detection row is [x0, y0, x1, y1, conf, class_id]; pull the
         # class so downstream OCR can pick the right Tesseract PSM per region.
-        class_id = int(d[5].item()) if len(d) > 5 else -1
-        class_name = class_names.get(class_id, f"class_{class_id}")
+        class_id = int(d[5].item())
+        class_name = class_names[class_id]
         ox0 = int((x0 - left) / r_x)
         oy0 = int((y0 - top) / r_y)
         ox1 = int((x1 - left) / r_x)
@@ -223,8 +223,8 @@ def segment_page(
         class_names = ast.literal_eval(metadata["names"])
         crops, boxes = get_layout_predictions(layout_sess, img, inp, class_names)
 
-    else:  # no model - treat the whole page as a single article-class region
-        crops = [(0, img, 0, "article")]
+    else:  # fall back to whole image
+        crops = [(0, img)]
         boxes = [(0, 0, w, h)]
 
     logger.debug("Segmented into %d regions", len(crops))
