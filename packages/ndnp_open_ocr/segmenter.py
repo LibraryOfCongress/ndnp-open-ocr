@@ -1,9 +1,9 @@
+import ast
 import os
 import sys
 import logging
 import cv2
 import numpy as np
-import ast
 
 import xml.etree.ElementTree as ET
 import copy
@@ -36,18 +36,6 @@ from effocr.engines.yolov8_ops import non_max_suppression as nms_yolov8
 layout_model_path = os.path.join(
     REPO_ROOT, "american_stories_models", "layout_model_new.onnx"
 )
-DEFAULT_LAYOUT_CLASS_NAMES = {
-    0: "article",
-    1: "author",
-    2: "cartoon_or_advertisement",
-    3: "headline",
-    4: "image_caption",
-    5: "masthead",
-    6: "newspaper_header",
-    7: "page_number",
-    8: "photograph",
-    9: "table",
-}
 cv2.setNumThreads(0)
 
 # ----------------------------------------------------------------------
@@ -132,25 +120,6 @@ def filter_contained_boxes(boxes, crops, threshold=0.85):
     return [boxes[i] for i in kept], [crops[i] for i in kept]
 
 
-def get_layout_class_names(model) -> dict[int, str]:
-    """Return layout class names from ONNX metadata when available."""
-    metadata = {prop.key: prop.value for prop in model.metadata_props}
-    names_value = metadata.get("names")
-    if not names_value:
-        return DEFAULT_LAYOUT_CLASS_NAMES
-
-    try:
-        parsed = ast.literal_eval(names_value)
-    except (ValueError, SyntaxError):
-        logger.warning("Failed to parse layout model class metadata; using defaults")
-        return DEFAULT_LAYOUT_CLASS_NAMES
-
-    if not isinstance(parsed, dict):
-        return DEFAULT_LAYOUT_CLASS_NAMES
-
-    return {int(key): str(value) for key, value in parsed.items()}
-
-
 def get_layout_predictions(session, img, input_name, class_names, backend="yolov8"):
     """
     Returns:
@@ -192,6 +161,8 @@ def get_layout_predictions(session, img, input_name, class_names, backend="yolov
     boxes, crops = [], []
     for i, d in enumerate(det):
         x0, y0, x1, y1 = d[:4]
+        # yolov8 detection row is [x0, y0, x1, y1, conf, class_id]; pull the
+        # class so downstream OCR can pick the right Tesseract PSM per region.
         class_id = int(d[5].item()) if len(d) > 5 else -1
         class_name = class_names.get(class_id, f"class_{class_id}")
         ox0 = int((x0 - left) / r_x)
@@ -247,10 +218,12 @@ def segment_page(
         layout_sess = ort.InferenceSession(layout_model_path)
         layout_model = onnx.load(layout_model_path)
         inp = get_onnx_input_name(layout_model)
-        class_names = get_layout_class_names(layout_model)
+        # yolov8 stores class names in the ONNX metadata as a dict literal.
+        metadata = {p.key: p.value for p in layout_model.metadata_props}
+        class_names = ast.literal_eval(metadata["names"])
         crops, boxes = get_layout_predictions(layout_sess, img, inp, class_names)
 
-    else:  # fall back to whole image
+    else:  # no model - treat the whole page as a single article-class region
         crops = [(0, img, 0, "article")]
         boxes = [(0, 0, w, h)]
 
