@@ -28,7 +28,7 @@ import copy
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-PASS1_PSM3_REGION_CLASSES = {"cartoon_or_advertisement", "photograph"}
+PASS1_PSM6_REGION_CLASSES = {"article", "image_caption", "author"}
 
 # Gap filling helpers
 def detect_alto_ns(tree: ET.ElementTree) -> dict:
@@ -794,7 +794,7 @@ class OCRProcessor:
         self._pixel_alto_path = None
 
     def _pass1_psm_config(self, region_class_name: str | None) -> str:
-        return "--psm 3" if region_class_name in PASS1_PSM3_REGION_CLASSES else "--psm 6"
+        return "--psm 6" if region_class_name in PASS1_PSM6_REGION_CLASSES else "--psm 3"
 
     def _get_file_name(self):
         return os.path.splitext(os.path.basename(self.input_file_path))[0]
