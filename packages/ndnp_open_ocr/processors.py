@@ -28,6 +28,8 @@ import copy
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+PASS1_PSM6_REGION_CLASSES = {"article", "image_caption", "author"}
+
 # Gap filling helpers
 def detect_alto_ns(tree: ET.ElementTree) -> dict:
     root = tree.getroot()
@@ -791,6 +793,9 @@ class OCRProcessor:
         self.visualize_segmentation = visualize_segmentation 
         self._pixel_alto_path = None
 
+    def _pass1_psm_config(self, region_class_name: str | None) -> str:
+        return "--psm 6" if region_class_name in PASS1_PSM6_REGION_CLASSES else "--psm 3"
+
     def _get_file_name(self):
         return os.path.splitext(os.path.basename(self.input_file_path))[0]
 
@@ -1065,15 +1070,19 @@ class OCRProcessor:
                 logging.info("Detected %d regions", len(crops))
                 boxes_dict = {}
 
-                for idx, (rid, crop) in enumerate(crops):
-                    logging.debug("OCRing region %s", rid)
-                    # PSM 6 (uniform block of text). The default PSM 3 runs
-                    # Tesseract's auto page segmenter on each per-region crop,
-                    # which is redundant with the AmericanStories segmentation
-                    # we already did and causes multiple words to be picked up 
-                    # as a single word in some cases, causing layout issues and lack 
-                    # of <sp> elements in the ALTO.
-                    xml = pytesseract.image_to_alto_xml(crop, config="--psm 6")
+                for idx, (rid, crop, class_id, class_name) in enumerate(crops):
+                    logging.debug("OCRing region %s (%s:%s)", rid, class_id, class_name)
+                    # Use the AmericanStories region class directly. Text-like
+                    # classes stay on PSM 6; photograph/advertisement classes
+                    # switch to PSM 3 for a safer first OCR pass.
+                    psm_config = self._pass1_psm_config(class_name)
+                    logging.debug(
+                        "Region %s (%s) selected Pass 1 config %s",
+                        rid,
+                        class_name,
+                        psm_config,
+                    )
+                    xml = pytesseract.image_to_alto_xml(crop, config=psm_config)
                     xml_path = os.path.join(regions_dir, f"region_{rid}.xml")
                     with open(xml_path, "wb") as f:
                         f.write(xml)

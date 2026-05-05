@@ -322,6 +322,13 @@ def _resolve_batch_prefix(batch_name: str, bucket: str) -> str:
     if bucket != "loc-preservation":
         return batch_name
 
+    # If a full prefix was passed (contains a slash), use it as-is so callers
+    # can target batches that live outside the standard lcbp/ndnp/<dir_code>/
+    # layout (e.g. virginia/batch_va_*, lcbp/ndnp/dlc/batch_lc_*).
+    stripped = batch_name.strip("/")
+    if "/" in stripped:
+        return stripped
+
     code_to_dir = {"lc": "loc", "vi": "vi", "va": "vi", "lv": "vi"}
     m = re.search(r"batch[_-]([a-zA-Z]+)_", batch_name)
     if m:
@@ -422,6 +429,7 @@ def list_keys(ctx, batch_name, bucket, storage_class):
                 s3_client.download_file(s3_bucket, s3_key, local_filename)
                 print(f"[green]CSV saved to ./{local_filename}")
 
+            # Show storage class for a random sample of TIFs (from Lambda)
             sample_access = body.get("sample_access", [])
             if sample_access:
                 table = Table(title=f"Storage class sample ({len(sample_access)} random TIFs)")

@@ -79,13 +79,15 @@ def handler(event, context):
             m = re.match(r"([a-zA-Z]+)_", batch_name)
             code = m.group(1).lower() if m else batch_name
 
-        code_to_dir = {
-            "lc": "loc",
-            "vi": "vi",
-            "va": "vi",
-            "lv": "vi",
+        # Candidate directory codes to try (in order) for each batch code.
+        # "dlc" is always tried first as the canonical NDNP layout.
+        code_to_dirs = {
+            "lc": ["dlc", "loc"],
+            "vi": ["dlc", "vi", "virginia"],
+            "va": ["dlc", "vi", "virginia"],
+            "lv": ["dlc", "vi", "virginia"],
         }
-        dir_code = code_to_dir.get(code, code)
+        dir_codes = code_to_dirs.get(code, ["dlc", code])
 
         # If custom connectors provided, pass them through and compute array size from override
         # Otherwise, default to S3 discovery using historical NDNP layout.
@@ -111,29 +113,18 @@ def handler(event, context):
                         "Invalid array_size override; falling back to S3 prefix discovery if possible."
                     )
         if not keys:
-            # For loc-preservation bucket, use LOC-specific directory structure
-            # For other buckets, use batch_name directly as prefix
+            # For loc-preservation, walk through candidate dir_codes until one matches.
+            # For other buckets, use batch_name directly as prefix.
             if bucket_name == "loc-preservation":
                 prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp")
-                prefix = os.path.join(prefix_base, dir_code, batch_name, "")
+                for candidate in dir_codes:
+                    prefix = os.path.join(prefix_base, candidate, batch_name, "")
+                    keys = get_image_files(bucket_name, prefix, file_extension)
+                    if keys:
+                        break
             else:
                 prefix = f"{batch_name}/"
-            keys = get_image_files(bucket_name, prefix, file_extension)
-
-        # Check alternative prefixes if no image files found (LOC-specific)
-        if not keys and bucket_name == "loc-preservation":
-            prefix_base = os.environ.get("BATCH_BASED_PREFIX", "loc-preservation/lcbp/ndnp")
-            if dir_code == "dlc":
-                alt_dir_code = "loc"
-                alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name, "")
-                keys = get_image_files(bucket_name, alt_prefix, file_extension)
-                prefix = alt_prefix if keys else prefix
-
-            elif dir_code == "vi":
-                alt_dir_code = "virginia"
-                alt_prefix = os.path.join(prefix_base, alt_dir_code, batch_name, "")
-                keys = get_image_files(bucket_name, alt_prefix, file_extension)
-                prefix = alt_prefix if keys else prefix
+                keys = get_image_files(bucket_name, prefix, file_extension)
 
         if not keys:
             msg = f"No image files ({file_extension}) found in source data at s3://{bucket_name}/{prefix}"
