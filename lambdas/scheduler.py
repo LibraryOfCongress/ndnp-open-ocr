@@ -83,6 +83,7 @@ def handler(event, context):
         # "dlc" is always tried first as the canonical NDNP layout.
         code_to_dirs = {
             "lc": ["dlc", "loc"],
+            "dlc": ["dlc", "loc"],
             "vi": ["dlc", "vi", "virginia"],
             "va": ["dlc", "vi", "virginia"],
             "lv": ["dlc", "vi", "virginia"],
