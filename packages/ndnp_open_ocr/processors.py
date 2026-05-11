@@ -105,13 +105,13 @@ def build_gap_alto_from_full(full_tess_tree: ET.ElementTree, full_NS: dict, img:
     num_kept = len(keep_set)
     num_removed = num_full_strings - num_kept
 
+    # Drop Strings that duplicate composite output. SPs are kept so fill_gaps
+    # can preserve inter-word spacing between surviving Strings.
     for line in full_tess_tree.findall(".//alto:TextLine", full_NS):
         for child in list(line):
             if child.tag.endswith("String"):
                 if id(child) not in keep_set:
                     line.remove(child)
-            elif child.tag.endswith("SP"):
-                line.remove(child)
 
     for block in full_tess_tree.findall(".//alto:TextBlock", full_NS):
         for line in list(block):
@@ -129,15 +129,16 @@ def build_gap_alto_from_full(full_tess_tree: ET.ElementTree, full_NS: dict, img:
                 cb.remove(block)
 
     k, sx, sy = _compute_scalers(full_tess_tree, img, full_NS)
-    for string in full_tess_tree.findall(".//alto:String", full_NS):
-        x = _to_px(string.get("HPOS", "0"), k, sx)
-        y = _to_px(string.get("VPOS", "0"), k, sy)
-        w = _to_px(string.get("WIDTH", "0"), k, sx)
-        h = _to_px(string.get("HEIGHT", "0"), k, sy)
-        string.set("HPOS", str(x))
-        string.set("VPOS", str(y))
-        string.set("WIDTH", str(w))
-        string.set("HEIGHT", str(h))
+    # Rescale inch1200 -> pixels to match the composite ALTO. SPs are
+    # included so they land at the right x/y when carried into fill_gaps.
+    els = full_tess_tree.findall(".//alto:String", full_NS) + full_tess_tree.findall(".//alto:SP", full_NS)
+    for el in els:
+        el.set("HPOS", str(_to_px(el.get("HPOS", "0"), k, sx)))
+        el.set("VPOS", str(_to_px(el.get("VPOS", "0"), k, sy)))
+        el.set("WIDTH", str(_to_px(el.get("WIDTH", "0"), k, sx)))
+        h = el.get("HEIGHT")  # SPs have no HEIGHT
+        if h is not None:
+            el.set("HEIGHT", str(_to_px(h, k, sy)))
 
     root = full_tess_tree.getroot()
     mu_el = full_tess_tree.find(".//alto:MeasurementUnit", full_NS)
@@ -400,14 +401,32 @@ class AltoProcessor:
             line_attrs = {"HPOS":str(x1), "VPOS":str(y1), "WIDTH":str(x2-x1), "HEIGHT":str(y2-y1)}
             new_line = ET.SubElement(target_block, f"{{{NS['alto']}}}TextLine", line_attrs)
 
-            for s,(sx1,sy1,sx2,sy2) in strings:
-                s_attrs = {"HPOS":str(sx1), "VPOS":str(sy1), "WIDTH":str(sx2-sx1), "HEIGHT":str(sy2-sy1)}
-                for k in ("CONTENT","SUBS_CONTENT","SUBS_TYPE"):
-                    v = s.get(k)
-                    if v is not None:
-                        s_attrs[k] = v
-                ET.SubElement(new_line, f"{{{NS['alto']}}}String", s_attrs)
-                appended_strings += 1
+            # Walk src_line in document order to preserve <SP>s between
+            # adjacent kept Strings. Buffer each SP and emit only when the
+            # next String is also kept (so SPs adjacent to dropped Strings
+            # or at line edges are dropped). WC/CC carry confidence values.
+            kept_box = {id(s): box for s, box in strings}
+            prev_sp = None
+            prev_kept = False
+            for child in list(src_line):
+                if child.tag.endswith("String"):
+                    if id(child) in kept_box:
+                        sx1,sy1,sx2,sy2 = kept_box[id(child)]
+                        if prev_sp is not None and prev_kept:
+                            ET.SubElement(new_line, f"{{{NS['alto']}}}SP", dict(prev_sp.attrib))
+                        s_attrs = {"HPOS":str(sx1), "VPOS":str(sy1), "WIDTH":str(sx2-sx1), "HEIGHT":str(sy2-sy1)}
+                        for k in ("CONTENT","SUBS_CONTENT","SUBS_TYPE","WC","CC"):
+                            v = child.get(k)
+                            if v is not None:
+                                s_attrs[k] = v
+                        ET.SubElement(new_line, f"{{{NS['alto']}}}String", s_attrs)
+                        appended_strings += 1
+                        prev_kept = True
+                    else:
+                        prev_kept = False
+                    prev_sp = None
+                elif child.tag.endswith("SP"):
+                    prev_sp = child
             appended_lines += 1
 
             # Ensure target_block has HPOS/VPOS/WIDTH/HEIGHT and expand to include this line
