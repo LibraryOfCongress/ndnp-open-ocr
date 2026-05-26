@@ -160,7 +160,7 @@ def process_alto(file_path):
     parser.parse(file_path)
     return dict(local_word_count)
 
-def main(batch_dir):
+def count_words(batch_dir):
     batch_content = get_batch_info(batch_dir)
     # print("BATCH CONTENT: %s", batch_content)
     alto_files = []
@@ -169,19 +169,17 @@ def main(batch_dir):
     print(f"Alto file count: {len(alto_files)}")
     if not alto_files:
         logging.warning('No ALTO XML files found in the directory: %s', batch_dir)
-        return
+        return {}, 0
 
     with Pool(processes=cpu_count()) as pool:
         results = pool.map(process_alto, alto_files)
-        
+
     word_count = defaultdict(int)
     for local_count in results:
         for word, count in local_count.items():
             word_count[word] += count
 
-
-    print(f'Total unique words: {len(word_count)}')
-
+    return dict(word_count), len(alto_files)
 if __name__ == '__main__':
     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
@@ -189,4 +187,6 @@ if __name__ == '__main__':
     parser.add_argument('batch_dir', help='Directory containing ALTO XML files', type=str)
     args = parser.parse_args()
 
-    main(args.batch_dir)
+    count_words(args.batch_dir)
+
+
