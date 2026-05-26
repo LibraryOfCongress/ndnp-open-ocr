@@ -8,7 +8,7 @@ try:
 except ImportError:
     pass
 
-AWS_ACCOUNT_ID = os.getenv("AWS_ACCOUNT_ID", "")
+AWS_ACCOUNT_ID = os.getenv("AWS_ACCOUNT_ID", "")  # CI build injects default; users may override via env
 AWS_REGION = os.getenv("AWS_REGION", "us-east-2")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development-deployment")
 S3_OUTPUT_BUCKET_PREFIX = os.getenv("S3_OUTPUT_BUCKET_PREFIX", "ndnp-open-ocr-output-bucket")
