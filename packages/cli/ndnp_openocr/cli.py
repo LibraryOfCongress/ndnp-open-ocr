@@ -13,6 +13,7 @@ import os
 from botocore.config import Config
 import keyring
 import shutil
+from .wordcount import count_words
 
 # Import the generated config file with injected values
 from . import config
@@ -455,12 +456,24 @@ def list_keys(ctx, batch_name, bucket, storage_class):
         print(f"[red]Failed to invoke list-keys Lambda: {e}")
 
 
+@click.command(name="wordcount")
+@click.argument("batch_dir", type=click.Path(exists=True, file_okay=False))
+def wordcount(batch_dir):
+    """Counts unique words across all ALTO XML files in a local NDNP batch."""
+
+    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+    counts, alto_file_count = count_words(batch_dir)
+    print(f"[green]Alto file count: {alto_file_count}")
+    print(f"[green]Total unique words: {len(counts)}")
+
+
 cli.add_command(sync)
 cli.add_command(process)
 cli.add_command(get)
 cli.add_command(job_info)
 cli.add_command(delete)
 cli.add_command(list_keys)
+cli.add_command(wordcount)
 
 if __name__ == "__main__":
     cli()
