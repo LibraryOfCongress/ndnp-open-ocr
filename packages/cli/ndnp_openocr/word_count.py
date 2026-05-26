@@ -166,7 +166,7 @@ def count_words(batch_dir):
     alto_files = []
     for issue in batch_content:
         alto_files += issue['alto_files']
-    print(f"Alto file count: {len(alto_files)}")
+
     if not alto_files:
         logging.warning('No ALTO XML files found in the directory: %s', batch_dir)
         return {}, 0
