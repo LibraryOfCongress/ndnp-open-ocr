@@ -13,7 +13,7 @@ import os
 from botocore.config import Config
 import keyring
 import shutil
-from .wordcount import count_words
+from .word_count import count_words
 
 # Import the generated config file with injected values
 from . import config
