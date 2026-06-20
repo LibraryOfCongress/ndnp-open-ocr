@@ -1,6 +1,10 @@
 # Environment configuration (contains secrets)
 .env
 
+# Terraform backend config with real values — copy backend.hcl.example to backend.hcl
+backend.hcl
+
+
 **__pycache__
 **/.DS_Store
 .DS_Store
