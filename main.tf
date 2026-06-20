@@ -1,11 +1,12 @@
 # Main Terraform file to declare NDNP Open OCR resources that have to be created
 # in AWS to run the pipeline.
 terraform {
+  # Partial backend configuration: supply your own state bucket/key/region at
+  # init time so this repo never hardcodes a specific account's resources, e.g.
+  #   terraform init -backend-config=backend.hcl   (see backend.hcl.example)
+  # Remove this backend block entirely to fall back to local state.
   backend "s3" {
-    bucket  = "ndnp-open-ocr-dependencies"                         # Your S3 bucket name
-    key     = "ndnp-open-ocr-tf-state-files/dev/terraform.tfstate" # The file path inside the bucket for your state
-    region  = "us-east-1"                                          # Specify the AWS region of the bucket
-    encrypt = true                                                 # Encrypt the state file
+    encrypt = true
   }
 }
 
