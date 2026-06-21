@@ -69,29 +69,32 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
 ### 1. Configure AWS credentials
  for the target account (environment variables, shared config/credentials file, SSO, etc.).
 ### 2. Configure environment-specific Terraform variables
-   Before deploying, update the following varibales in `variables.tf` to match your environment **or** override them at runtime using `-var`
+   Before deploying, update the following variables in `variables.tf` to match your environment **or** override them at runtime using `-var`
    ```hcl
-   s3_bucketname
+   s3_bucket_name
    env
+   region
    batch_image_tag
    ```
-   These values control resource naming/isolation and the tagging container image used by openocr
+   These values control resource naming/isolation and the Docker image tag used by the AWS Batch job definition.
 
 ### 3. Provision infrastructure:
    Run `make check-env` to verify your `.env` values and TF_VAR exports before running Terraform.
 
-   If this a **fresh install in a new AWS account** (ie. you are not using an existing Terraform state)
+   If this is a **fresh install in a new AWS account** (ie. you are not using an existing Terraform state)
    1. **Update the Terraform backend configuration**
       Configure the backend to use an **s3 bucket and key** owned by this AWS account.
       You may do this in **one of two ways**:
       **Option A - Edit the backend configuration in code**
-      Update `backend "s3" configuration to point to the correct bucket and key for this account.
-      **Option B - Override the backends at initilization time**
-      Supply backend values using `-backend-config` during initialization.
+      Update the `backend "s3"` configuration to point to the correct bucket and key for this account.
+      **Option B - Override the backends at initialization time**
+      Supply backend values using `-backend-config` during initialization. You can copy the
+      template (`cp backend.hcl.example backend.hcl`), fill in your bucket/key/region, and pass
+      it with `-backend-config=backend.hcl`.
 
    2. **Initialize Terraform**
    ```bash
-   terraform init --reconfigure
+   terraform init -reconfigure
    ```
    Or when overriding backend values explicitly:
 
@@ -102,7 +105,7 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
       -backend-config="region=<aws-region>"
       ```
 
-   the `--reconfigure` ensures Terraform does not attempt to read or migrate an existing remote state. If this not a new AWS account, ommit the `--reconfigure` flag.
+   the `-reconfigure` flag ensures Terraform does not attempt to read or migrate an existing remote state. If this is not a new AWS account, omit the `-reconfigure` flag.
 
    3. **Review and apply the plan**
    ```bash
@@ -111,10 +114,9 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
    ```
 
    4. **Build fargate image for ndnp openocr**
-      1. **Update Makefile variables**
-         * AWS Account ID
-         * region
-         * Any other environment-specific values
+      1. **Set the build values in `.env`** (see `.env.example`) — `AWS_ACCOUNT_ID`,
+         `AWS_REGION`, and any other environment-specific values. The Makefile derives the
+         ECR registry/repo and image tag from these; run `make check-env` to verify.
 
       2. **Build and push image**
          ```bash
@@ -123,7 +125,10 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
          ```
 
 ### 4. Wire the CLI to your deployment
- By editing `packages/cli/ndnp_openocr/config.py` (bucket name + Lambda ARNs). If you publish the CLI, regenerate this file per environment or inject it during your build.
+ Set your deployment values in `.env` at the repository root: `AWS_ACCOUNT_ID`, `AWS_REGION`,
+ `ENVIRONMENT`, and `S3_OUTPUT_BUCKET_PREFIX` (see `.env.example`). The CLI's `config.py` reads
+ these and derives the output bucket name and the scheduler/get-job/list-keys Lambda ARNs
+ automatically.
 5. **Install the CLI** (from the repository root):
    ```bash
    make install-cli
@@ -153,7 +158,7 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
 
 ## AmericanStories Assets (optional)
 
-AmericanStories models power the optional segmentation path (e.g., `--segmentation` in the CLI) and are pulled into the Docker image during the build. Licensing and model refresh notes for those assets are tracked in `OPENSOURCE_README.md` in the AmericanStories project.
+AmericanStories models power the optional segmentation path (e.g., `--segmentation` in the CLI) and are pulled into the Docker image during the build. Licensing and model-refresh details for those assets are documented in the upstream [AmericanStories](https://github.com/dell-research-harvard/AmericanStories) project (see its README and license).
 
 If you omit the AmericanStories code/models, NDNP Open OCR still builds and runs the core Tesseract-based pipeline. The trade-off is limited functionality: segmentation-aware features are disabled and outputs remain page-level rather than article-aware. Use this mode when licensing constraints prevent bundling the AmericanStories assets.
 
@@ -169,12 +174,13 @@ Terraform creates the AWS resources NDNP Open OCR needs to run at scale:
 
 Deploy into a dedicated AWS account or VPC to keep costs and permissions isolated per project.
 
+
 ## Deployment Details
 
 1. Configure `.env` (see `.env.example`) and run `make check-env` to verify values. Terraform picks up `TF_VAR_*` exports from `.env` via the Makefile.
 2. Run `terraform init/plan/apply` as shown above.
 3. Build the Batch container image (`make build-ocr-image` or `docker build ...`) and push it to your registry for the target environment.
-4. Update any automation or CI pipelines to inject the correct `ndnp_openocr/config.py` before building the CLI.
+4. Ensure your automation/CI sets the CLI environment variables for the target environment (`AWS_ACCOUNT_ID`, `AWS_REGION`, `ENVIRONMENT`, `S3_OUTPUT_BUCKET_PREFIX`). `config.py` reads these at runtime — there is no per-environment file to inject.
 
 ## CLI Reference
 
@@ -189,10 +195,12 @@ Deploy into a dedicated AWS account or VPC to keep costs and permissions isolate
 | `sync`      | Merge Batch outputs from S3 into a local batch folder. |
 | `delete`    | Remove job outputs from S3 and/or local disk. |
 | `job_info`  | Display the last job/output directory stored in the OS keyring. |
+| `list_keys` | Export a CSV listing of S3 object keys for one or more batches (downloads the CSV locally). |
+| `wordcount` | Count unique words across the ALTO XML files in a local batch directory. |
 
 The CLI stores the most recent `job_id` and `output_dir` in the OS keyring so you can omit `--job`/`--output-dir` after the first run. Use `ndnp_openocr --help` or `ndnp_openocr <command> --help` for option details.
 
 ## Next Steps
 
-- Use `scripts/gen_python_licenses.sh` to refresh THIRD_PARTY_NOTICES when dependencies change.
+- See [`LICENSE.md`](LICENSE.md) for the CC0 dedication and the third-party software the image pulls in at build time (and their obligations).
 - Keep Terraform state and backend configuration outside of this repository (e.g., remote state in your own S3 bucket).
