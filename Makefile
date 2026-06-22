@@ -20,13 +20,23 @@ AWS_REGION ?= us-east-2
 ECR_REGISTRY ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 ECR_REPO ?= $(ECR_REPO_PREFIX)-$(ENVIRONMENT)
 ECR_IMAGE_TAG ?= $(BATCH_IMAGE_TAG)
+
+# Set ECR_LOGIN_PROFILE (in .env or on the command line) to log in via a named profile.
 ECR_LOGIN_PROFILE ?= NDNP_OPEN_OCR_DEVELOPER_DEV-$(AWS_ACCOUNT_ID)
+
+# Sample NDNP pages for local testing: New-York Tribune, 1898-06-21,
+# served by loc.gov (Chronicling America / tile.loc.gov).
+# Used by `make prep-testdata` and `make demo`.
+SAMPLE_BASE  ?= https://tile.loc.gov/storage-services/service/ndnp/dlc/batch_dlc_universal_ver02/data/sn83030214/00175036866/1898062101
+SAMPLE_PAGES ?= 0423 0424
+SAMPLE_DIR   := $(CURDIR)/testdata/sample/sn83030214
 
 help:
 	@echo "Common targets:"
 	@echo "  check-env        Show .env configuration and TF_VAR exports"
 	@echo "  build-ocr-image  Build the local OCR runtime Docker image ($(IMAGE_NAME))"
-	@echo "  prep-testdata    Copy bundled sample into testdata/issue0602"
+	@echo "  prep-testdata    Download sample pages from the Library of Congress"
+	@echo "  demo             Build + fetch sample data + run OCR on it (outputs to ./output)"
 	@echo "  ocr-shell        Open an interactive container; set MOUNT_IN/MOUNT_OUT to mount paths"
 	@echo "  build_fargate    Build Fargate/Batch images (runtime + deploy wrapper)"
 	@echo "  push_fargate     Build and push deploy image to ECR ($(ECR_REGISTRY)/$(ECR_REPO):$(ECR_IMAGE_TAG))"
@@ -51,12 +61,28 @@ push_fargate: build_fargate
 	docker tag ndnp_open_ocr_deploy:latest $(ECR_REGISTRY)/$(ECR_REPO):$(ECR_IMAGE_TAG)
 	docker push $(ECR_REGISTRY)/$(ECR_REPO):$(ECR_IMAGE_TAG)
 
-# Prepare local test data (copies 0602 samples into openocr/testdata/issue0602)
+# Download a couple of real NDNP newspaper pages (JP2 + original ALTO)
+# so you have runnable input without needing your own batch.
 prep-testdata:
-	@mkdir -p $(CURDIR)/testdata/issue0602
-	@cp -f $(CURDIR)/packages/ndnp_open_ocr/0602.jp2 $(CURDIR)/testdata/issue0602/ 2>/dev/null || true
-	@cp -f $(CURDIR)/packages/ndnp_open_ocr/0602.pdf $(CURDIR)/testdata/issue0602/ 2>/dev/null || true
-	@echo "Prepared test data at $(CURDIR)/testdata/issue0602"
+	@mkdir -p "$(SAMPLE_DIR)"
+	@for p in $(SAMPLE_PAGES); do \
+	  [ -s "$(SAMPLE_DIR)/$$p.jp2" ] || curl -fsSL --retry 3 -o "$(SAMPLE_DIR)/$$p.jp2" "$(SAMPLE_BASE)/$$p.jp2"; \
+	  [ -s "$(SAMPLE_DIR)/$$p.xml" ] || curl -fsSL --retry 3 -o "$(SAMPLE_DIR)/$$p.xml" "$(SAMPLE_BASE)/$$p.xml"; \
+	done
+	@echo "Sample data in $(SAMPLE_DIR) — run 'make demo' to OCR it."
+
+# One-shot demo: build the image (if needed), fetch sample data, and run baseline OCR on it.
+# The generated PDF + ALTO land in ./output. Quickest way to see the pipeline actually work.
+demo: build-ocr-image prep-testdata
+	@mkdir -p "$(CURDIR)/output"
+	docker run --rm --platform $(PLATFORM) $(RUN_USER_FLAG) \
+	  -v "$(CURDIR)":/app -w /app \
+	  -e TESSDATA_PREFIX=/usr/local/share/tessdata \
+	  -e LD_LIBRARY_PATH=/usr/local/lib \
+	  -e PYTHONPATH=/app/packages:/app \
+	  $(IMAGE_NAME) \
+	  python -m ndnp_open_ocr.run_local --input file:///app/testdata/sample --output file:///app/output --glob '**/*.jp2' --segmentation true
+	@echo "Output PDF + ALTO are in $(CURDIR)/output"
 
 # Open an interactive shell inside the OCR image with optional host mounts
 ocr-shell: build-ocr-image
@@ -93,4 +119,4 @@ check-env:
 install-cli:
 	pip install packages/cli
 
-.PHONY: help build-ocr-image build_fargate push_fargate prep-testdata ocr-shell check-env install-cli
+.PHONY: help build-ocr-image build_fargate push_fargate prep-testdata demo ocr-shell check-env install-cli

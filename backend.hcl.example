@@ -1,7 +1,0 @@
-# Terraform S3 backend configuration.
-# Copy to backend.hcl, fill in values you own, then:
-#   terraform init -backend-config=backend.hcl
-# backend.hcl is gitignored so your real values are never committed.
-bucket = "your-terraform-state-bucket"
-key    = "ndnp-open-ocr/terraform.tfstate"
-region = "us-east-1"  # state-bucket region; independent of the deploy region (AWS_REGION)

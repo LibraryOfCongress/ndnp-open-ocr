@@ -38,31 +38,48 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
 - These instructions currently use AWS as the cloud environment.
   
 
+### Quickest start: run the demo
+
+To see the pipeline work end-to-end on real data with a single command:
+
+```bash
+make demo
+```
+
+This builds the runtime image, downloads a couple of **NDNP newspaper pages**
+(New-York Tribune, 1898-06-21) from loc.gov into `testdata/sample/`, runs the OCR
+pipeline on them with AmericanStories segmentation (falling back to baseline Tesseract
+if those assets aren't present), and writes the newly generated PDF + ALTO files into
+`./output/`. (The first run builds the image, which takes ~15 minutes; later runs are fast.)
+
 ### Local batch testing (file:// inputs or S3)
 
 1. **Build the runtime container** (installs Tesseract and all Python deps):
    ```bash
    make build-ocr-image
    ```
-2. **(Optional) stage sample data** so you have a known-good TIFF/JP2 pair:
+2. **Fetch sample data** — a couple of public-domain LOC newspaper pages, so you have
+   runnable input without your own NDNP batch:
    ```bash
    make prep-testdata
    ```
-3. **Open an OCR shell** that mounts your input/output directories:
+3. **Open an OCR shell** (your repo is mounted at `/app`; optionally mount other dirs):
    ```bash
    make ocr-shell \
      MOUNT_IN=/ABS/PATH/to/tifs \
      MOUNT_OUT=/ABS/PATH/to/out
    ```
-4. **Run the pipeline** from inside the shell:
+4. **Run the pipeline** from inside the shell (on the downloaded sample):
    ```bash
    python -m ndnp_open_ocr.run_local \
-     --source file:///data/in \
-     --sink file:///data/out \
-     --glob '**/*.tif' \
+     --input file:///app/testdata/sample \
+     --output file:///app/output \
+     --glob '**/*.jp2' \
      --segmentation true
    ```
-   `--source`/`--sink` accept both `file://` and `s3://` URIs, so you can pull directly from S3 if desired.
+   `--segmentation true` uses the AmericanStories layout model; if those assets aren't
+   present the pipeline automatically falls back to baseline Tesseract OCR. `--input`/`--output`
+   accept both `file://` and `s3://` URIs, so you can pull directly from S3 if desired.
 
 ### AWS deployment + CLI workflow
 
@@ -81,22 +98,17 @@ This document captures the pieces that matter most when running **NDNP-Open-OCR*
 ### 3. Provision infrastructure:
    Run `make check-env` to verify your `.env` values and TF_VAR exports before running Terraform.
 
-   If this is a **fresh install in a new AWS account** (ie. you are not using an existing Terraform state)
-   1. **Update the Terraform backend configuration**
-      Configure the backend to use an **s3 bucket and key** owned by this AWS account.
-      You may do this in **one of two ways**:
-      **Option A - Edit the backend configuration in code**
-      Update the `backend "s3"` configuration to point to the correct bucket and key for this account.
-      **Option B - Override the backends at initialization time**
-      Supply backend values using `-backend-config` during initialization. You can copy the
-      template (`cp backend.hcl.example backend.hcl`), fill in your bucket/key/region, and pass
-      it with `-backend-config=backend.hcl`.
+   If this is a **fresh install in a new AWS account** (ie. you are not using an existing Terraform state):
+
+   1. **Point the backend at a bucket you own.** Edit the `backend "s3"` block in `main.tf`
+      (`bucket` / `key` / `region`) to match your account, or override those values at init
+      time with `-backend-config` flags (next step).
 
    2. **Initialize Terraform**
    ```bash
    terraform init -reconfigure
    ```
-   Or when overriding backend values explicitly:
+   Or override the backend values explicitly:
 
    ```bash
       terraform init -reconfigure \
