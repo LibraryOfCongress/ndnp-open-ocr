@@ -11,7 +11,7 @@ export TF_VAR_batch_image_tag=$(BATCH_IMAGE_TAG)
 export TF_VAR_s3_bucket_name=$(S3_OUTPUT_BUCKET_PREFIX)
 
 PLATFORM ?= linux/amd64
-IMAGE_NAME ?= ndnp_open_ocr:opensource1.1
+IMAGE_NAME ?= ndnp_open_ocr:opensource1.2.0
 # Mount AWS credentials for both root and appuser; pass profile/config env
 # These are defaults that will be overridden by ENVs 
 AWS_MOUNT_FLAGS := -v $$HOME/.aws:/root/.aws:ro -v $$HOME/.aws:/home/appuser/.aws:ro

@@ -19,6 +19,6 @@ variable "region" {
 variable "batch_image_tag" {
   description = "Docker image tag used by AWS Batch job definition"
   type        = string
-  default     = "opensource1.1"
+  default     = "opensource1.2.0"
 }
 
