@@ -52,6 +52,9 @@ pipeline on them with AmericanStories segmentation (falling back to baseline Tes
 if those assets aren't present), and writes the newly generated PDF + ALTO files into
 `./output/`. (The first run builds the image, which takes ~15 minutes; later runs are fast.)
 
+> **Note:** The local pipeline is intended for testing and experimentation. It is too slow
+> for full production workloads — for those, use the AWS deployment described below.
+
 ### Local batch testing (file:// inputs or S3)
 
 1. **Build the runtime container** (installs Tesseract and all Python deps):
@@ -216,3 +219,7 @@ The CLI stores the most recent `job_id` and `output_dir` in the OS keyring so yo
 
 - See [`LICENSE.md`](LICENSE.md) for the CC0 dedication and the third-party software the image pulls in at build time (and their obligations).
 - Keep Terraform state and backend configuration outside of this repository (e.g., remote state in your own S3 bucket).
+
+## Disclaimer
+
+This software is provided "as is," without warranty of any kind, express or implied. The Library of Congress is not responsible for any errors or omissions, or for any results obtained from the use of this software or the data it produces.
