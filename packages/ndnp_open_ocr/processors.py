@@ -16,7 +16,15 @@ import re
 from tempfile import NamedTemporaryFile
 import xml.sax.saxutils as saxutils
 from ndnp_open_ocr.alto import renumber_alto_ids
-from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
+try:
+    from ndnp_open_ocr.segmenter import segment_page, merge_alto_region_xmls
+    _SEGMENTER_AVAILABLE = True
+except Exception as _seg_err:  # AmericanStories/effocr assets missing or broken
+    segment_page = merge_alto_region_xmls = None
+    _SEGMENTER_AVAILABLE = False
+    logging.getLogger(__name__).warning(
+        "Segmentation unavailable (%s); running baseline Tesseract OCR only", _seg_err
+    )
 from PIL import Image
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
@@ -805,7 +813,7 @@ class OCRProcessor:
         self.output_path = output_path
         self.full_height = True
         self.preprocessing_method = preprocessing_method
-        self.use_segmenter = use_segmenter
+        self.use_segmenter = use_segmenter and _SEGMENTER_AVAILABLE
         self.use_gap_filling = use_gap_filling
         self.layout_model = layout_model
         self.line_model = line_model
