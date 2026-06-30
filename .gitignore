@@ -1,6 +1,10 @@
 # Environment configuration (contains secrets)
 .env
 
+# Terraform backend config with real values — copy backend.hcl.example to backend.hcl
+backend.hcl
+
+
 **__pycache__
 **/.DS_Store
 .DS_Store
@@ -17,3 +21,7 @@ terraform.tfstate.d/sd*
 **jupyter**
 *.whl
 *old_terraform
+
+# Local demo artifacts (downloaded sample pages + generated OCR output)
+testdata/sample/
+output/

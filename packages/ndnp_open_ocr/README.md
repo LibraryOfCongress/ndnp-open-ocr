@@ -55,7 +55,12 @@ brew install ghostscript
 
 ### Pip
 
+Requires Python 3.12+ (the runtime image and CLI both target 3.12). Create and activate a
+virtual environment first:
+
 ```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -135,14 +140,14 @@ This command generates a PDF and an ALTO file from the input image, applies post
 
 ### Running Tests
 
-The unit tests live in `ndnp_open_ocr/tests`. After installing the dependencies
+The unit tests live in `tests/`. After installing the dependencies
 you can run them with:
 
 ```bash
 pytest
 ```
 
-To run the suite inside the project Docker image (matching the GitLab CI job), use:
+To run the suite inside the project Docker image, use:
 
 ```bash
 make test

@@ -11,7 +11,7 @@ export TF_VAR_batch_image_tag=$(BATCH_IMAGE_TAG)
 export TF_VAR_s3_bucket_name=$(S3_OUTPUT_BUCKET_PREFIX)
 
 PLATFORM ?= linux/amd64
-IMAGE_NAME ?= ndnp_open_ocr:opensource1.1
+IMAGE_NAME ?= ndnp_open_ocr:opensource1.2.0
 # Mount AWS credentials for both root and appuser; pass profile/config env
 # These are defaults that will be overridden by ENVs 
 AWS_MOUNT_FLAGS := -v $$HOME/.aws:/root/.aws:ro -v $$HOME/.aws:/home/appuser/.aws:ro
@@ -20,13 +20,25 @@ AWS_REGION ?= us-east-2
 ECR_REGISTRY ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 ECR_REPO ?= $(ECR_REPO_PREFIX)-$(ENVIRONMENT)
 ECR_IMAGE_TAG ?= $(BATCH_IMAGE_TAG)
+
+# Set ECR_LOGIN_PROFILE (in .env or on the command line) to log in via a named profile.
 ECR_LOGIN_PROFILE ?= NDNP_OPEN_OCR_DEVELOPER_DEV-$(AWS_ACCOUNT_ID)
+
+# Sample NDNP pages for local testing: New-York Tribune (LCCN sn83030214), 1898-06-21.
+# LOC.gov item page: https://www.loc.gov/item/sn83030214/1898-06-21/ed-1/
+SAMPLE_BASE  ?= https://tile.loc.gov/storage-services/service/ndnp/dlc/batch_dlc_universal_ver02/data/sn83030214/00175036866/1898062101
+SAMPLE_PAGES ?= 0423 0424
+SAMPLE_DIR   := $(CURDIR)/testdata/sample/sn83030214
+# tile.loc.gov serves the JP2 openly but gates the page PDF behind a loc.gov Referer;
+# send one so the original PDF (used for XMP metadata transfer) downloads.
+SAMPLE_CURL  := curl -fsSL --retry 3 -H "Referer: https://www.loc.gov/"
 
 help:
 	@echo "Common targets:"
 	@echo "  check-env        Show .env configuration and TF_VAR exports"
 	@echo "  build-ocr-image  Build the local OCR runtime Docker image ($(IMAGE_NAME))"
-	@echo "  prep-testdata    Copy bundled sample into testdata/issue0602"
+	@echo "  prep-testdata    Download sample pages from the Library of Congress"
+	@echo "  demo             Build + fetch sample data + run OCR on it (outputs to ./output)"
 	@echo "  ocr-shell        Open an interactive container; set MOUNT_IN/MOUNT_OUT to mount paths"
 	@echo "  build_fargate    Build Fargate/Batch images (runtime + deploy wrapper)"
 	@echo "  push_fargate     Build and push deploy image to ECR ($(ECR_REGISTRY)/$(ECR_REPO):$(ECR_IMAGE_TAG))"
@@ -51,12 +63,27 @@ push_fargate: build_fargate
 	docker tag ndnp_open_ocr_deploy:latest $(ECR_REGISTRY)/$(ECR_REPO):$(ECR_IMAGE_TAG)
 	docker push $(ECR_REGISTRY)/$(ECR_REPO):$(ECR_IMAGE_TAG)
 
-# Prepare local test data (copies 0602 samples into openocr/testdata/issue0602)
+# Download a couple of real NDNP newspaper pages (JP2 + source PDF) so you have
+# runnable input without needing your own batch. 
 prep-testdata:
-	@mkdir -p $(CURDIR)/testdata/issue0602
-	@cp -f $(CURDIR)/packages/ndnp_open_ocr/0602.jp2 $(CURDIR)/testdata/issue0602/ 2>/dev/null || true
-	@cp -f $(CURDIR)/packages/ndnp_open_ocr/0602.pdf $(CURDIR)/testdata/issue0602/ 2>/dev/null || true
-	@echo "Prepared test data at $(CURDIR)/testdata/issue0602"
+	@mkdir -p "$(SAMPLE_DIR)"
+	@for p in $(SAMPLE_PAGES); do \
+	  [ -s "$(SAMPLE_DIR)/$$p.jp2" ] || $(SAMPLE_CURL) -o "$(SAMPLE_DIR)/$$p.jp2" "$(SAMPLE_BASE)/$$p.jp2"; \
+	  [ -s "$(SAMPLE_DIR)/$$p.pdf" ] || $(SAMPLE_CURL) -o "$(SAMPLE_DIR)/$$p.pdf" "$(SAMPLE_BASE)/$$p.pdf"; \
+	done
+	@echo "Sample data in $(SAMPLE_DIR) — run 'make demo' to OCR it."
+
+# One-shot demo: build the image (if needed), fetch sample data, and run baseline OCR on it.
+# The generated PDF + ALTO land in ./output. Quickest way to see the pipeline actually work.
+demo: build-ocr-image prep-testdata
+	@mkdir -p "$(CURDIR)/output"
+	# Mount only the sample input + output dirs and run the image's baked-in code
+	docker run --rm --platform $(PLATFORM) $(RUN_USER_FLAG) \
+	  -v "$(CURDIR)/testdata/sample":/data/in:ro \
+	  -v "$(CURDIR)/output":/data/out \
+	  $(IMAGE_NAME) \
+	  python -m ndnp_open_ocr.run_local --input file:///data/in --output file:///data/out --glob '**/*.jp2' --segmentation true
+	@echo "Output PDF + ALTO are in $(CURDIR)/output"
 
 # Open an interactive shell inside the OCR image with optional host mounts
 ocr-shell: build-ocr-image
@@ -93,4 +120,4 @@ check-env:
 install-cli:
 	pip install packages/cli
 
-.PHONY: help build-ocr-image build_fargate push_fargate prep-testdata ocr-shell check-env install-cli
+.PHONY: help build-ocr-image build_fargate push_fargate prep-testdata demo ocr-shell check-env install-cli

@@ -2,10 +2,10 @@
 # in AWS to run the pipeline.
 terraform {
   backend "s3" {
-    bucket  = "ndnp-open-ocr-dependencies"                         # Your S3 bucket name
-    key     = "ndnp-open-ocr-tf-state-files/dev/terraform.tfstate" # The file path inside the bucket for your state
-    region  = "us-east-1"                                          # Specify the AWS region of the bucket
-    encrypt = true                                                 # Encrypt the state file
+    bucket  = "ndnp-open-ocr-dependencies"                         # S3 bucket holding Terraform state
+    key     = "ndnp-open-ocr-tf-state-files/dev/terraform.tfstate" # State file path inside the bucket
+    region  = "us-east-1"                                          # Region of the state bucket
+    encrypt = true
   }
 }
 
