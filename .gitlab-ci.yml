@@ -8,7 +8,7 @@ stages:
 
 variables:
   AWS_REGION: "us-east-2"
-  BATCH_IMAGE_TAG: "opensource1.1"
+  BATCH_IMAGE_TAG: "opensource1.2.0"
 
 workflow:
   rules:
@@ -102,7 +102,7 @@ deploy_fargate:
     - . /tmp/venv/bin/activate
     - pip install awscli
     - export AWS_REGION=${AWS_REGION:-"us-east-2"}
-    - export IMAGE_TAG=${BATCH_IMAGE_TAG:-"opensource1.1"}
+    - export IMAGE_TAG=${BATCH_IMAGE_TAG:-"opensource1.2.0"}
   script:
     - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin 342134162356.dkr.ecr.us-east-2.amazonaws.com
     - docker build --platform linux/amd64 -t ndnp_open_ocr:${IMAGE_TAG} ./packages/ndnp_open_ocr
