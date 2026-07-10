@@ -34,7 +34,7 @@ fsspec==2024.3.1
 s3fs==2024.3.1
 setuptools==78.1.1
 six==1.16.0
-soupsieve==2.5
+soupsieve==2.8.4
 scikit-learn==1.7.1
 typer==0.6.1
 urllib3==2.5.0
@@ -43,5 +43,5 @@ wrapt==1.16.0
 onnxruntime==1.18.1
 torch==2.6.0
 torchvision==0.21.0
-onnx==1.17.0
+onnx==1.22.0
 protobuf>=4.25.8,<5
