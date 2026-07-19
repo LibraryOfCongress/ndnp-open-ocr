@@ -11,7 +11,11 @@ export TF_VAR_batch_image_tag=$(BATCH_IMAGE_TAG)
 export TF_VAR_s3_bucket_name=$(S3_OUTPUT_BUCKET_PREFIX)
 
 PLATFORM ?= linux/amd64
-IMAGE_NAME ?= ndnp_open_ocr:opensource1.2.0
+# Release version. Bump here and in .gitlab-ci.yml each release. Deliberately
+# not in .env: local copies would go stale after every release. `?=` still
+# allows a one-off override from the command line or environment.
+BATCH_IMAGE_TAG ?= opensource1.2.1
+IMAGE_NAME ?= ndnp_open_ocr:$(BATCH_IMAGE_TAG)
 # Mount AWS credentials for both root and appuser; pass profile/config env
 # These are defaults that will be overridden by ENVs 
 AWS_MOUNT_FLAGS := -v $$HOME/.aws:/root/.aws:ro -v $$HOME/.aws:/home/appuser/.aws:ro

@@ -66,7 +66,7 @@ def handler(event, context):
         "job_name": job_name,
         "batch_name": batch_name,
         "created": current_date,
-        "ndnp_open_ocr_version": "1.2.0",
+        "ndnp_open_ocr_version": "1.2.1",
         "tesseract_version": tesseract_version,
         "status": status_value,
         "summary": {
