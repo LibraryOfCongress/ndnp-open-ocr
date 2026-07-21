@@ -11,6 +11,7 @@ segmenter_dummy.merge_alto_region_xmls = lambda **kwargs: None
 sys.modules['ndnp_open_ocr.segmenter'] = segmenter_dummy
 pytesseract_dummy = types.ModuleType('pytesseract')
 pytesseract_dummy.get_tesseract_version = lambda: '0.0'
+pytesseract_dummy.TesseractError = type('TesseractError', (Exception,), {})
 sys.modules['pytesseract'] = pytesseract_dummy
 
 for mod_name in ['exiftool', 'pikepdf', 'cv2']:
@@ -61,6 +62,59 @@ def test_fix_alto_file_hyphenation():
     assert first_line_children[2]['CONTENT'] == '-'
     assert lines[1].find('String')['CONTENT'] == 'licd'
     os.unlink(tmp.name)
+
+
+def _write_alto(tmp_path, body):
+    alto = tmp_path / 'alto.xml'
+    alto.write_text(
+        '<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#">'
+        '<Layout><Page WIDTH="300" HEIGHT="400"><PrintSpace>'
+        f'{body}'
+        '</PrintSpace></Page></Layout></alto>'
+    )
+    return str(alto)
+
+
+def test_sanitize_string_content(tmp_path):
+    body = (
+        '<TextBlock><TextLine>'
+        '<String CONTENT=" oisalce"/>'
+        '<String CONTENT="fine"/>'
+        '<SP WIDTH="10"/>'
+        '<String CONTENT="ta l" SUBS_CONTENT=" tal licd"/>'
+        '<SP WIDTH="10"/>'
+        '<String CONTENT="  "/>'
+        '</TextLine></TextBlock>'
+        '<ComposedBlock><TextBlock><TextLine>'
+        '<String CONTENT=" "/>'
+        '</TextLine></TextBlock></ComposedBlock>'
+    )
+    proc = AltoProcessor(_write_alto(tmp_path, body))
+    proc.sanitize_string_content()
+
+    strings = proc.soup.find_all('String')
+    assert [s['CONTENT'] for s in strings] == ['oisalce', 'fine', 'tal']
+    assert strings[2]['SUBS_CONTENT'] == 'tallicd'
+    # SP kept between survivors, orphaned SP dropped
+    assert len(proc.soup.find_all('SP')) == 1
+    # emptied line/block/composed block all removed
+    assert len(proc.soup.find_all('TextLine')) == 1
+    assert len(proc.soup.find_all('TextBlock')) == 1
+    assert len(proc.soup.find_all('ComposedBlock')) == 0
+
+
+def test_remove_invalid_graphical_elements(tmp_path):
+    body = (
+        '<Illustration ID="zero_w" WIDTH="0" HEIGHT="1456"/>'
+        '<Illustration ID="zero_h" WIDTH="100" HEIGHT="0"/>'
+        '<Illustration ID="ok" WIDTH="100" HEIGHT="200"/>'
+        '<GraphicalElement ID="no_dims"/>'
+    )
+    proc = AltoProcessor(_write_alto(tmp_path, body))
+    proc.remove_invalid_graphical_elements()
+
+    assert [el['ID'] for el in proc.soup.find_all('Illustration')] == ['ok']
+    assert proc.soup.find_all('GraphicalElement') == []
 
 
 def test_get_postprocessed_pdf_path(tmp_path):
