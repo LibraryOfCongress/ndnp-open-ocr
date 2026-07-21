@@ -372,15 +372,10 @@ class AltoProcessor:
                 block_index.append((b, bb))
         logger.info(f"[fill_gaps] composite TextBlocks={len(block_index)} (for placement)")
 
-        # distance helper for nearest-block selection when no overlap
-        def _rect_distance(a,b):
-            ax1, ay1, ax2, ay2 = a; bx1, by1, bx2, by2 = b
-            dx = 0 if (ax1 <= bx2 and bx1 <= ax2) else (bx1 - ax2 if bx1 > ax2 else ax1 - bx2)
-            dy = 0 if (ay1 <= by2 and by1 <= ay2) else (by1 - ay2 if by1 > ay2 else ay1 - by2)
-            return dx*dx + dy*dy
-
-        # Add lines: try to append to an overlapping block; else nearest; else create positioned TextBlock
-        fallback_block = None  # lazily created when needed
+        # Append to an overlapping block; otherwise group orphan lines into
+        # new per-column blocks so one block never balloons across columns.
+        x_tol = max(int(page_w * 0.06), 100)
+        col_blocks = {}
         appended_lines = 0
         appended_strings = 0
 
@@ -390,19 +385,17 @@ class AltoProcessor:
                 if _intersect(lb, bb, eps_touch):
                     target_block = b_el
                     break
-            if target_block is None and block_index:
-                target_block = min(block_index, key=lambda t: _rect_distance(lb, t[1]))[0]
             if target_block is None:
-                if fallback_block is None:
-                    x1,y1,x2,y2 = lb
-                    fallback_block = ET.SubElement(ps, f"{{{NS['alto']}}}TextBlock", {
-                        "ID":"gap_block",
+                col = lb[0] // x_tol
+                target_block = col_blocks.get(col)
+                if target_block is None:
+                    x1, y1, x2, y2 = lb
+                    target_block = col_blocks[col] = ET.SubElement(ps, f"{{{NS['alto']}}}TextBlock", {
                         "HPOS": str(x1),
                         "VPOS": str(y1),
                         "WIDTH": str(max(1, x2 - x1)),
                         "HEIGHT": str(max(1, y2 - y1)),
                     })
-                target_block = fallback_block
 
             # Create a new TextLine under target_block
             x1,y1,x2,y2 = lb
@@ -465,6 +458,54 @@ class AltoProcessor:
             self.soup = BeautifulSoup(f.read(), "lxml-xml")
         logger.info("[fill_gaps] Saved updated composite ALTO.")
 
+
+    def sanitize_string_content(self):
+        """Strip whitespace from String CONTENT/SUBS_CONTENT and drop Strings left
+        empty. Tesseract sometimes emits bad tokens like CONTENT=" word", which
+        ingest tools discard."""
+        removed = 0
+        affected_lines = {}
+        for string in self.soup.find_all("String"):
+            for attr in ("CONTENT", "SUBS_CONTENT"):
+                value = string.get(attr)
+                if value is not None:
+                    string[attr] = re.sub(r"\s+", "", value)
+            if not string.get("CONTENT"):
+                line = string.parent
+                string.decompose()
+                removed += 1
+                if line is not None:
+                    affected_lines[id(line)] = line
+
+        for line in affected_lines.values():
+            # keep SPs only between surviving Strings (same rule as fill_gaps)
+            for sp in line.find_all("SP", recursive=False):
+                prev, nxt = sp.find_previous_sibling(True), sp.find_next_sibling(True)
+                if not (prev and prev.name == "String" and nxt and nxt.name == "String"):
+                    sp.decompose()
+            # remove containers left empty
+            node = line
+            while (node is not None
+                   and node.name in ("TextLine", "TextBlock", "ComposedBlock")
+                   and node.find(True, recursive=False) is None):
+                parent = node.parent
+                node.decompose()
+                node = parent
+
+        if removed:
+            logger.info("[sanitize] Removed %d Strings with whitespace-only CONTENT", removed)
+
+    def remove_invalid_graphical_elements(self):
+        """Drop Illustration/GraphicalElement blocks with a zero or missing
+        WIDTH/HEIGHT. Tesseract emits these on noise regions and they mark
+        nothing on the page."""
+        removed = 0
+        for el in self.soup.find_all(["Illustration", "GraphicalElement"]):
+            if float(el.get("WIDTH", 0)) <= 0 or float(el.get("HEIGHT", 0)) <= 0:
+                el.decompose()
+                removed += 1
+        if removed:
+            logger.info("[sanitize] Removed %d zero-area graphical blocks", removed)
 
     def add_description_tags(self):
         """Add NDNP Open OCR description tags to the output ALTO file."""
@@ -1167,6 +1208,8 @@ class OCRProcessor:
             if full_alto_path and os.path.isfile(full_alto_path):
                 os.remove(full_alto_path)
 
+            alto_processor.sanitize_string_content()
+            alto_processor.remove_invalid_graphical_elements()
             alto_processor.add_description_tags()
             alto_processor.fix_alto_file_hyphenation()
             alto_processor.add_textblock_language()
