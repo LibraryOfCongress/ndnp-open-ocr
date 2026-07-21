@@ -18,7 +18,7 @@ packaging==24.2
 pdfminer.six==20231228
 pdfplumber==0.11.0
 pikepdf==8.15.1
-pillow==12.2.0
+pillow==12.3.0
 pybind11==2.10.0
 pycparser==2.22
 PyExifTool==0.5.3
@@ -30,9 +30,9 @@ python-dateutil==2.9.0.post0
 reportlab==4.2.0
 rich==12.5.1
 s3transfer==0.10.1
-setuptools==78.1.1
+setuptools==83.0.0
 six==1.16.0
-soupsieve==2.5
+soupsieve==2.8.4
 typer==0.6.1
 urllib3==2.7.0
 wheel==0.46.2
