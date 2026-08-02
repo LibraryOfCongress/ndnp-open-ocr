@@ -21,8 +21,6 @@ While **NDNP-Open-OCR** is most relevant for parties using the NDNP technical sp
 
 [Read more about the NDNP Technical Specification here](https://www.loc.gov/ndnp/).
 
-[Frequently Asked Questions about **NDNP-Open-OCR**](FAQ.md).
-
 ## Advanced Segmentation Setting
 Historical newspapers are complex documents with a variety of page and column layouts that can be challenging for OCR engines to parse. All versions of **NDNP-Open-OCR** use Tesseract's generalized layout detection model. **NDNP-Open-OCR** version 1.1 and later includes an option to use an advanced segmentation setting that more accurately identifies columns, text, and other regions on historical newspaper scans. This setting incorporates newspaper layout detection modeling from the American Stories (Harvard) dataset. 
 [Read more about Harvard's American Stories project here](https://dell-research-harvard.github.io/resources/americanstories).
