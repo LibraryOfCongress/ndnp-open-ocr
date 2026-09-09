@@ -21,8 +21,6 @@ While **NDNP-Open-OCR** is most relevant for parties using the NDNP technical sp
 
 [Read more about the NDNP Technical Specification here](https://www.loc.gov/ndnp/).
 
-[Frequently Asked Questions about **NDNP-Open-OCR**](FAQ.md).
-
 ## Advanced Segmentation Setting
 Historical newspapers are complex documents with a variety of page and column layouts that can be challenging for OCR engines to parse. All versions of **NDNP-Open-OCR** use Tesseract's generalized layout detection model. **NDNP-Open-OCR** version 1.1 and later includes an option to use an advanced segmentation setting that more accurately identifies columns, text, and other regions on historical newspaper scans. This setting incorporates newspaper layout detection modeling from the American Stories (Harvard) dataset. 
 [Read more about Harvard's American Stories project here](https://dell-research-harvard.github.io/resources/americanstories).
@@ -54,6 +52,17 @@ This builds the runtime image, downloads a couple of **NDNP newspaper pages**
 pipeline on them with AmericanStories segmentation (falling back to baseline Tesseract
 if those assets aren't present), and writes the newly generated PDF + ALTO files into
 `./output/`. (The first run builds the image, which takes ~15 minutes; later runs are fast.)
+The demo container runs with the invoking user's UID and GID so its bind-mounted output
+remains owned by that user.
+
+If an earlier run created `./output` with the wrong ownership, remove and recreate it as
+your normal user before retrying:
+
+```bash
+sudo rm -rf ./output
+mkdir ./output
+make demo
+```
 
 > **Note:** The local pipeline is intended for testing and experimentation. It is too slow
 > for full production workloads — for those, use the AWS deployment described below.

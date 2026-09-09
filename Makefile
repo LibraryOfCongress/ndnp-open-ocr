@@ -11,6 +11,10 @@ export TF_VAR_batch_image_tag=$(BATCH_IMAGE_TAG)
 export TF_VAR_s3_bucket_name=$(S3_OUTPUT_BUCKET_PREFIX)
 
 PLATFORM ?= linux/amd64
+# Run local containers as the person who invoked make so bind-mounted output
+# files remain writable on the host.
+HOST_UID := $(shell id -u)
+HOST_GID := $(shell id -g)
 # Release version. Bump here and in .gitlab-ci.yml each release. Deliberately
 # not in .env: local copies would go stale after every release. 
 BATCH_IMAGE_TAG ?= opensource1.2.1
@@ -81,7 +85,7 @@ prep-testdata:
 demo: build-ocr-image prep-testdata
 	@mkdir -p "$(CURDIR)/output"
 	# Mount only the sample input + output dirs and run the image's baked-in code
-	docker run --rm --platform $(PLATFORM) $(RUN_USER_FLAG) \
+	docker run --rm --platform $(PLATFORM) --user $(HOST_UID):$(HOST_GID) \
 	  -v "$(CURDIR)/testdata/sample":/data/in:ro \
 	  -v "$(CURDIR)/output":/data/out \
 	  $(IMAGE_NAME) \
@@ -94,7 +98,7 @@ ocr-shell: build-ocr-image
 	# Then inside the container, run: python -m ndnp_open_ocr.run_local --input file:///data/in --output file:///data/out --glob '**/*.tif' --segmentation true
 	@if [ -n "$$MOUNT_OUT" ]; then mkdir -p "$$MOUNT_OUT"; fi; \
 	 echo "Opening OCR shell (optional mounts: MOUNT_IN, MOUNT_OUT)."; \
-	 docker run --rm -it --platform $(PLATFORM) $(RUN_USER_FLAG) \
+	 docker run --rm -it --platform $(PLATFORM) --user $(HOST_UID):$(HOST_GID) \
 	  -v "$(CURDIR)":/app \
 	  $${MOUNT_IN:+-v "$$MOUNT_IN":/data/in} \
 	  $${MOUNT_OUT:+-v "$$MOUNT_OUT":/data/out} \
