@@ -54,6 +54,17 @@ This builds the runtime image, downloads a couple of **NDNP newspaper pages**
 pipeline on them with AmericanStories segmentation (falling back to baseline Tesseract
 if those assets aren't present), and writes the newly generated PDF + ALTO files into
 `./output/`. (The first run builds the image, which takes ~15 minutes; later runs are fast.)
+The demo container runs with the invoking user's UID and GID so its bind-mounted output
+remains owned by that user.
+
+If an earlier run created `./output` with the wrong ownership, remove and recreate it as
+your normal user before retrying:
+
+```bash
+sudo rm -rf ./output
+mkdir ./output
+make demo
+```
 
 > **Note:** The local pipeline is intended for testing and experimentation. It is too slow
 > for full production workloads — for those, use the AWS deployment described below.

@@ -6,6 +6,7 @@ from typing import List, Tuple
 from urllib.parse import urlparse
 
 import fsspec
+from fsspec.implementations.local import LocalFileSystem
 
 
 def _norm_root(uri: str) -> str:
@@ -174,13 +175,12 @@ def publish_outputs(sink_uri: str, output_dir: str, rel_dir: str) -> None:
         if not os.path.isfile(local_path):
             continue
         dst = "/".join(filter(None, [root, rel_dir, name]))
-        # Ensure parent directories exist (needed for local file sinks)
-        try:
-            parent = os.path.dirname(dst)
-            if parent:
-                fs.makedirs(parent, exist_ok=True)
-        except Exception:
-            pass
+        # Ensure parent directories exist (needed for local file sinks; object
+        # stores like S3 have no real directories, so skip it there rather
+        # than risk swallowing a real error, e.g. a permissions failure).
+        parent = os.path.dirname(dst)
+        if parent and isinstance(fs, LocalFileSystem):
+            fs.makedirs(parent, exist_ok=True)
         fs.put(local_path, dst)
 
 
